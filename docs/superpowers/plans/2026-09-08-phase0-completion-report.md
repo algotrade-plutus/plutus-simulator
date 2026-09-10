@@ -1,9 +1,11 @@
 # Phase 0 — completion report (2026-09-08)
 
 Implements `docs/superpowers/plans/2026-09-08-phase0-execution-seam-sb-null-anchor.md`.
-Status: **foundation landed and verified (Tasks 1–6); the null-anchor number
-(Tasks 7–9) is gated on two modeling decisions surfaced below.** All work is on
-branch `rivf-2026` in each repo.
+Status: **COMPLETE — all of Tasks 1–9 landed and verified.** The two modeling
+decisions below were confirmed by the user (faithful capital = 25B đồng; sale
+advance enabled so SB stays the null anchor), and the null-anchor result landed
+— see **Update (2026-09-10)** at the foot. All work is on branch `rivf-2026` in
+each repo.
 
 ## What landed (green, committed)
 
@@ -74,3 +76,32 @@ number now would risk publishing a wrong anchor.
   optional deps (redis, …) are not pulled.
 - The buy-leg `sell_fee` quirk and the two divergent budget formulas were
   preserved (not "fixed") so the baseline stays exact.
+
+## Update (2026-09-10) — null-anchor landed (Tasks 7–9)
+
+Both decisions confirmed. Verified: naive SmartBeta charges **no** advance/
+interest/T+2 logic (only the flat 0.035% fee), so it implicitly assumes a free
+instant sale advance. The faithful arm therefore enables the sale advance
+(`broker_profile.advance_sale_proceeds`, `daily_rate 0.0003`) at 25B đồng, with
+LIMIT-at-close orders over the frozen daily slice.
+
+**Result (OOS 2022–2024, 525 days, 25 rebalances):**
+
+| Metric | naive | faithful | Δ |
+|---|--:|--:|--:|
+| Sharpe | −0.3497 | −0.5543 | −0.205 |
+| HPR | −3.17% | −9.61% | −6.44 pp |
+| Max drawdown | −46.04% | −46.25% | −0.21 pp |
+
+Tier-1: 2,187 fills; refusals **45 BAND_LOCK only** (0 INSUFFICIENT_CASH after
+switching MTL→LIMIT-at-close), **0 indeterminate**. The **drawdown is unchanged**
+— same risk profile; only the return level moves, and the movable part is mostly
+frictions (advance fee, lot granularity, fill timing) a naive backtest could also
+add. SB is the null anchor. Committed: ProtoSmartBeta `3280d39`
+(`experiments/null_anchor.py`, `tests/test_null_anchor.py`), plutus `505fc6b`
+(`docs/reference/tables/experiments_registry.md`). Regenerate: `python -m
+proto_smart_beta.experiments.{extract_market,null_anchor}`.
+
+**Next:** Phase 1 (ProtoGrid, the high-intensity equity demonstrator), then MM
+(+ KRX), then ProtoPair. Follow-up: re-ship the SB parquet slice to Drive and
+re-green containerized `plutus check`.
