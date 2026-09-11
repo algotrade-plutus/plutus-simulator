@@ -6,8 +6,8 @@ MECHANISM — two outcomes a reader conflates, and separating them is the point:
     * BAND_LIMIT: a price *outside* the band is illegal — rejected at entry,
       regardless of the book. A rule.
     * BAND_LOCK: a price *at* the ceiling is legal — admitted, and rests in
-      the book. On a locked-up day no ask sits at or below it, so the order
-      does not fill. A market fact, established at fill time, not admission.
+      the book. Whether it fills is a market fact, established at fill time
+      from the whole session's bar, not admission.
 
 POLICY (oracle — SCENARIO-CATALOGUE.md J2)
     * Ordinary band HSX ±7% — QĐ 352 Điều 9.6 → VNX QĐ 17 Phụ lục III §1.3,
@@ -17,29 +17,50 @@ POLICY (oracle — SCENARIO-CATALOGUE.md J2)
     * A limit-UP lock blocks BUYS only — INFERRED from band arithmetic +
       price-then-time priority; no Vietnamese article states it.
 
-KNOWN OVER-ASSERTION (published with the scenario, per the catalogue):
-    On the shipped ``DataHubSource`` — the daily adapter, outdated and slated
-    for reimplementation — the lock is inferred from ``close == ceiling``
-    alone, which over-asserts ~10×. HPG 2022-11-16 closed at its ceiling
-    (13.35) but traded down to 11.80 intraday, so a real tick book would have
-    allowed some fills. The strict lock (``open==high==low==close``) lives in
-    ``validation/``, not in the shipped library. This scenario therefore tests
-    the *shipped proxy* behaviour and declares the over-assertion.
+CORRECTED BEHAVIOUR (was published as a known over-assertion; fixed here):
+    ``band_lock_decision`` used to infer a lock from ``close == ceiling``
+    alone (Increment 1's proxy), which over-asserted ~10× — it answered
+    NO_FILL for every close-at-the-ceiling bar, including the majority that
+    had traded below the cap earlier in the session. It now grades from the
+    **whole daily bar**: a session that ever traded below the ceiling
+    (``low < ceiling``) passes through to the ordinary fill policy; only a
+    bar that **collapsed on the ceiling with zero volume**
+    (``open==high==low==close==ceiling``, no trade at all) is a proven
+    NO_FILL. HPG 2022-11-16 closed at its ceiling (13.35) but traded down to
+    11.80 intraday — it *traded through*, so under the corrected contract the
+    at-ceiling order now fills. That is case B below. Case C, a true lock
+    with zero volume, does not occur anywhere in the shipped corpus (its
+    ``quote_dailyvolume`` table never records a literal 0 — a no-trade day
+    simply carries no row, i.e. UNKNOWN, not zero — corpus-wide minimum
+    traded quantity is 1 share) and is hand-built accordingly, per this
+    task's brief.
 
-WORKED CASE — HPG, 2022-11-16: reference 12.5, ceiling 13.35, close 13.35.
+WORKED CASES
+    B. HPG, 2022-11-16: reference 12.5, ceiling 13.35 — closed AT the
+       ceiling (13.35) but the session traded down to 11.80: a real book
+       would have crossed it. *Traded-through*, not a lock.
+    C. HPG, 2022-11-15: reference 12.2, ceiling 13.05 — an ordinary trading
+       day in reality (O=12.0 H=12.55 L=12.0 C=12.5, unremarkable), used here
+       only as a source of a genuine HSX ceiling; its bar is overridden to
+       ``open==high==low==close==13.05``, volume 0 — a hand-built, clearly
+       synthetic full-session lock, since the real corpus cannot supply one.
 
 EXPECTED — Tier 2
-    A. BUY above the ceiling (14.00) -> Rejected(BAND_LIMIT): an illegal price,
-       a rule, rejected regardless of the book.
-    B. BUY at the ceiling (13.35) on a locked-up day -> Accepted: a legal
-       price is admitted and rests in the book, but it does not fill on the
-       locked day — no fill event is emitted for it. On the daily adapter the
-       lock is known (not merely suspected) via ``lock_evidence ==
-       'bar_proxy'`` (close == ceiling), so the fill-time check resolves to a
-       definite no-fill rather than an INDETERMINATE.
-    The teaching point: A and B are DIFFERENT outcomes — an illegal price
-    rejected outright vs a legal-but-unfillable one admitted and left
-    resting — which a naive backtest conflates into "rejected".
+    A. BUY above the ceiling (14.00) -> Rejected(BAND_LIMIT): an illegal
+       price, a rule, rejected regardless of the book.
+    B. BUY at the ceiling (13.35) on HPG's traded-through day -> Accepted,
+       and now FILLS (evidence TRADED_THROUGH): the corrected behaviour —
+       no longer the flattering free no-fill Increment 1 gave every
+       close-at-band bar.
+    C. BUY at the ceiling (13.05) on the hand-built full-session lock ->
+       Accepted: a legal price is admitted and rests in the book, but it
+       does not fill — no fill event is emitted for it, and
+       ``band_lock_decision`` names the reason ``BAND_LOCK`` with a proven
+       zero-volume lock.
+    The teaching point: A and B/C are DIFFERENT outcomes — an illegal price
+    rejected outright vs a legal price that is either fillable (B) or truly
+    locked (C) depending on the *whole bar*, not the close alone — which a
+    naive backtest (and Increment 1's own proxy) conflates.
 
 RUN
     python scenarios/test_j2_limit_up_lock.py
@@ -47,16 +68,21 @@ RUN
 """
 from __future__ import annotations
 
-from datetime import datetime
+from dataclasses import replace
+from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
 
 from plutus.market.session import ExchangeSession, Accepted, Rejected  # noqa: F401
-from plutus.market.protocol import Order
+from plutus.market.protocol import LockEvidence, Order, Resolution
+from plutus.market.adapters.datahub import DataHubSource
+from plutus.market.session.fills import band_lock_decision
+from plutus.market.session.types import (DataField, OrderRecord, OrderState,
+                                         TimeInForce, Venue)
 from plutus.core.order import OrderType, Side
 
-from _harness import build_session, data_available
+from _harness import build_session, data_available, data_root
 
 CONFIG = {
     "period": {"start": "2022-11-16", "end": "2022-11-18"},
@@ -70,6 +96,82 @@ CEILING = Decimal("13.35")
 ABOVE_CEILING = Decimal("14.00")
 LOCK_DAY_AFTERNOON = datetime(2022, 11, 16, 13, 0)
 
+# -- Case C: the hand-built true lock -------------------------------------
+#
+# See the module docstring's "CORRECTED BEHAVIOUR": no ticker-day in the
+# shipped corpus can prove a zero-volume lock (quote_dailyvolume never
+# records a literal 0), so this overrides one real, ordinary HSX trading
+# day's bar to a synthetic full-session collapse at its own real ceiling.
+TRUE_LOCK_CONFIG = {
+    "period": {"start": "2022-11-15", "end": "2022-11-17"},
+    "resolution": "1d",
+    "exchange_rules": {"venues": ["HSX"]},
+    "accounts": {"securities": {"initial_cash": 200_000_000, "account_no": "SEC-J2C"}},
+}
+TRUE_LOCK_DAY = "2022-11-15"
+TRUE_LOCK_DAY_AFTERNOON = datetime(2022, 11, 15, 13, 0)
+
+
+class FrozenLockSource(DataHubSource):
+    """The live corpus, with one ticker-day's bar overridden to a **proven**
+    zero-volume band lock.
+
+    ``band_lock_decision``'s NO_FILL branch requires ``interval.volume == 0``
+    exactly — a *proven* lock, distinct from a lock whose volume is merely
+    unknown (INDETERMINATE). The Hermes corpus's ``quote_dailyvolume`` table
+    never records a literal 0 anywhere (corpus-wide minimum non-null
+    quantity is 1 share): a no-trade day simply carries no row, which this
+    adapter reports as ``volume=None`` — UNKNOWN, not zero. So no ticker-day
+    in the live corpus can produce that proof, and this task's brief
+    sanctions the fallback: "if it hand-builds the interval/state: set
+    open==high==low==close==ceiling/floor and volume=0."
+
+    Every ticker-day except the one named here is served untouched, straight
+    off the real corpus — the instrument spec, admission, and every other
+    day's fill all stay genuine. Only the named day's bar is overridden, and
+    only ``open``/``high``/``low``/``close``/``volume``/``last`` change: the
+    real ceiling/floor/reference for that day (already real HSX ±7% band
+    arithmetic) are kept as-is.
+    """
+
+    def __init__(self, root, *, ticker: str, day: str, side: Side):
+        super().__init__(root)
+        self._ticker = ticker
+        self._day = date.fromisoformat(day)
+        self._side = side
+
+    def _is_locked(self, ticker, ts) -> bool:
+        d = ts.date() if isinstance(ts, datetime) else ts
+        return ticker == self._ticker and d == self._day
+
+    def _frozen(self, state):
+        edge = state.ceiling if self._side is Side.BUY else state.floor
+        return replace(state, last=edge, locked_side=self._side,
+                       lock_evidence=LockEvidence.BAR_PROXY)
+
+    def state_at(self, ticker, ts):
+        state = super().state_at(ticker, ts)
+        if state is None or not self._is_locked(ticker, ts):
+            return state
+        return self._frozen(state)
+
+    def states(self, ticker, start, end, *, resolution=Resolution.DAILY):
+        for state in super().states(ticker, start, end, resolution=resolution):
+            yield self._frozen(state) if self._is_locked(ticker, state.ts) else state
+
+    def interval(self, ticker, start, end, *, resolution=Resolution.DAILY):
+        interval = super().interval(ticker, start, end, resolution=resolution)
+        if interval is None or not self._is_locked(ticker, start):
+            return interval
+        state = self._frozen(interval.state)
+        edge = state.ceiling if self._side is Side.BUY else state.floor
+        return replace(
+            interval, state=state, open=edge, high=edge, low=edge, close=edge,
+            volume=0,
+            missing=interval.missing - {DataField.VOLUME, DataField.OPEN,
+                                        DataField.HIGH, DataField.LOW,
+                                        DataField.CLOSE, DataField.LAST})
+
 
 def run_j2() -> dict:
     session = build_session(CONFIG)
@@ -78,7 +180,8 @@ def run_j2() -> dict:
     above = session.submit(Order(ticker=TICKER, side=Side.BUY, quantity=1000,
                                  order_type=OrderType.LIMIT, limit_price=ABOVE_CEILING))
 
-    # B) submit AT the ceiling — legal, but the book is locked.
+    # B) submit AT the ceiling on the traded-through day — legal, and (per
+    #    the corrected contract) marketable: the session dipped to 11.80.
     at_ceiling = session.submit(Order(ticker=TICKER, side=Side.BUY, quantity=1000,
                                       order_type=OrderType.LIMIT, limit_price=CEILING))
     events = session.advance_to(LOCK_DAY_AFTERNOON)
@@ -88,6 +191,36 @@ def run_j2() -> dict:
 
     return {"above": above, "at_ceiling": at_ceiling, "events": events,
             "held_after": held_after}
+
+
+def run_j2_true_lock() -> dict:
+    """Case C — the hand-built full-session lock (see module docstring)."""
+    source = FrozenLockSource(data_root(), ticker=TICKER, day=TRUE_LOCK_DAY,
+                              side=Side.BUY)
+    interval = source.interval(TICKER, datetime(2022, 11, 15), datetime(2022, 11, 16))
+    ceiling = interval.state.ceiling
+
+    session = build_session(TRUE_LOCK_CONFIG, source=source)
+    at_ceiling = session.submit(Order(ticker=TICKER, side=Side.BUY, quantity=1000,
+                                      order_type=OrderType.LIMIT, limit_price=ceiling))
+    events = session.advance_to(TRUE_LOCK_DAY_AFTERNOON)
+
+    holding = session.holdings(TICKER)
+    held_after = holding.settled + sum(t.quantity for t in holding.unsettled)
+
+    # Mechanism-level proof, alongside the session-level one: the same
+    # interval this session's fill pass saw, fed straight to
+    # band_lock_decision, must itself name a proven BAND_LOCK NO_FILL.
+    order_record = OrderRecord(
+        order_id="J2-C-CHECK", venue=Venue.HSX, state=OrderState.RESTING,
+        time_in_force=TimeInForce.DAY, submitted_at=TRUE_LOCK_DAY_AFTERNOON,
+        updated_at=TRUE_LOCK_DAY_AFTERNOON, fills=(),
+        order=Order(ticker=TICKER, side=Side.BUY, quantity=1000,
+                    order_type=OrderType.LIMIT, limit_price=ceiling))
+    decision = band_lock_decision(order_record, interval)
+
+    return {"at_ceiling": at_ceiling, "events": events, "held_after": held_after,
+            "decision": decision, "ceiling": ceiling}
 
 
 @pytest.mark.skipif(not data_available(),
@@ -100,19 +233,42 @@ def test_j2_limit_up_lock():
     assert isinstance(above, Rejected), above
     assert above.rule.name == "BAND_LIMIT", above.rule
 
-    # B. At the ceiling: a legal price into a locked book — admitted and
-    #    rests (BAND_LOCK is now a fill-time refusal, not an admission one).
-    #    On the locked-up day it does not fill: the bar proxy (close ==
-    #    ceiling) makes the lock a known fact, so the fill policy resolves a
-    #    definite no-fill, which emits no event at all. NOT the flattering
-    #    free fill.
+    # B. At the ceiling on the traded-through day: a legal price, admitted,
+    #    and now FILLS — HPG dipped to 11.80 intraday, so a real book would
+    #    have crossed a resting buy at 13.35. This is the corrected
+    #    behaviour: Increment 1's close==band proxy answered NO_FILL here,
+    #    over-asserting a lock the session's own low disproves.
     at_ceiling = obs["at_ceiling"]
     assert isinstance(at_ceiling, Accepted), at_ceiling
     fills = [e for e in obs["events"]
              if getattr(e.kind, "value", e.kind) == "filled"
              and e.order_id == at_ceiling.order_id]
-    assert not fills, "a buy into a limit-up lock must not fill"
-    assert obs["held_after"] == 0, "the buy into the lock must not have filled"
+    assert fills, "a buy into a day that traded through the ceiling must fill"
+    assert fills[0].detail["evidence"].value == "traded_through", fills[0].detail
+    assert obs["held_after"] == 1000, "the traded-through buy must have filled"
+
+
+@pytest.mark.skipif(not data_available(),
+                    reason="market-data corpus not found; set PLUTUS_DATA_ROOT")
+def test_j2_true_lock():
+    obs = run_j2_true_lock()
+
+    # C. At the ceiling into a hand-built full-session lock: admitted and
+    #    rests — BAND_LOCK is a fill-time refusal, not an admission one —
+    #    but zero volume traded, so it cannot cross. No fill event at all.
+    at_ceiling = obs["at_ceiling"]
+    assert isinstance(at_ceiling, Accepted), at_ceiling
+    fills = [e for e in obs["events"]
+             if getattr(e.kind, "value", e.kind) == "filled"
+             and e.order_id == at_ceiling.order_id]
+    assert not fills, "a buy into a true limit-up lock must not fill"
+    assert obs["held_after"] == 0, "the buy into the true lock must not have filled"
+
+    # Mechanism-level proof: band_lock_decision itself names a proven
+    # BAND_LOCK NO_FILL for this interval, not merely "nothing happened".
+    decision = obs["decision"]
+    assert decision is not None and decision.outcome.value == "no_fill", decision
+    assert "BAND_LOCK" in decision.reason, decision.reason
 
 
 if __name__ == "__main__":
@@ -123,13 +279,26 @@ if __name__ == "__main__":
     at_ceiling_fills = [e for e in obs["events"]
                         if getattr(e.kind, "value", e.kind) == "filled"
                         and e.order_id == getattr(at_ceiling, "order_id", None)]
-    print("J2 — Momentum chaser into a limit-UP lock (HPG 2022-11-16)")
+    print("J2 — Momentum chaser into a limit-UP lock (HPG 2022-11-16, traded-through)")
     print(f"  BUY above ceiling (14.00): {type(above).__name__}"
           f"({getattr(above,'rule',None) and above.rule.name})")
     print(f"  BUY at ceiling (13.35):    {type(at_ceiling).__name__}"
-          f"(filled={bool(at_ceiling_fills)})")
+          f"(filled={bool(at_ceiling_fills)}, held_after={obs['held_after']})")
+
+    obs_c = run_j2_true_lock()
+    at_ceiling_c = obs_c["at_ceiling"]
+    fills_c = [e for e in obs_c["events"]
+              if getattr(e.kind, "value", e.kind) == "filled"
+              and e.order_id == getattr(at_ceiling_c, "order_id", None)]
+    print("J2 — Case C: hand-built true lock (HPG 2022-11-15, synthetic)")
+    print(f"  BUY at ceiling ({obs_c['ceiling']}): {type(at_ceiling_c).__name__}"
+          f"(filled={bool(fills_c)}, held_after={obs_c['held_after']})")
+    print(f"  band_lock_decision: {obs_c['decision'].outcome.value} — "
+          f"{obs_c['decision'].reason}")
+
     try:
         test_j2_limit_up_lock()
+        test_j2_true_lock()
         print("  TIER 2: PASS")
     except AssertionError as exc:
         print(f"  TIER 2: FAIL — {exc}")

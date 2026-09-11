@@ -17,7 +17,9 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from typing import Optional
 
+from plutus.market.adapters.base import MarketDataSource
 from plutus.market.session import ExchangeSession
 
 #: Fallback corpus (author's machine). Override with PLUTUS_DATA_ROOT.
@@ -38,12 +40,22 @@ def data_available() -> bool:
     return root.is_dir() and any(root.glob("quote_close*.parquet"))
 
 
-def build_session(config: dict) -> ExchangeSession:
+def build_session(config: dict, *,
+                  source: Optional[MarketDataSource] = None) -> ExchangeSession:
     """Build a session from a config dict, exactly the user's ``from_config``
     path — the config is written to a file and loaded, no privileged
     injection. The one substitution is ``data.root``, filled from
     ``PLUTUS_DATA_ROOT`` so the same scenario runs on any machine with the
     corpus. ``data.adapter`` defaults to the daily corpus adapter.
+
+    ``source``, forwarded verbatim to ``ExchangeSession.from_config``, is the
+    same keyword-only injection point that method documents as existing for
+    "a test needs a data source that is not on disk" — ``data.adapter`` and
+    ``data.root`` are then unused (``from_mapping`` only calls
+    ``load_data_source`` when ``source`` is ``None``). A scenario reaches for
+    it only when a fact under test is one the shipped corpus cannot record at
+    all (see ``FrozenLockSource`` in the J2/J11/J10 scenarios): every other
+    scenario leaves it unset and reads the live corpus exactly as before.
     """
     cfg = json.loads(json.dumps(config))  # deep copy; never mutate the caller's
     data = cfg.setdefault("data", {})
@@ -54,4 +66,4 @@ def build_session(config: dict) -> ExchangeSession:
     ) as handle:
         json.dump(cfg, handle)
         path = handle.name
-    return ExchangeSession.from_config(path)
+    return ExchangeSession.from_config(path, source=source)
