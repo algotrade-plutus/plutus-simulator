@@ -72,3 +72,41 @@ def test_s3_all_bids_at_or_below_floor_zero_volume_is_no_fill():
     d = band_lock_decision(_order(Side.SELL, FLOOR),
                            _interval(bids=[FLOOR], asks=[FLOOR], volume=0))
     assert d is not None and d.outcome is FillOutcome.NO_FILL
+    assert "BAND_LOCK" in d.reason
+
+
+def test_s3_locked_ladder_absent_volume_is_no_fill():
+    # option B (2026-09-11): a locked bid ladder with no volume figure is still
+    # trắng bên mua -- the empty bid side is the direct evidence.
+    d = band_lock_decision(_order(Side.SELL, FLOOR),
+                           _interval(bids=[FLOOR], asks=[FLOOR], volume=None))
+    assert d is not None and d.outcome is FillOutcome.NO_FILL
+    assert "BAND_LOCK" in d.reason
+
+
+def test_s2_bids_at_floor_with_volume_is_passthrough_to_policy():
+    d = band_lock_decision(_order(Side.SELL, FLOOR),
+                           _interval(bids=[FLOOR], asks=[FLOOR], volume=200))
+    assert d is None
+
+
+def test_book_tier_engages_via_interval_state_book_fallback():
+    # Every other test in this file passes the same book to both
+    # MarketInterval(book=...) and MarketState(book=...), so interval.book is
+    # never None and band_lock_decision's `else interval.state.book` fallback
+    # never runs. Here interval.book IS None; only state.book carries the
+    # locked ladder, so this only passes if the fallback actually fires.
+    book = OrderBook(asks=(BookLevel(price=CEIL),), bids=(BookLevel(price=CEIL),),
+                     as_of=datetime(2022, 11, 16))
+    state = MarketState(ticker="HPG", ts=datetime(2022, 11, 16),
+                        ceiling=CEIL, floor=FLOOR, last=CEIL,
+                        session=SessionPhase.CONTINUOUS, book=book)
+    interval = MarketInterval(ticker="HPG", start=datetime(2022, 11, 16),
+                              end=datetime(2022, 11, 17),
+                              resolution=Resolution.TICK, state=state,
+                              close=CEIL, volume=None, book=None)
+    assert interval.book is None  # the condition this test exists to exercise
+
+    d = band_lock_decision(_order(Side.BUY, CEIL), interval)
+    assert d is not None and d.outcome is FillOutcome.NO_FILL
+    assert "BAND_LOCK" in d.reason
