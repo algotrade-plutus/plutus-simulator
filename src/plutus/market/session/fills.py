@@ -141,8 +141,8 @@ from typing import (ClassVar, Dict, FrozenSet, Iterable, List, Mapping,
 
 from plutus.core.constant import get_trading_unit
 from plutus.market.exchanges.base import Exchange
-from plutus.market.protocol import (InstrumentSpec, OrderType, Resolution,
-                                    SessionPhase, Side)
+from plutus.market.protocol import (InstrumentSpec, LockEvidence, OrderType,
+                                    Resolution, SessionPhase, Side)
 from plutus.market.session.types import (TIME_IN_FORCE, DataField, FillDecision,
                                          FillEvidence, FillOutcome,
                                          FillPolicyConfig, MarketInterval,
@@ -155,8 +155,8 @@ __all__ = [
     'ProbabilisticFillPolicy',
     'FillQuestion', 'DivergenceRow', 'DivergenceReport', 'compare_policies',
     'probabilistic_sweep',
-    'auction_fill_price', 'build_fill_policy', 'draw_key', 'fill_draw',
-    'floor_to_lot', 'parse_fill_policy_config', 'participation_cap',
+    'auction_fill_price', 'band_lock_decision', 'build_fill_policy', 'draw_key',
+    'fill_draw', 'floor_to_lot', 'parse_fill_policy_config', 'participation_cap',
     'policy_of', 'stamp_policy',
 ]
 
@@ -536,6 +536,45 @@ class BaseFillPolicy(ABC):
             return int(instrument.trading_unit)
         unit = get_trading_unit(rules.spec.code, interval.start.date())
         return None if unit is None else int(unit)
+
+
+# --------------------------------------------------------------------------
+# BAND_LOCK -- a fillability check, not an admission rule
+# --------------------------------------------------------------------------
+
+def band_lock_decision(order: OrderRecord,
+                       interval: MarketInterval) -> Optional[FillDecision]:
+    """BAND_LOCK as a fill decision -- a fillability check, not an admission rule.
+
+    The band being locked against the order's side means it rests but cannot
+    cross the lock. Ported from ``BookWalkFillPolicy._lock_refusal`` so every
+    policy shares one rule at fill time, reading ``interval.state``. Returns
+    ``None`` when the lock does not apply (wrong side, or not marketable through
+    the lock), so the ordinary price test runs.
+    """
+    state = interval.state
+    if state.locked_side is None or order.order.side is not state.locked_side:
+        return None
+    price = order.order.limit_price
+    marketable = price is None or (
+        (order.order.side is Side.BUY and state.ceiling is not None
+         and price >= state.ceiling)
+        or (order.order.side is Side.SELL and state.floor is not None
+            and price <= state.floor))
+    if not marketable:
+        return None
+    if state.lock_evidence is LockEvidence.UNKNOWN:
+        return FillDecision.indeterminate(
+            f'BAND_LOCK: the band is reported locked against the '
+            f'{order.order.side.value} side and this order is marketable '
+            f'through it, but the lock rests on no book and no bar proxy, so '
+            f'whether it would have filled cannot be established',
+            [DataField.BOOK])
+    bound = state.ceiling if order.order.side is Side.BUY else state.floor
+    return FillDecision.no_fill(
+        f'BAND_LOCK: the band is locked at {bound} against the '
+        f'{order.order.side.value} side ({state.lock_evidence.value}) and this '
+        f'order is marketable through it; it rests but cannot cross the lock')
 
 
 # --------------------------------------------------------------------------
