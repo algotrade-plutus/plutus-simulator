@@ -1,4 +1,10 @@
-"""Equity-exchange admission: all six rules."""
+"""Equity-exchange admission: the five rules that gate order entry.
+
+BAND_LOCK is not one of them any more -- it moved to the fill layer
+(`band_lock_decision` in `market/session/fills.py`), fully covered by
+`tests/market/session/test_band_lock_fill.py`. A marketable-into-lock order
+is admitted here; whether it can cross the lock is decided at fill time.
+"""
 
 from datetime import datetime
 from decimal import Decimal
@@ -180,17 +186,11 @@ def test_absent_bands_yield_indeterminate_not_admission():
     assert r.rule is AdmissionRule.BAND_LIMIT
 
 
-# --- 4. BAND_LOCK ----------------------------------------------------------
-
-def test_buy_into_a_locked_ceiling_is_not_fillable():
-    r = HSX_EXCHANGE.admits(
-        _order(limit_price=Decimal('101.6')),
-        _state(last=Decimal('101.6'), locked_side=Side.BUY,
-               lock_evidence=LockEvidence.BAR_PROXY))
-    assert r.verdict is Verdict.REJECTED
-    assert r.rule is AdmissionRule.BAND_LOCK
-    assert r.detail['lock_evidence'] == 'bar_proxy'
-
+# --- 4. BAND_LOCK: moved to the fill layer ---------------------------------
+# BAND_LIMIT (section 3) is now the only band rule admission enforces; a
+# marketable-into-lock order is admitted here, and whether it can cross the
+# lock is decided at fill time by band_lock_decision (session/fills.py),
+# covered by tests/market/session/test_band_lock_fill.py.
 
 def test_sell_into_a_locked_ceiling_is_fine():
     """A lock blocks the side that must cross it, not the side supplying it."""
@@ -199,42 +199,6 @@ def test_sell_into_a_locked_ceiling_is_fine():
         _state(last=Decimal('101.6'), locked_side=Side.BUY,
                lock_evidence=LockEvidence.BAR_PROXY))
     assert r.verdict is Verdict.ADMITTED
-
-
-def test_sell_into_a_locked_floor_is_not_fillable():
-    r = HSX_EXCHANGE.admits(
-        _order(side=Side.SELL, limit_price=Decimal('88.4')),
-        _state(last=Decimal('88.4'), locked_side=Side.SELL,
-               lock_evidence=LockEvidence.BAR_PROXY))
-    assert r.verdict is Verdict.REJECTED
-    assert r.rule is AdmissionRule.BAND_LOCK
-
-
-def test_unknown_lock_evidence_yields_indeterminate():
-    """Absence of a book is not evidence of fillability."""
-    r = HSX_EXCHANGE.admits(
-        _order(limit_price=Decimal('101.6')),
-        _state(last=Decimal('101.6'), locked_side=Side.BUY,
-               lock_evidence=LockEvidence.UNKNOWN))
-    assert r.verdict is Verdict.INDETERMINATE
-    assert r.rule is AdmissionRule.BAND_LOCK
-
-
-def test_tick_book_evidence_is_honoured_the_same_way():
-    r = HSX_EXCHANGE.admits(
-        _order(limit_price=Decimal('101.6')),
-        _state(last=Decimal('101.6'), locked_side=Side.BUY,
-               lock_evidence=LockEvidence.TICK_BOOK))
-    assert r.verdict is Verdict.REJECTED
-    assert r.detail['lock_evidence'] == 'tick_book'
-
-
-def test_band_limit_precedes_band_lock():
-    r = HSX_EXCHANGE.admits(
-        _order(limit_price=Decimal('101.7')),
-        _state(last=Decimal('101.6'), locked_side=Side.BUY,
-               lock_evidence=LockEvidence.BAR_PROXY))
-    assert r.rule is AdmissionRule.BAND_LIMIT
 
 
 # --- 5. foreign room -------------------------------------------------------
