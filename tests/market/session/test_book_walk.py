@@ -890,7 +890,7 @@ class TestTheBandLock:
 
         assert decision.outcome is FillOutcome.NO_FILL
         assert 'BAND_LOCK' in decision.reason
-        assert 'a resting order do what a new one may not' in decision.reason
+        assert 'it rests but cannot cross the lock' in decision.reason
 
     def test_a_lock_on_the_other_side_says_nothing_about_this_order(self, local):
         """One direction only. A lock may refuse a fill; it may never authorise
