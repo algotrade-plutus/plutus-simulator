@@ -614,10 +614,13 @@ def band_lock_decision(order: OrderRecord,
       active fill policy's floor decides -- soft fills, hard is INDETERMINATE,
       probabilistic draws), or when the lock does not apply at all;
     * ``NO_FILL`` -- a proven full lock: the instant sat on the edge and zero
-      volume traded (*trắng bên bán/mua*, rows B5/S5);
+      OR absent volume traded (*trắng bên bán/mua*, rows B5/S5 -- the corpus's
+      ``quote_dailyvolume`` never records a literal 0, so an absent row here is
+      the no-trade fact itself, not ignorance about it; owner decision
+      2026-09-11);
     * ``INDETERMINATE`` -- the order is marketable into the edge but neither the
-      book (Task 3) nor the bar can settle whether it filled: the instant is
-      absent, or it sat on the edge with volume unknown (rows B7/S7).
+      book (Task 3) nor the bar can settle whether it filled: the instant
+      itself is absent (no OHLC at all to test against the edge).
 
     It **never returns a FILL**: a fill is sized by the policy's ``_sized_fill``,
     so both the traded-through fill and the assumed fill are passed through for
@@ -644,20 +647,20 @@ def band_lock_decision(order: OrderRecord,
     if traded_through:
         return None   # rows B4/S4: the edge was crossed -> the policy fills
 
-    # instant sits on the edge: a lock at the tested instant. Volume splits it.
-    if interval.volume is None or interval.lacks(DataField.VOLUME):
-        return FillDecision.indeterminate(
-            f'BAND_LOCK: {side.value} into a {edge} lock at the '
-            f'{_phase_word(interval)}, but with no observed volume a proven '
-            f'no-fill cannot be told from a matched-at-the-edge assumption',
-            [DataField.VOLUME])
-    if interval.volume == 0:
+    # The tested instant sits on the edge: the phase never left the band. Zero
+    # OR absent volume is trắng bên bán -- nothing traded, a proven no-fill.
+    # (Owner decision 2026-09-11: the OHLC collapse is the evidence, so an
+    # absent volume row here is not ignorance but the no-trade fact the corpus
+    # records by omission -- it never stores a literal 0.) Volume > 0 means the
+    # edge was matched at: the ASSUMED tier the policy floor decides.
+    if (interval.volume is None or interval.lacks(DataField.VOLUME)
+            or interval.volume == 0):
         return FillDecision.no_fill(
             f'BAND_LOCK: {side.value} into a {edge} lock at the '
-            f'{_phase_word(interval)} with zero volume (trắng bên '
-            f'{"bán" if side is Side.BUY else "mua"}); it rests but nothing '
-            f'traded, so it cannot cross the lock')
-    return None   # rows B6/S6: volume > 0 -> ASSUMED -> the policy floor decides
+            f'{_phase_word(interval)}; the bar collapsed on the edge with no '
+            f'trade recorded (trắng bên {"bán" if side is Side.BUY else "mua"}), '
+            f'so it rests but cannot cross the lock')
+    return None   # volume > 0: matched at the edge -> ASSUMED -> the policy floor
 
 
 # --------------------------------------------------------------------------
