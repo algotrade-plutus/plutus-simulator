@@ -83,12 +83,11 @@ def run_j2() -> dict:
                                       order_type=OrderType.LIMIT, limit_price=CEILING))
     events = session.advance_to(LOCK_DAY_AFTERNOON)
 
-    return {"above": above, "at_ceiling": at_ceiling, "events": events}
+    holding = session.holdings(TICKER)
+    held_after = holding.settled + sum(t.quantity for t in holding.unsettled)
 
-
-def _fills_for(events, order_id):
-    return [e for e in events
-            if getattr(e.kind, "value", e.kind) == "filled" and e.order_id == order_id]
+    return {"above": above, "at_ceiling": at_ceiling, "events": events,
+            "held_after": held_after}
 
 
 @pytest.mark.skipif(not data_available(),
@@ -113,11 +112,7 @@ def test_j2_limit_up_lock():
              if getattr(e.kind, "value", e.kind) == "filled"
              and e.order_id == at_ceiling.order_id]
     assert not fills, "a buy into a limit-up lock must not fill"
-
-    # The separation is the whole point: A is an illegal price, rejected
-    # outright as a rule; B is a legal price, admitted, that simply never
-    # crosses the lock — a market fact, not a rule.
-    assert type(above) is not type(at_ceiling)
+    assert obs["held_after"] == 0, "the buy into the lock must not have filled"
 
 
 if __name__ == "__main__":

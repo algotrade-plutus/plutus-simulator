@@ -201,7 +201,7 @@ def test_sell_into_a_locked_ceiling_is_fine():
     assert r.verdict is Verdict.ADMITTED
 
 
-# --- 5. foreign room -------------------------------------------------------
+# --- 4. foreign room -------------------------------------------------------
 
 def test_domestic_order_ignores_foreign_room():
     assert HSX_EXCHANGE.admits(_order(is_foreign=False),
@@ -237,7 +237,7 @@ def test_absent_room_yields_indeterminate_for_a_foreign_buy():
     assert r.rule is AdmissionRule.FOREIGN_ROOM
 
 
-# --- 6. session semantics --------------------------------------------------
+# --- 5. session semantics --------------------------------------------------
 
 def test_limit_order_in_continuous_session_is_admitted():
     assert HSX_EXCHANGE.admits(

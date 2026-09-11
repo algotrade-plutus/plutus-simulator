@@ -1,11 +1,16 @@
 """Unit tests for `band_lock_decision`: BAND_LOCK as a fill-path decision.
 
-Task 1 of the BAND_LOCK admission -> fill migration. This is the *only*
-consumer of the function today -- no policy calls it yet (that is later
-tasks). The four cases mirror `book_walk.py`'s `_lock_refusal`, which this
-function ports: same side test, same marketability test, same
-UNKNOWN -> INDETERMINATE / known -> NO_FILL split, read off
+`band_lock_decision` is the shared band-lock rule: `BaseFillPolicy._dispatch`
+(session/fills.py) calls it for every fill policy, so `SoftFillPolicy`,
+`HardFillPolicy` and `ProbabilisticFillPolicy` all apply the same answer. It
+ports `book_walk.py`'s `_lock_refusal`: same side test, same marketability
+test, same UNKNOWN -> INDETERMINATE / known -> NO_FILL split, read off
 `interval.state.{locked_side, ceiling, floor, lock_evidence}`.
+
+Six cases below: a buy into a known ceiling lock, a sell into a known floor
+lock, unknown lock evidence -> INDETERMINATE, tick_book evidence honoured the
+same way as the bar proxy, and the two not-applicable cases -- an unlocked
+side, and a limit price not marketable into the lock -- that return `None`.
 """
 
 from datetime import datetime
