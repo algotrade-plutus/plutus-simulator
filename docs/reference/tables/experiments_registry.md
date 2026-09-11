@@ -55,6 +55,17 @@ python -m proto_smart_beta.experiments.null_anchor         # naive vs faithful
 Naive numbers reproduce the committed `.plutus/expected/` baseline exactly
 (`tests/test_regression_baseline.py`).
 
+**Increment 1 note.** BAND_LOCK is now enforced at fill time rather than at
+order admission (same `close==band` bar-proxy evidence — Increment 2 is what
+upgrades the evidence ladder). Behaviour-preserving as designed: regenerating
+this experiment reproduces the faithful Sharpe at **≈ −0.55** (unchanged) and
+the same 2,187 fills. The one visible change is reporting, not behaviour: the
+45 BAND_LOCK cases no longer show as admission `refusals` (now `{}`) because
+those orders are `Accepted` and resolve as a silent fill-time `NO_FILL`
+instead of being rejected at submit. The runner's Tier-1 tally is not yet
+updated to count the fill-time no-fill in place of the admission refusal —
+that's an Increment-2 follow-up.
+
 ---
 
 ## Grid · MM · Pair — pending (Phases 1–3)
