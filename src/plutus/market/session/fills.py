@@ -606,7 +606,7 @@ _PASSTHROUGH = object()
 
 
 def _band_lock_by_book(side: Side, edge: Decimal, book,
-                       volume: Optional[int]) -> Optional[FillDecision]:
+                       volume: Optional[int]) -> object:
     """The dense-book tier (rows B1-B3 / S1-S3), or ``None`` to fall through.
 
     Prices only -- ``BookLevel.size`` is ``None`` on every corpus here. An ask
@@ -617,6 +617,10 @@ def _band_lock_by_book(side: Side, edge: Decimal, book,
     (option B, 2026-09-11: the empty offer ladder is the direct evidence, just
     as the OHLC collapse is at daily resolution). Returns ``None`` when the
     relevant side of the book is empty, so the caller falls to the OHLC tier.
+
+    Return type is ``object`` rather than ``Optional[FillDecision]``: a third
+    value is possible, the module-level ``_PASSTHROUGH`` sentinel, meaning
+    "an order can cross, or was matched at the edge -- defer to the policy".
     """
     levels = book.asks if side is Side.BUY else book.bids
     if not levels:
