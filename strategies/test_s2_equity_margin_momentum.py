@@ -12,25 +12,26 @@ TRADING RATIONALE
 THE FLAW THE MARKET PUNISHES
     A stop only works if you can *sell*. In a real crash the tape gaps **limit
     down** and locks: everyone is a seller, there are no bids, and your stop
-    order is refused (``BAND_LOCK``) day after day while the position bleeds. The
-    leverage that pressed the edge now works in reverse. In **Oct 2022** DIG did
-    exactly this — a breakout on 18 Oct, then a **four-day limit-down waterfall**
-    (21–26 Oct, −6.9/−6.8/−6.8/−6.8%). A leveraged long can neither be stopped
-    nor cured, the maintenance ratio craters, and the broker force-sells (*bán
-    giải chấp*) into the same locked tape.
+    order rests unfilled (``BAND_LOCK``) day after day while the position
+    bleeds. The leverage that pressed the edge now works in reverse. In **Oct
+    2022** DIG did exactly this — a breakout on 18 Oct, then a **four-day
+    limit-down waterfall** (21–26 Oct, −6.9/−6.8/−6.8/−6.8%). A leveraged long
+    can neither be stopped nor cured, the maintenance ratio craters, and the
+    broker force-sells (*bán giải chấp*) into the same locked tape.
 
 WHAT THE SIMULATOR MUST GET RIGHT (emergent, not staged)
     The position is built by the breakout signal; the loss is real DIG P&L; the
     margin call and forced sale must **emerge** from the equity-margin algebra;
-    and orders into a locked book must be **refused**, not filled at a fantasy
-    price.
+    and orders into a locked book must **rest unfilled**, never filled at a
+    fantasy price.
 
 MECHANISM / POLICY (oracle — SCENARIO-CATALOGUE.md, folded scenarios)
     * Equity margin lending: imr ≥ 50%, mmr ≥ 30% — QĐ 87/QĐ-UBCK Điều 5(1),(2)
       (VERIFIED). Call → cure ≤ 3 business days → forced sale — QĐ 87 Điều 7.1, 8
       (J5). The call/force LEVELS are a broker term, UNSOURCED.
-    * A locked book refuses an order with ``BAND_LOCK`` — a market fact, not an
-      illegal price; the forced sale itself is subject to it (J2/J11).
+    * A locked book admits an order but rests it unfilled — ``BAND_LOCK`` is a
+      fill-time market fact, not an illegal price; the forced sale itself is
+      subject to it (J2/J11).
     * Purchases settle T+2, so proceeds and re-entry are gated (J1/J16); the
       leveraged account can run out of purchasing power (J24).
 
@@ -42,8 +43,8 @@ EXPECTED — Tier 2
     * A margin CALL is issued as DIG's slide erodes the maintenance ratio.
     * A forced sale FIRES and EXECUTES — the account is sold out, not carried.
     * A lock bites: at least one order (the forced sale, or a same-day attempt)
-      is refused ``BAND_LOCK`` on a limit-down day — the stop that could not
-      clear.
+      is admitted but rests unfilled (``BAND_LOCK``) on a limit-down day — the
+      stop that could not clear.
 
 RUN
     .venv/bin/python strategies/test_s2_equity_margin_momentum.py
@@ -130,8 +131,8 @@ class LeveragedMomentum(Strategy):
 
         # Size to ~leverage x cash (in đồng — the price field is in thousands)
         # and buy the breakout on margin with a market order (MTL/MP, legal on
-        # HSX): it fills at the print, and on a locked book it is refused, which
-        # is the point.
+        # HSX): it fills at the print, and on a locked book it rests unfilled,
+        # which is the point.
         target_notional = self.leverage * self.cash
         shares = int((target_notional / (prev * PRICE_SCALE)) // self.lot) * self.lot
         if shares <= 0:
@@ -186,8 +187,11 @@ def _count_events(account, kind_value: str) -> int:
 
 
 def _sell_verdict_on(sell_day: date):
-    """Hold real DIG, then try to sell it on ``sell_day``. Returns the verdict —
-    used to prove directly that a limit-down lock refuses a sale (J11)."""
+    """Hold real DIG, then try to sell it on ``sell_day``. Returns the held
+    quantity, the verdict, the events from evaluating it, and the quantity
+    still held afterwards — used to prove directly that a limit-down lock
+    rests a sale unfilled rather than refusing it at admission (J11's
+    contract)."""
     src = DataHubSource.for_root(data_root())
     session = build_session(
         {**CONFIG, "period": {"start": "2022-10-03", "end": "2022-11-15"}},
@@ -198,11 +202,17 @@ def _sell_verdict_on(sell_day: date):
     session.advance_to(datetime(2022, 10, 4, 14, 0))
     session.advance_to(datetime(2022, 10, 11, 11, 0))     # settle T+2
     held = int(getattr(session.holdings(TICKER), "settled", 0) or 0)
-    session.advance_to(datetime(sell_day.year, sell_day.month, sell_day.day, 11, 0))
+    sell_time = datetime(sell_day.year, sell_day.month, sell_day.day, 11, 0)
+    session.advance_to(sell_time)
     verdict = session.submit(Order(ticker=TICKER, side=Side.SELL,
                                    quantity=held or 1000,
                                    order_type=OrderType.MARKET_WITH_LEFTOVER_AS_LIMIT))
-    return held, verdict
+    # The sell was submitted after the advance above, so it has not had a
+    # fill-evaluation pass yet -- the bar is evaluated by the advance that
+    # lands inside its day (see ExchangeSession.advance_to). A second advance,
+    # same instant, gives the resting sell its chance to cross the lock.
+    events = session.advance_to(sell_time)
+    return held, verdict, events, _held(session, TICKER)
 
 
 @pytest.mark.skipif(not data_available(),
@@ -243,16 +253,33 @@ def test_s2_equity_margin_momentum():
                     reason="market-data corpus not found; set PLUTUS_DATA_ROOT")
 def test_s2_forced_sale_is_blocked_by_a_downlock():
     """J11, directly and user-observably: a sale into a limit-down lock is
-    refused (``lock_evidence='bar_proxy'``); the same sale on a tradeable day is
-    accepted. This is the mechanism that stays S2's forced sale."""
-    held_lock, locked = _sell_verdict_on(date(2022, 10, 24))    # a DN-LOCK day
-    held_ok, tradeable = _sell_verdict_on(date(2022, 10, 20))   # a normal day
+    ``Accepted`` and rests -- it does not fill, and the position stays fully
+    held; the same sale on a tradeable day is ``Accepted`` and fills. This is
+    the mechanism that stays S2's forced sale."""
+    held_lock, locked, lock_events, held_after_lock = \
+        _sell_verdict_on(date(2022, 10, 24))                    # a DN-LOCK day
+    held_ok, tradeable, ok_events, held_after_ok = \
+        _sell_verdict_on(date(2022, 10, 20))                    # a normal day
     assert held_lock > 0 and held_ok > 0, (held_lock, held_ok)
 
-    assert not isinstance(locked, Accepted), "a sale into a limit-down lock filled"
-    assert (getattr(locked, "detail", {}) or {}).get("lock_evidence") == "bar_proxy", \
-        getattr(locked, "detail", None)
+    # Locked day: admitted and rests. BAND_LOCK is a fill-time refusal now,
+    # not an admission one -- no fill event, and the position is still fully
+    # held: the stop that could not clear.
+    assert isinstance(locked, Accepted), "a sale into a limit-down lock was refused at admission"
+    lock_fills = [e for e in lock_events
+                 if getattr(e.kind, "value", e.kind) == "filled"
+                 and e.order_id == locked.order_id]
+    assert not lock_fills, "a sale into a limit-down lock must not fill"
+    assert held_after_lock == held_lock, \
+        "the position must still be held -- the down-locked sale never got out"
+
+    # Tradeable day: admitted, and it actually fills and clears the position.
     assert isinstance(tradeable, Accepted), "a sale on a tradeable day was refused"
+    ok_fills = [e for e in ok_events
+               if getattr(e.kind, "value", e.kind) == "filled"
+               and e.order_id == tradeable.order_id]
+    assert ok_fills, "a sale on a tradeable day never filled"
+    assert held_after_ok == 0, "a sale on a tradeable day must clear the position"
 
 
 if __name__ == "__main__":
@@ -269,7 +296,7 @@ if __name__ == "__main__":
           f"completed {_count_events(acc,'forced_sale_result_sent')} "
           f"(locks stayed the rest)")
     for label, test in (("lifecycle", test_s2_equity_margin_momentum),
-                        ("downlock refuses the sale (J11)",
+                        ("downlock rests the sale unfilled (J11)",
                          test_s2_forced_sale_is_blocked_by_a_downlock)):
         try:
             test()
