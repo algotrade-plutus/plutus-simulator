@@ -132,9 +132,10 @@ The asymmetry this closes
 ``exchanges/equity.py``'s ``BAND_LOCK`` rule refuses a marketable order **at
 entry** when ``state.locked_side`` matches its side. Nothing at *fill* time
 read that field, so the identical order, already resting, filled at the same
-instant. :meth:`BookWalkFillPolicy._continuous` reads it -- and reads it in one
-direction only: the lock may **refuse** a fill, it may never authorise one. See
-that method.
+instant. That gap is now closed once, for every fill policy, by
+``fills.band_lock_decision``, which reads the same ``interval.state`` fields
+the admission rule reads. ``fills.BaseFillPolicy._dispatch`` calls it before
+``_continuous`` runs -- for every policy, not book-walk alone.
 
 Composition with the participation cap
 ------------------------------------------------------------------------
@@ -153,7 +154,7 @@ from typing import (Callable, ClassVar, FrozenSet, Iterable, List, Optional,
 from plutus.core.order import Side
 from plutus.market.adapters.depth import (MAX_DEPTH, DepthBook, DepthLevel,
                                           DepthSide, SideAvailability)
-from plutus.market.protocol import LockEvidence, Resolution
+from plutus.market.protocol import Resolution
 from plutus.market.session.fills import (BOOK_WALK_KIND, NO_MARKET_IMPACT,
                                          POLICY_SEPARATOR, FillPolicy,
                                          _CappedFillPolicy, fill_draw,
