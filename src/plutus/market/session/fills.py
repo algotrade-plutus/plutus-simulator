@@ -599,6 +599,42 @@ def _phase_word(interval: MarketInterval) -> str:
     return 'session'
 
 
+#: Sentinel: the book tier decided "defer to the ordinary path". Distinct from
+#: ``None`` (book tier not applicable), so band_lock_decision can tell "the book
+#: says pass through" from "no book -- try the OHLC tier".
+_PASSTHROUGH = object()
+
+
+def _band_lock_by_book(side: Side, edge: Decimal, book,
+                       volume: Optional[int]) -> Optional[FillDecision]:
+    """The dense-book tier (rows B1-B3 / S1-S3), or ``None`` to fall through.
+
+    Prices only -- ``BookLevel.size`` is ``None`` on every corpus here. An ask
+    below the ceiling (bid above the floor) means the order can cross now, a
+    passthrough. Otherwise the offer side below the edge is empty: ``volume > 0``
+    means the edge was still matched at (the ASSUMED tier the policy floor
+    decides), while zero *or absent* volume is trắng bên bán -- a proven no-fill
+    (option B, 2026-09-11: the empty offer ladder is the direct evidence, just
+    as the OHLC collapse is at daily resolution). Returns ``None`` when the
+    relevant side of the book is empty, so the caller falls to the OHLC tier.
+    """
+    levels = book.asks if side is Side.BUY else book.bids
+    if not levels:
+        return None
+    crossable = (any(l.price < edge for l in levels) if side is Side.BUY
+                 else any(l.price > edge for l in levels))
+    if crossable:
+        return _PASSTHROUGH   # B1/S1: an order can cross -> the policy fills
+    if volume is not None and volume > 0:
+        return _PASSTHROUGH   # B2/S2: matched at the edge -> the policy floor
+    # B3/S3: locked ladder, nothing on offer below the edge, no trade recorded.
+    return FillDecision.no_fill(
+        f'BAND_LOCK: {side.value} into a {edge} lock; the resting '
+        f'{"ask" if side is Side.BUY else "bid"} ladder is entirely at or '
+        f'past the edge with no trade recorded (trắng bên '
+        f'{"bán" if side is Side.BUY else "mua"})')
+
+
 def band_lock_decision(order: OrderRecord,
                        interval: MarketInterval) -> Optional[FillDecision]:
     """BAND_LOCK as an evidence-graded fillability check -- not an admission rule.
@@ -633,6 +669,12 @@ def band_lock_decision(order: OrderRecord,
     edge = _band_edge(side, interval.state)
     if edge is None or not _marketable_into(order, side, edge):
         return None
+
+    book = interval.book if interval.book is not None else interval.state.book
+    if book is not None:
+        by_book = _band_lock_by_book(side, edge, book, interval.volume)
+        if by_book is not None:
+            return None if by_book is _PASSTHROUGH else by_book
 
     instant, field = _lock_instant(side, interval)
     if instant is None:
