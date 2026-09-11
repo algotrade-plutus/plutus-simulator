@@ -15,7 +15,7 @@ from typing import Optional
 from plutus.core.constant import HNX, HSX, UPCOM, get_trading_unit
 from plutus.market.exchanges.base import Exchange
 from plutus.market.protocol import (
-    InstrumentSpec, LockEvidence, MarketState, Order, OrderType, SessionPhase,
+    InstrumentSpec, MarketState, Order, OrderType, SessionPhase,
     Side,
 )
 from plutus.market.verdicts import Admissibility, AdmissionRule, Verdict
@@ -100,27 +100,6 @@ class EquityExchange(Exchange):
             if price < state.floor:
                 return verdict(Verdict.REJECTED, AdmissionRule.BAND_LIMIT,
                                state.floor, side='below_floor')
-
-        # --- 4. BAND_LOCK: fillability, needs lock provenance -------------
-        # An order priced AT a band is admissible; this asks whether it can
-        # fill. Only the side that must cross the lock is blocked.
-        if state.locked_side is not None and order.side is state.locked_side:
-            marketable = price is None or (
-                (order.side is Side.BUY and state.ceiling is not None
-                 and price >= state.ceiling)
-                or (order.side is Side.SELL and state.floor is not None
-                    and price <= state.floor)
-            )
-            if marketable:
-                if state.lock_evidence is LockEvidence.UNKNOWN:
-                    return verdict(
-                        Verdict.INDETERMINATE, AdmissionRule.BAND_LOCK,
-                        lock_evidence=state.lock_evidence.value,
-                        reason='lock cannot be established without book or proxy',
-                    )
-                bound = state.ceiling if order.side is Side.BUY else state.floor
-                return verdict(Verdict.REJECTED, AdmissionRule.BAND_LOCK, bound,
-                               lock_evidence=state.lock_evidence.value)
 
         # --- 5. FOREIGN_ROOM ----------------------------------------------
         # Room limits acquisition, not disposal, so only a foreign BUY is
