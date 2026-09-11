@@ -2,11 +2,12 @@
 
 Scenario **J2** of ``docs/reference/SCENARIO-CATALOGUE.md``, as user code.
 
-MECHANISM — two refusals a reader conflates, and separating them is the point:
+MECHANISM — two outcomes a reader conflates, and separating them is the point:
     * BAND_LIMIT: a price *outside* the band is illegal — rejected at entry,
       regardless of the book. A rule.
-    * BAND_LOCK: a price *at* the ceiling is legal but, on a locked-up day,
-      no ask rests at or below it — admissible and unfillable. A market fact.
+    * BAND_LOCK: a price *at* the ceiling is legal — admitted, and rests in
+      the book. On a locked-up day no ask sits at or below it, so the order
+      does not fill. A market fact, established at fill time, not admission.
 
 POLICY (oracle — SCENARIO-CATALOGUE.md J2)
     * Ordinary band HSX ±7% — QĐ 352 Điều 9.6 → VNX QĐ 17 Phụ lục III §1.3,
@@ -30,12 +31,15 @@ WORKED CASE — HPG, 2022-11-16: reference 12.5, ceiling 13.35, close 13.35.
 EXPECTED — Tier 2
     A. BUY above the ceiling (14.00) -> Rejected(BAND_LIMIT): an illegal price,
        a rule, rejected regardless of the book.
-    B. BUY at the ceiling (13.35) on a locked-up day -> Rejected(BAND_LOCK): a
-       legal price with no ask below it, a market fact. On the daily adapter
-       the lock is detected via ``lock_evidence == 'bar_proxy'`` (close ==
-       ceiling).
-    The teaching point: A and B are DIFFERENT refusals — an illegal price vs a
-    legal-but-unfillable one — which a naive backtest conflates into "rejected".
+    B. BUY at the ceiling (13.35) on a locked-up day -> Accepted: a legal
+       price is admitted and rests in the book, but it does not fill on the
+       locked day — no fill event is emitted for it. On the daily adapter the
+       lock is known (not merely suspected) via ``lock_evidence ==
+       'bar_proxy'`` (close == ceiling), so the fill-time check resolves to a
+       definite no-fill rather than an INDETERMINATE.
+    The teaching point: A and B are DIFFERENT outcomes — an illegal price
+    rejected outright vs a legal-but-unfillable one admitted and left
+    resting — which a naive backtest conflates into "rejected".
 
 RUN
     python scenarios/test_j2_limit_up_lock.py
@@ -97,16 +101,23 @@ def test_j2_limit_up_lock():
     assert isinstance(above, Rejected), above
     assert above.rule.name == "BAND_LIMIT", above.rule
 
-    # B. At the ceiling: a legal price into a locked book — rejected as
-    #    BAND_LOCK (a market fact), detected on the daily adapter via the bar
-    #    proxy (close == ceiling). NOT the flattering free fill.
+    # B. At the ceiling: a legal price into a locked book — admitted and
+    #    rests (BAND_LOCK is now a fill-time refusal, not an admission one).
+    #    On the locked-up day it does not fill: the bar proxy (close ==
+    #    ceiling) makes the lock a known fact, so the fill policy resolves a
+    #    definite no-fill, which emits no event at all. NOT the flattering
+    #    free fill.
     at_ceiling = obs["at_ceiling"]
-    assert isinstance(at_ceiling, Rejected), at_ceiling
-    assert at_ceiling.rule.name == "BAND_LOCK", at_ceiling.rule
-    assert at_ceiling.detail.get("lock_evidence") == "bar_proxy", at_ceiling.detail
+    assert isinstance(at_ceiling, Accepted), at_ceiling
+    fills = [e for e in obs["events"]
+             if getattr(e.kind, "value", e.kind) == "filled"
+             and e.order_id == at_ceiling.order_id]
+    assert not fills, "a buy into a limit-up lock must not fill"
 
-    # The separation is the whole point: the two refusals are distinct.
-    assert above.rule.name != at_ceiling.rule.name
+    # The separation is the whole point: A is an illegal price, rejected
+    # outright as a rule; B is a legal price, admitted, that simply never
+    # crosses the lock — a market fact, not a rule.
+    assert type(above) is not type(at_ceiling)
 
 
 if __name__ == "__main__":
@@ -114,12 +125,14 @@ if __name__ == "__main__":
         raise SystemExit("market-data corpus not found; set PLUTUS_DATA_ROOT")
     obs = run_j2()
     above, at_ceiling = obs["above"], obs["at_ceiling"]
+    at_ceiling_fills = [e for e in obs["events"]
+                        if getattr(e.kind, "value", e.kind) == "filled"
+                        and e.order_id == getattr(at_ceiling, "order_id", None)]
     print("J2 — Momentum chaser into a limit-UP lock (HPG 2022-11-16)")
     print(f"  BUY above ceiling (14.00): {type(above).__name__}"
           f"({getattr(above,'rule',None) and above.rule.name})")
     print(f"  BUY at ceiling (13.35):    {type(at_ceiling).__name__}"
-          f"({getattr(at_ceiling,'rule',None) and at_ceiling.rule.name}, "
-          f"evidence={at_ceiling.detail.get('lock_evidence') if isinstance(at_ceiling, Rejected) else None})")
+          f"(filled={bool(at_ceiling_fills)})")
     try:
         test_j2_limit_up_lock()
         print("  TIER 2: PASS")
