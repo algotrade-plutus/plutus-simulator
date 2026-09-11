@@ -449,6 +449,10 @@ class BaseFillPolicy(ABC):
             return FillDecision.no_fill(
                 f'no matching takes place in {phase.value}')
 
+        locked = band_lock_decision(order, interval)
+        if locked is not None:
+            return locked
+
         if phase is SessionPhase.CONTINUOUS:
             return self._continuous(order, interval, rules,
                                     already_filled=already_filled,

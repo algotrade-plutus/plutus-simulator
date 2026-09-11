@@ -1571,10 +1571,6 @@ class BookWalkFillPolicy(_CappedFillPolicy):
                 [DataField.BOOK],
             )
 
-        locked = self._lock_refusal(order, interval)
-        if locked is not None:
-            return locked
-
         book = self.books.book_at(interval.ticker, interval.start,
                                   max_age=self.max_staleness)
         if self._is_marketable(order.order, book):
@@ -1759,57 +1755,6 @@ class BookWalkFillPolicy(_CappedFillPolicy):
         beyond = (price > deepest if resting_side is Side.SELL
                   else price < deepest)
         return None if beyond else 0
-
-    def _lock_refusal(self, order: OrderRecord,
-                      interval: MarketInterval) -> Optional[FillDecision]:
-        """The band lock read at **fill** time. The asymmetry item 3 names.
-
-        ``exchanges/equity.py``'s ``BAND_LOCK`` rule refuses an order at entry
-        when it is marketable through a lock on its own side. Nothing read
-        ``state.locked_side`` afterwards, so the identical order, already
-        resting, filled at the same instant under every shipped policy. This
-        closes it, using the venue's own predicate rather than a second one:
-        same side, same marketability test, same evidence ladder.
-
-        **One direction only.** A lock may refuse a fill; it may never
-        authorise one. ``locked_side`` that does *not* match this order says
-        nothing about it, and a book that shows liquidity while the state says
-        locked is refused rather than filled -- refusing a trade the market
-        allowed costs an opportunity, filling one it refused costs money.
-
-        Evidence decides which refusal:
-        ``LockEvidence.UNKNOWN`` (the lock could not be established from a book
-        or a bar proxy) is ``INDETERMINATE``; a lock established from either is
-        a definite ``NO_FILL``, exactly as admission treats it.
-        """
-        state = interval.state
-        if state.locked_side is None or order.order.side is not state.locked_side:
-            return None
-        price = order.order.limit_price
-        marketable = price is None or (
-            (order.order.side is Side.BUY and state.ceiling is not None
-             and price >= state.ceiling)
-            or (order.order.side is Side.SELL and state.floor is not None
-                and price <= state.floor))
-        if not marketable:
-            return None
-        if state.lock_evidence is LockEvidence.UNKNOWN:
-            return FillDecision.indeterminate(
-                f'the band is reported locked against the '
-                f'{order.order.side.value} side and this order is marketable '
-                f'through it, but the lock rests on no book and no bar proxy, '
-                f'so whether it would have filled cannot be established',
-                [DataField.BOOK],
-            )
-        bound = (state.ceiling if order.order.side is Side.BUY
-                 else state.floor)
-        return FillDecision.no_fill(
-            f'the band is locked at {bound} against the '
-            f'{order.order.side.value} side ({state.lock_evidence.value}) and '
-            f'this order is marketable through it; admission refuses the '
-            f'identical order at entry under BAND_LOCK, so filling it here '
-            f'would let a resting order do what a new one may not'
-        )
 
     # -- auction ---------------------------------------------------------
 
