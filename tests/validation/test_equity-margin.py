@@ -40,7 +40,6 @@ from plutus.market.session.margin_lending import (
     SecurityEligibility, binding_policy,
 )
 from plutus.market.session.types import Pool, StatefulRule, Venue, Verdict
-from plutus.market.verdicts import AdmissionRule
 
 from validation import BaseStrategy, StepPhase, run_scenario
 from validation.logs import CashMovement, TradeAction
@@ -698,33 +697,54 @@ def test_no_second_sale_is_planned_while_one_is_in_flight(hold):
 @requires_corpus
 def test_a_forced_sale_into_a_floor_locked_market_does_not_execute(cure):
     """2022-10-31: HPG opens and closes at its floor, 15.65. The *ban giai
-    chap* is placed at the floor, the sell side is locked, and the exchange
-    refuses it. The right existed and could not be exercised.
+    chap* is placed at the floor, the sell side is locked, and the order does
+    not execute. The right existed and could not be exercised.
 
-    The evidence is ``bar_proxy`` -- an inference from the daily bar, not an
-    observation -- and the event says so rather than claiming a book.
+    BAND_LOCK is a fill-time question now, not an admission one: the exchange
+    ADMITS a marketable-into-lock order (``accepted`` is True, ``refusal`` is
+    None below) and it rests. The refusal shows up only as an order that never
+    fills and expires at the end of the locked session -- decided by
+    ``band_lock_decision`` (``market/session/fills.py``), unit-tested in
+    ``tests/market/session/test_band_lock_fill.py`` including this exact
+    bar_proxy-evidence shape. This test's job is only to show the forced sale
+    actually reaches that machinery and comes back with nothing filled.
     """
-    refused = [e for e in cure.events_of(MarginEventKind.FORCED_SALE_INSTRUCTED)
-               if e.detail.get('accepted') is False
-               and e.detail.get('refusal')]
-    assert refused, 'the corpus should refuse at least one giai chap'
-    event = refused[0]
-    assert event.ts.date() == date(2022, 10, 31)
-    assert event.detail['refusal']['rule'] == AdmissionRule.BAND_LOCK.value
-    assert event.detail['refusal']['detail']['lock_evidence'] == 'bar_proxy'
+    submitted = [e for e in cure.events_of(MarginEventKind.FORCED_SALE_INSTRUCTED)
+                 if e.ts.date() == date(2022, 10, 31)
+                 and e.detail.get('accepted') is not None]
+    assert submitted, 'the corpus should submit a giai chap on 2022-10-31'
+    event = submitted[0]
+    assert event.detail['accepted'] is True
+    assert event.detail['refusal'] is None
+    assert event.detail['quantity'] == 300
+    assert event.detail['limit_price'] == Decimal('15.65')  # HPG's floor
+    order_id = event.detail['order_id']
+    assert order_id is not None
 
-    # And it is in the TRADE LOG, not only in the margin event stream. The
-    # refused ``ban giai chap`` is the single most interesting event in this
-    # arm and the deliverable log did not mention it at all: it had zero rows
-    # of any kind, because ``_translate_events`` skipped REJECTED outright and
-    # ``StrategyContext`` never sees a broker-placed order.
-    rejected = [r for r in cure.result.logs.trades
-                if r.action is TradeAction.REJECTED]
-    assert len(rejected) == 1
-    assert rejected[0].ts.date() == date(2022, 10, 31)
-    assert rejected[0].rule == AdmissionRule.BAND_LOCK.value
-    assert rejected[0].order_id is not None, (
-        'the refusal must join to an order, not float free in the log')
+    # And it is in the TRADE LOG, not only in the margin event stream: an
+    # ACCEPTED order -- never REJECTED, since admission no longer refuses it
+    # -- that never fills and EXPIRES unfilled at the end of the locked
+    # session.
+    rows = cure.result.logs.trades.for_order(order_id)
+    actions = {r.action for r in rows}
+    assert TradeAction.ACCEPTED in actions
+    assert TradeAction.REJECTED not in actions
+    assert TradeAction.FILLED not in actions
+    assert TradeAction.EXPIRED in actions
+    assert all(r.ts.date() == date(2022, 10, 31) for r in rows), (
+        'the order must join to an order that lived on the locked session, '
+        'not float free in the log')
+
+    # The broker's own statement of results (QD 87 Dieu 8's second limb) says
+    # so in numbers, the session after the order expires: nothing filled.
+    results = [e for e in cure.events_of(MarginEventKind.FORCED_SALE_RESULT_SENT)
+               if e.instruction_id == event.instruction_id]
+    assert results, 'the broker must report a result for the placed ticket'
+    result = results[0]
+    assert result.ts.date() == date(2022, 11, 1)
+    assert result.detail['filled_quantity'] == 0
+    assert result.detail['ordered_quantity'] == 271     # pre-lot-rounding
+    assert result.detail['unfilled'] == 271
 
 
 @requires_corpus

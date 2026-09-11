@@ -4,7 +4,7 @@ One class parameterized by :class:`ExchangeSpec`. The three exchanges differ
 only in fields the rulebook already carries -- trading unit, daily trading
 limit, tick-size function -- so they are instances, not subclasses.
 
-The six rules run in a fixed order and short-circuit on the first breach. The
+The five rules run in a fixed order and short-circuit on the first breach. The
 order does not change the measured blocked-entry rate (verified: zero off-grid
 closes and zero off-grid ceilings over the headline population), but it does
 determine the per-rule composition of the rejection log, so it is normative.
@@ -101,7 +101,7 @@ class EquityExchange(Exchange):
                 return verdict(Verdict.REJECTED, AdmissionRule.BAND_LIMIT,
                                state.floor, side='below_floor')
 
-        # --- 5. FOREIGN_ROOM ----------------------------------------------
+        # --- 4. FOREIGN_ROOM ----------------------------------------------
         # Room limits acquisition, not disposal, so only a foreign BUY is
         # constrained.
         #
@@ -126,7 +126,7 @@ class EquityExchange(Exchange):
                 return verdict(Verdict.REJECTED, AdmissionRule.FOREIGN_ROOM,
                                state.foreign_room)
 
-        # --- 6. SESSION_SEMANTICS -----------------------------------------
+        # --- 5. SESSION_SEMANTICS -----------------------------------------
         session_verdict = self._admits_in_session(order, state)
         if session_verdict is not None:
             return session_verdict

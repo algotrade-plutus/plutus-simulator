@@ -46,6 +46,25 @@ def test_buy_into_known_ceiling_lock_is_no_fill():
     assert "BAND_LOCK" in d.reason
 
 
+def test_sell_into_known_floor_lock_is_no_fill():
+    d = band_lock_decision(
+        _order(Side.SELL, Decimal("11.65")),
+        _interval(locked_side=Side.SELL, ceiling=Decimal("13.35"),
+                  floor=Decimal("11.65"), evidence=LockEvidence.BAR_PROXY))
+    assert d is not None and d.outcome is FillOutcome.NO_FILL
+    assert "BAND_LOCK" in d.reason
+
+
+def test_tick_book_evidence_is_honoured_the_same_way():
+    d = band_lock_decision(
+        _order(Side.BUY, Decimal("13.35")),
+        _interval(locked_side=Side.BUY, ceiling=Decimal("13.35"),
+                  floor=Decimal("11.65"), evidence=LockEvidence.TICK_BOOK))
+    assert d is not None and d.outcome is FillOutcome.NO_FILL
+    assert "BAND_LOCK" in d.reason
+    assert "tick_book" in d.reason
+
+
 def test_unknown_lock_evidence_is_indeterminate():
     d = band_lock_decision(
         _order(Side.BUY, Decimal("13.35")),
