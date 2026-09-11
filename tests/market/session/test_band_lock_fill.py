@@ -9,10 +9,12 @@ established. It never returns a FILL -- a fill is sized by the policy.
 
 Rows below are the daily OHLC+volume tier of the design's ladder
 (docs/superpowers/specs/2026-09-10-band-lock-fillability-design.md, tables 1a/1b):
-B4/S4 traded-through -> passthrough; B5/S5 collapse+vol==0 -> NO_FILL;
-B6/S6 collapse+vol>0 -> passthrough (the policy floor decides); B7/S7 no signal
--> INDETERMINATE; plus the phase instant (continuous low/high, ATO open, ATC
-close) and the not-applicable (unmarketable / no band) cases.
+B4/S4 traded-through -> passthrough; B5/S5 collapse+vol==0-or-absent ->
+NO_FILL (the corpus never stores a literal 0, so an absent row proves the
+no-trade fact just as zero would -- owner decision 2026-09-11); B6/S6
+collapse+vol>0 -> passthrough (the policy floor decides); B7/S7 no OHLC signal
+at all -> INDETERMINATE; plus the phase instant (continuous low/high, ATO
+open, ATC close) and the not-applicable (unmarketable / no band) cases.
 """
 
 from datetime import datetime
@@ -83,12 +85,16 @@ def test_b6_buy_collapse_with_volume_is_passthrough_to_policy():
     assert d is None
 
 
-def test_b7_buy_collapse_volume_unknown_is_indeterminate_naming_volume():
+def test_collapse_volume_absent_is_no_fill():
+    # The corpus never records a literal volume==0 -- "nothing traded" is an
+    # absent row (volume=None). A bar collapsed on the edge with volume absent
+    # is therefore the same trắng-bên-bán proof as B5, not a volume-unknown
+    # INDETERMINATE (owner decision 2026-09-11).
     d = band_lock_decision(
         _order(Side.BUY, CEIL),
         _interval(high=CEIL, low=CEIL, close=CEIL, volume=None))
-    assert d is not None and d.outcome is FillOutcome.INDETERMINATE
-    assert DataField.VOLUME in d.missing
+    assert d is not None and d.outcome is FillOutcome.NO_FILL
+    assert "BAND_LOCK" in d.reason
 
 
 def test_b7_buy_no_low_signal_is_indeterminate():
@@ -121,6 +127,17 @@ def test_s6_sell_collapse_with_volume_is_passthrough_to_policy():
         _order(Side.SELL, FLOOR),
         _interval(high=FLOOR, low=FLOOR, close=FLOOR, volume=7000))
     assert d is None
+
+
+def test_collapse_volume_absent_is_no_fill_sell():
+    # SELL-side mirror of test_collapse_volume_absent_is_no_fill: a collapsed
+    # floor bar with volume absent is the same trắng-bên-mua proof as S5, not
+    # a volume-unknown INDETERMINATE (owner decision 2026-09-11).
+    d = band_lock_decision(
+        _order(Side.SELL, FLOOR),
+        _interval(high=FLOOR, low=FLOOR, close=FLOOR, volume=None))
+    assert d is not None and d.outcome is FillOutcome.NO_FILL
+    assert "BAND_LOCK" in d.reason
 
 
 # ---- phase: ATO tests the open, ATC tests the close (Case D) -----------------
