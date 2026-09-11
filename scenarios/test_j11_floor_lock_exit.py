@@ -3,12 +3,14 @@
 Scenario **J11** of ``docs/reference/SCENARIO-CATALOGUE.md``, as user code.
 The mirror of J2, with a sharper edge: **there is no order type in Vietnam
 that gets you out at any price once a name is floor-locked.** You hold it, it
-craters to the floor and locks, and your stop-loss cannot fill.
+craters to the floor and locks, and your stop-loss rests unfilled.
 
 MECHANISM
-    * BAND_LIMIT: a sell *below* the floor is an illegal price — a rule.
+    * BAND_LIMIT: a sell *below* the floor is an illegal price — a rule,
+      rejected at entry.
     * BAND_LOCK: a sell *at* the floor on a locked-down day is a legal price
-      with no bid beneath it — admissible and unfillable, a market fact.
+      — admitted, and rests in the book. With no bid beneath it, it does not
+      fill. A market fact, established at fill time, not admission.
 
 POLICY (oracle — SCENARIO-CATALOGUE.md J11)
     * Floor = ref − ref×band, rounded UP — QĐ 352 Điều 9.1–9.2, eff.
@@ -20,13 +22,15 @@ POLICY (oracle — SCENARIO-CATALOGUE.md J11)
 
 WORKED CASE — DIG, Oct 2022 selloff. Buy 2022-10-27 (close 19.80, tradeable),
 hold; the lot settles 2022-10-31, which closes at its floor (17.70) — locked
-down. The stop-loss cannot get out.
+down. The stop-loss rests, unable to get out.
 
 EXPECTED — Tier 2
     1. BUY 2022-10-27 accepted and settles by 2022-10-31.
-    2. On the locked-down day, SELL at the floor (17.70) -> Rejected(BAND_LOCK)
-       — the stop-loss that cannot fill.
-    3. SELL below the floor (17.00) -> Rejected(BAND_LIMIT) — an illegal price.
+    2. On the locked-down day, SELL at the floor (17.70) -> Accepted: admitted
+       and rests, but does not fill — no fill event is emitted for it. The
+       stop-loss that cannot get out.
+    3. SELL below the floor (17.00) -> Rejected(BAND_LIMIT) — an illegal
+       price, a different and still-immediate refusal.
 
 RUN
     python scenarios/test_j11_floor_lock_exit.py
@@ -73,9 +77,18 @@ def run_j11() -> dict:
                                          order_type=OrderType.LIMIT, limit_price=FLOOR))
     sell_below = session.submit(Order(ticker=TICKER, side=Side.SELL, quantity=1000,
                                       order_type=OrderType.LIMIT, limit_price=BELOW_FLOOR))
+    # Both sells were submitted after the advance above, so neither has had a
+    # fill-evaluation pass yet -- the bar is evaluated by the advance that
+    # lands inside its day (see ExchangeSession.advance_to). A second advance,
+    # same instant, gives the resting sell its chance to cross the lock.
+    events = session.advance_to(LOCK_DAY_AFTERNOON)
+
+    holding = session.holdings(TICKER)
+    held_after = holding.settled + sum(t.quantity for t in holding.unsettled)
 
     return {"buy": buy, "settle_events": settle_events,
-            "sell_at_floor": sell_at_floor, "sell_below": sell_below}
+            "sell_at_floor": sell_at_floor, "sell_below": sell_below,
+            "events": events, "held_after": held_after}
 
 
 def _settled(events):
@@ -91,17 +104,24 @@ def test_j11_floor_lock_exit():
     assert isinstance(obs["buy"], Accepted), obs["buy"]
     assert _settled(obs["settle_events"]), "the lot never settled"
 
-    # 2. Sell at the floor into a locked-down book -> BAND_LOCK (can't get out).
+    # 2. Sell at the floor into a locked-down book: admitted and rests --
+    #    BAND_LOCK is now a fill-time refusal, not an admission one -- and
+    #    with no bid beneath the floor it does not fill. No fill event, and
+    #    the position stays fully held: the stop-loss that cannot get out.
     at_floor = obs["sell_at_floor"]
-    assert isinstance(at_floor, Rejected), at_floor
-    assert at_floor.rule.name == "BAND_LOCK", at_floor.rule
-    assert at_floor.detail.get("lock_evidence") == "bar_proxy", at_floor.detail
+    assert isinstance(at_floor, Accepted), at_floor
+    fills = [e for e in obs["events"]
+             if getattr(e.kind, "value", e.kind) == "filled"
+             and e.order_id == at_floor.order_id]
+    assert not fills, "a sell into a floor lock must not fill"
+    assert obs["held_after"] == 1000, "the position must still be held -- it never got out"
 
-    # 3. Sell below the floor -> BAND_LIMIT (illegal price), a different refusal.
+    # 3. Sell below the floor -> BAND_LIMIT (illegal price), a different,
+    #    still-immediate refusal.
     below = obs["sell_below"]
     assert isinstance(below, Rejected), below
     assert below.rule.name == "BAND_LIMIT", below.rule
-    assert at_floor.rule.name != below.rule.name
+    assert type(at_floor) is not type(below)
 
 
 if __name__ == "__main__":
@@ -109,11 +129,14 @@ if __name__ == "__main__":
         raise SystemExit("market-data corpus not found; set PLUTUS_DATA_ROOT")
     obs = run_j11()
     af, bl = obs["sell_at_floor"], obs["sell_below"]
+    af_fills = [e for e in obs["events"]
+               if getattr(e.kind, "value", e.kind) == "filled"
+               and e.order_id == getattr(af, "order_id", None)]
     print("J11 — Floor-lock on the exit (DIG, Oct 2022)")
     print(f"  BUY 10-27:            {type(obs['buy']).__name__}")
     print(f"  settled by 10-31:     {bool(_settled(obs['settle_events']))}")
     print(f"  SELL at floor (17.70):{type(af).__name__}"
-          f"({getattr(af,'rule',None) and af.rule.name})")
+          f"(filled={bool(af_fills)}, held_after={obs['held_after']})")
     print(f"  SELL below (17.00):   {type(bl).__name__}"
           f"({getattr(bl,'rule',None) and bl.rule.name})")
     try:
