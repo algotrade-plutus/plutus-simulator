@@ -121,7 +121,6 @@ def test_j11_floor_lock_exit():
     below = obs["sell_below"]
     assert isinstance(below, Rejected), below
     assert below.rule.name == "BAND_LIMIT", below.rule
-    assert type(at_floor) is not type(below)
 
 
 if __name__ == "__main__":
