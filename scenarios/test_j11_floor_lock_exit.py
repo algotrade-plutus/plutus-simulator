@@ -52,21 +52,18 @@ RUN
 """
 from __future__ import annotations
 
-from dataclasses import replace
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 
 import pytest
 
 from plutus.market.session import ExchangeSession, Accepted, Rejected  # noqa: F401
-from plutus.market.protocol import LockEvidence, Order, Resolution
-from plutus.market.adapters.datahub import DataHubSource
+from plutus.market.protocol import Order
 from plutus.market.session.fills import band_lock_decision
-from plutus.market.session.types import (DataField, OrderRecord, OrderState,
-                                         TimeInForce, Venue)
+from plutus.market.session.types import OrderRecord, OrderState, TimeInForce, Venue
 from plutus.core.order import OrderType, Side
 
-from _harness import build_session, data_available, data_root
+from _harness import FrozenLockSource, build_session, data_available, data_root
 
 CONFIG = {
     "period": {"start": "2022-10-27", "end": "2022-11-01"},
@@ -81,67 +78,6 @@ LOCK_DAY = "2022-10-31"
 LOCK_DAY_AFTERNOON = datetime(2022, 10, 31, 13, 0)   # T+2 settlement, and floor-locked
 FLOOR = Decimal("17.70")
 BELOW_FLOOR = Decimal("17.00")
-
-
-class FrozenLockSource(DataHubSource):
-    """The live corpus, with one ticker-day's bar overridden to a **proven**
-    zero-volume band lock.
-
-    ``band_lock_decision``'s NO_FILL branch requires ``interval.volume == 0``
-    exactly — a *proven* lock, distinct from a lock whose volume is merely
-    unknown (INDETERMINATE). The Hermes corpus's ``quote_dailyvolume`` table
-    never records a literal 0 anywhere (corpus-wide minimum non-null
-    quantity is 1 share): a no-trade day simply carries no row, which this
-    adapter reports as ``volume=None`` — UNKNOWN, not zero. So no ticker-day
-    in the live corpus can produce that proof, and this task's brief
-    sanctions the fallback: "if it hand-builds the interval/state: set
-    open==high==low==close==ceiling/floor and volume=0."
-
-    Every ticker-day except the one named here is served untouched, straight
-    off the real corpus — the instrument spec, admission, and every other
-    day's fill all stay genuine. Only the named day's bar is overridden, and
-    only ``open``/``high``/``low``/``close``/``volume``/``last`` change: the
-    real ceiling/floor/reference for that day (already real HSX ±7% band
-    arithmetic) are kept as-is.
-    """
-
-    def __init__(self, root, *, ticker: str, day: str, side: Side):
-        super().__init__(root)
-        self._ticker = ticker
-        self._day = date.fromisoformat(day)
-        self._side = side
-
-    def _is_locked(self, ticker, ts) -> bool:
-        d = ts.date() if isinstance(ts, datetime) else ts
-        return ticker == self._ticker and d == self._day
-
-    def _frozen(self, state):
-        edge = state.ceiling if self._side is Side.BUY else state.floor
-        return replace(state, last=edge, locked_side=self._side,
-                       lock_evidence=LockEvidence.BAR_PROXY)
-
-    def state_at(self, ticker, ts):
-        state = super().state_at(ticker, ts)
-        if state is None or not self._is_locked(ticker, ts):
-            return state
-        return self._frozen(state)
-
-    def states(self, ticker, start, end, *, resolution=Resolution.DAILY):
-        for state in super().states(ticker, start, end, resolution=resolution):
-            yield self._frozen(state) if self._is_locked(ticker, state.ts) else state
-
-    def interval(self, ticker, start, end, *, resolution=Resolution.DAILY):
-        interval = super().interval(ticker, start, end, resolution=resolution)
-        if interval is None or not self._is_locked(ticker, start):
-            return interval
-        state = self._frozen(interval.state)
-        edge = state.ceiling if self._side is Side.BUY else state.floor
-        return replace(
-            interval, state=state, open=edge, high=edge, low=edge, close=edge,
-            volume=0,
-            missing=interval.missing - {DataField.VOLUME, DataField.OPEN,
-                                        DataField.HIGH, DataField.LOW,
-                                        DataField.CLOSE, DataField.LAST})
 
 
 def run_j11() -> dict:
