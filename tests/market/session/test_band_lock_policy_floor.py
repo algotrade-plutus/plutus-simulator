@@ -12,7 +12,7 @@ from plutus.market.protocol import (MarketState, Order, OrderType, Resolution,
                                     SessionPhase, Side)
 from plutus.market.session.fills import (HardFillPolicy, ProbabilisticFillPolicy,
                                          SoftFillPolicy)
-from plutus.market.session.types import (FillOutcome, MarketInterval,
+from plutus.market.session.types import (DataField, FillOutcome, MarketInterval,
                                          OrderRecord, OrderState, TimeInForce,
                                          Venue)
 
@@ -45,9 +45,11 @@ def test_soft_fills_the_assumed_band_lock_at_the_edge():
 
 def test_hard_is_indeterminate_on_the_assumed_band_lock():
     d = HardFillPolicy().evaluate(_order(), _collapsed_bar(), HSX_EXCHANGE)
-    # d.missing == {DataField.FILL_UNOBSERVABLE_AT_RESOLUTION}: this is the
-    # touch/time-priority INDETERMINATE, not a participation-cap (VOLUME) one.
     assert d.outcome is FillOutcome.INDETERMINATE
+    # This is the touch/time-priority INDETERMINATE, not a participation-cap
+    # (VOLUME) one: missing names FILL_UNOBSERVABLE_AT_RESOLUTION and nothing
+    # else -- DataField.VOLUME (the cap's own indeterminate field) is absent.
+    assert d.missing == frozenset({DataField.FILL_UNOBSERVABLE_AT_RESOLUTION})
 
 
 def test_probabilistic_draws_on_the_assumed_band_lock():
