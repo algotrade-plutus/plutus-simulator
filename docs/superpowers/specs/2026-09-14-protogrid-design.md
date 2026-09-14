@@ -82,14 +82,13 @@ Tier-2 cost-fidelity lever.
   earlier sell's proceeds are still locked T+2, while the naive arm re-buys
   instantly. That divergence is the T+2 demonstration.
 - Total inventory per grid is bounded by the funded rung count (§6).
-- **Continuous across re-anchors (start flat once, at the run's start).** A
-  monthly re-anchor recomputes only the *buy-rung price levels* for new buys around
-  the new month-open; **held inventory and its paired sell orders persist** at their
-  original levels — the grid is not force-flattened each month. (Decision point for
-  review: the alternative is independent monthly episodes that liquidate residual
-  inventory at each month-end — cleaner episodes and a regular month-boundary T+2
-  hit, more directly SB-comparable, but less grid-realistic and higher turnover.
-  The continuous rule is the default here; confirm or switch at review.)
+- **Continuous across re-anchors (start flat once, at the run's start)** —
+  *confirmed 2026-09-14*. A monthly re-anchor recomputes only the *buy-rung price
+  levels* for new buys around the new month-open; **held inventory and its paired
+  sell orders persist** at their original levels — the grid is not force-flattened
+  each month. (The rejected alternative was independent monthly episodes that
+  liquidate residual inventory at each month-end — cleaner episodes and a regular
+  month-boundary T+2 hit, but higher turnover and less grid-realistic.)
 
 ### 3d. Admission dynamics this produces (the point of tick + fixed ladder)
 - **BAND_LIMIT:** a buy rung priced below today's floor is an illegal price — the
