@@ -127,15 +127,20 @@ predicted. The ``NO_FILL`` shape is real and is reachable (an ask ladder that
 is coherent and simply starts above our limit); it is not what a real Vietnamese
 lock looks like in this data. Both are tested.
 
-The asymmetry this closes
+Where band lock actually lives
 ------------------------------------------------------------------------
-``exchanges/equity.py``'s ``BAND_LOCK`` rule refuses a marketable order **at
-entry** when ``state.locked_side`` matches its side. Nothing at *fill* time
-read that field, so the identical order, already resting, filled at the same
-instant. That gap is now closed once, for every fill policy, by
-``fills.band_lock_decision``, which reads the same ``interval.state`` fields
-the admission rule reads. ``fills.BaseFillPolicy._dispatch`` calls it before
-``_continuous`` runs -- for every policy, not book-walk alone.
+``exchanges/equity.py`` used to refuse a marketable order **at entry** when a
+``state.locked_side`` field matched its side. Increment 1 removed that rung:
+band lock is now decided once, at fill time, for every policy, by
+``fills.band_lock_decision`` -- a pure, evidence-graded **fillability check**,
+not an admission gate. It does not read whatever the old admission field did;
+it walks the daily OHLC/volume/book ladder described in its own docstring,
+consulting ``interval.state`` only for the ceiling/floor edge the order is
+tested against. ``fills.BaseFillPolicy._dispatch`` calls it before
+``_continuous``/``_auction`` runs, for every policy including this one -- so
+by the time :func:`walk_book` is reached, the order has already cleared (or
+been resolved by) that daily-evidence gate; the book-level refusals below are
+this module's own, independent layer on top of it.
 
 Composition with the participation cap
 ------------------------------------------------------------------------

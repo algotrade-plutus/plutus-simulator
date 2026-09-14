@@ -103,6 +103,7 @@ def test_b7_buy_no_low_signal_is_indeterminate():
         _interval(high=None, low=None, close=CEIL, volume=0,
                   missing={DataField.LOW, DataField.HIGH, DataField.OPEN}))
     assert d is not None and d.outcome is FillOutcome.INDETERMINATE
+    assert "BAND_LOCK" in d.reason
 
 
 # ---- SELL into the floor (limit-down), continuous ---------------------------
