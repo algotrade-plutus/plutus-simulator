@@ -1,0 +1,44 @@
+# root: $HERMES_PARQUET
+
+[A1 true lock (BUY, PROVEN no-fill)] PTG 2021-02-17 BUY LO
+    note: Design named DAN 2022-01-04 for this rung; VERIFIED WRONG (task-2 and this task, independently): DAN is UPCOM and its real bar is a collapse with volume=1800 (the ASSUMED tier), not a proven lock. Substituted PTG 2021-02-17 -- the ONLY buy-side full-session collapse (O=H=L=C=ceiling) with absent quote_dailyvolume in the whole corpus (8,611 candidates scanned, 8,610 carry positive volume). PTG is a dormant UPCOM penny stock (~13y of history, almost no recorded volume); its ceiling(0.1)/floor(0.2) are inverted from the usual ceiling>floor shape on this, its very first row in the corpus -- a data artifact worth flagging, but irrelevant to a BUY test, which never reads the floor.
+    band  ceil=0.1 floor=0.2 (session read as continuous)
+    ohlc  O=0.1 H=0.1 L=0.1 C=0.1 vol=None book=no missing=['book_size', 'volume']
+    -->   NO_FILL: BAND_LOCK: BUY into a 0.1 lock at the session; the bar collapsed on the edge with no trade recorded (trắng bên bán), so it rests but cannot cross the lock
+
+[A2 true lock (SELL mirror)] PTG 2021-05-28 SELL LO
+    note: Not in the design's list; added because the floor-side scan (5,535 candidates) found the same shape -- 183 absent-volume days, and every single one of them is this same PTG, now trading a normal (floor < ceiling) band. Confirms the Case A finding is not one anomalous row.
+    band  ceil=0.2 floor=0.1 (session read as continuous)
+    ohlc  O=0.1 H=0.1 L=0.1 C=0.1 vol=None book=no missing=['book_size', 'volume']
+    -->   NO_FILL: BAND_LOCK: SELL into a 0.1 lock at the session; the bar collapsed on the edge with no trade recorded (trắng bên mua), so it rests but cannot cross the lock
+
+[B  traded-through] DMN 2022-01-06 BUY LO
+    note: Design's own candidate. Verified as named, no substitution: real bar is O=12.7 H=14.7 L=12.7 C=14.7 ceiling=14.7 -- closed AT the cap but traded up from 12.7 intraday, so low < ceiling -> traded-through -> passthrough. This is exactly the over-assertion the design fixes: the old close==ceiling proxy would have called this a lock.
+    band  ceil=14.7 floor=10.9 (session read as continuous)
+    ohlc  O=12.7 H=14.7 L=12.7 C=14.7 vol=1500 book=no missing=['book_size']
+    -->   PASSTHROUGH (policy fills)
+
+[D  ATO-lock, as named] NXT 2022-01-27 BUY ATO
+    note: Design's own candidate. The ticker-day is real and IS a genuine ATO-lock candidate (open=13.4=ceiling) -- verified, no substitution of the day. But the naive expectation (NO_FILL) is WRONG: real day volume is 4,900 (>0) because the price fell to 11.6 later in continuous trading, and the daily volume field cannot separate 'the opening cross traded' from 'the afternoon traded'. So the verified verdict is PASSTHROUGH via the ASSUMED tier, not NO_FILL -- the same daily-volume coarsening as the key finding, on the ATO instant instead of the whole-session one.
+    band  ceil=13.4 floor=10.0 (session read as opening_auction)
+    ohlc  O=13.4 H=13.4 L=11.6 C=11.8 vol=4900 book=no missing=['book_size']
+    -->   PASSTHROUGH (policy fills)
+
+[D  same-day continuous contrast] NXT 2022-01-27 BUY LO
+    note: Added to show the phase-appropriate instant in action on the SAME underlying day the design paired with Case D: a continuous order tests the session low (11.6 < 13.4 -> traded-through), which is the 'fill for a continuous order same day' half of the design's Case D narrative (section 3c). Lands on the same PASSTHROUGH outcome as the ATO row above for this real day, but by the traded-through path B4 (low < ceiling), not the ASSUMED path B6 (collapsed-at-open, volume>0) the ATO row takes -- band_lock_decision returns a bare None for a passthrough either way, with no field that tells the two apart, so only the OHLC row printed above (open vs low, against the same ceiling) distinguishes which path fired.
+    band  ceil=13.4 floor=10.0 (session read as continuous)
+    ohlc  O=13.4 H=13.4 L=11.6 C=11.8 vol=4900 book=no missing=['book_size']
+    -->   PASSTHROUGH (policy fills)
+
+[D' ATO-lock, clean NO_FILL] PTG 2021-02-17 BUY ATO
+    note: Bonus: no ticker-day in the corpus satisfies the textbook 'opened locked, fell later, whole-day volume absent' pattern (checked: of 15,903 real open==ceiling candidates corpus-wide, exactly 1 has absent volume, and it is this same flat PTG day, not a 'fell later' one). Reused PTG here only to show the ATO NO_FILL branch genuinely fires when the evidence supports it, on the same dormant name as Case A.
+    band  ceil=0.1 floor=0.2 (session read as opening_auction)
+    ohlc  O=0.1 H=0.1 L=0.1 C=0.1 vol=None book=no missing=['book_size', 'volume']
+    -->   NO_FILL: BAND_LOCK: BUY into a 0.1 lock at the opening auction; the bar collapsed on the edge with no trade recorded (trắng bên bán), so it rests but cannot cross the lock
+
+[U  INDETERMINATE (data gap)] CFPT2010 2021-02-17 BUY LO
+    note: Design asked for 'an UNKNOWN/data-gap example' if findable. Found by scanning for close+ceiling present but the session LOW (quote_min) row absent: CFPT2010 (an FPT covered warrant) closed AT its ceiling (26.15) that day -- marketable -- but carries no LOW at all, so the continuous BUY test has no instant to check the edge against.
+    band  ceil=26.15 floor=15.75 (session read as continuous)
+    ohlc  O=21.0 H=None L=None C=26.15 vol=45100 book=no missing=['book_size', 'high', 'low']
+    -->   INDETERMINATE: BAND_LOCK: this BUY order is marketable into the ceiling of 26.15, but the session carries no price to test against it, so whether it would have filled cannot be established
+

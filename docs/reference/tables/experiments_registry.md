@@ -99,6 +99,21 @@ traded bar fills at the edge, and this OOS window contains no ticker-day that
 both collapsed to the band **and** recorded zero volume — the residual
 true-lock population is empirically empty here, not assumed away.
 
+**Band-lock ladder audit (corpus-wide, owner-signed-off 2026-09-14).** SB's own
+zero count is not a fluke of one OOS window: a full-corpus scan
+(`measurements/band_lock_ladder_audit.py`, snapshot
+`measurements/band_lock_ladder_audit_output.txt`) of every genuine
+full-session collapse, 2021-02-05 → 2022-12-30, found **8,610 of 8,611
+(99.99%)** buy-side candidates carry positive `quote_dailyvolume` →
+**ASSUMED** (policy-dependent; `soft` fills at the edge); only **1** — PTG, a
+dormant UPCOM penny stock — is a proven `NO_FILL`. So at **daily** resolution
+band-lock is ASSUMED-dominant: the proven "band refuses the fill" is a
+**tick-resolution** effect (the Grid/Pair book tier, B1–B3/S1–S3), not
+something a daily, monthly-rebalance strategy like SB should ever expect to
+hit — consistent with the `band_lock_no_fills: 0` measured above. See design
+doc §4d/§4e
+(`docs/superpowers/specs/2026-09-10-band-lock-fillability-design.md`).
+
 ---
 
 ## Grid · MM · Pair — pending (Phases 1–3)
