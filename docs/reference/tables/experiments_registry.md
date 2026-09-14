@@ -85,8 +85,12 @@ silent transition — it cannot be read off `advance_to`'s event stream),
 `Accepted` order marketable into a close-at-the-band day
 (`DataHubSource.state_at(ticker, day).locked_side` matching the order's side)
 that never turns up in a fill event over its rebalance window is a band-lock
-no-fill. Of the **49** such candidates this run touched (the fresh count under
-this classifier — not directly comparable to Increment 1's **45**, which was
+no-fill. The runner now emits this candidate population as its own
+`band_lock_candidates` output field, alongside `band_lock_no_fills` — so both
+numbers below reproduce directly from the provenance command above, rather
+than from the uncommitted scratch script Increment 2 was first measured with.
+Of the **49** candidates this run touched (the fresh count under this
+classifier — not directly comparable to Increment 1's **45**, which was
 measured under the older admission-time-rejection regime; accepting rather
 than rejecting those orders changes downstream cash and holdings, so which
 later orders even get submitted diverges too), **all 49 resolved to fills**:
