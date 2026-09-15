@@ -14,7 +14,8 @@ import pytest
 from plutus.execution import PlutusBackend
 from plutus.market.protocol import Order
 from plutus.core.order import OrderType, Side
-from plutus.market.session import Accepted, Cancelled, Amended
+from plutus.market.session import (Accepted, Cancelled, Amended, Charge,
+                                    Pool, Transferred)
 
 FIXTURES = str(Path(__file__).resolve().parents[1].parent / "strategies" / "fixtures" / "parquet")
 
@@ -63,6 +64,32 @@ def test_backend_amends_a_resting_equity_order():
                                order_type=OrderType.LIMIT, limit_price=Decimal("70.0")))
     out = backend.amend(ack.order_id, quantity=500)
     assert isinstance(out, Amended)
+
+
+def test_backend_moves_cash_between_pools():
+    # the funding-on-demand mechanism: cash only moves between the two
+    # segregated pools (securities <-> derivatives) on an explicit transfer
+    backend = PlutusBackend.from_config(BASE_CONFIG)
+    moved = backend.transfer(Pool.SECURITIES, Pool.DERIVATIVES, Decimal("1000000"))
+    assert isinstance(moved, Transferred)
+    assert moved.source == Pool.SECURITIES
+    assert moved.destination == Pool.DERIVATIVES
+    assert moved.amount == Decimal("1000000")
+    # debited immediately from the securities settled balance -- no auto-transfer
+    assert backend.cash().settled_balance == Decimal("200000000") - Decimal("1000000")
+
+
+def test_backend_reports_charges_levied_so_far():
+    # the Tier-1 fee read: every Charge levied so far, across both pools
+    backend = PlutusBackend.from_config(BASE_CONFIG)
+    assert backend.charges() == ()
+    ack = backend.submit(Order(ticker="FPT", side=Side.BUY, quantity=1000,
+                               order_type=OrderType.LIMIT, limit_price=Decimal("74.0")))
+    assert isinstance(ack, Accepted)
+    PlutusBackend.fills(backend.advance_to(datetime(2022, 11, 9, 13, 0)))
+    charges = backend.charges()
+    assert charges, "expected at least one charge levied against the filled buy"
+    assert all(isinstance(c, Charge) for c in charges)
 
 
 @pytest.mark.skipif(not os.environ.get("PLUTUS_DATA_ROOT"),
