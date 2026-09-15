@@ -14,7 +14,7 @@ import pytest
 from plutus.execution import PlutusBackend
 from plutus.market.protocol import Order
 from plutus.core.order import OrderType, Side
-from plutus.market.session import Accepted
+from plutus.market.session import Accepted, Cancelled, Amended
 
 FIXTURES = str(Path(__file__).resolve().parents[1].parent / "strategies" / "fixtures" / "parquet")
 
@@ -43,6 +43,26 @@ def test_backend_submits_and_fills_the_j1_buy():
     assert fills, "expected a fill for the marketable FPT buy at the day's close"
     assert fills[0].price == Decimal("74.0")
     assert fills[0].quantity == 1000
+
+
+def test_backend_cancels_a_resting_order():
+    backend = PlutusBackend.from_config(BASE_CONFIG)
+    # a buy LIMIT below the 74.0 close is not marketable, so it rests
+    # (70.0 stays inside that day's price band; the band floor is 68.2)
+    ack = backend.submit(Order(ticker="FPT", side=Side.BUY, quantity=1000,
+                               order_type=OrderType.LIMIT, limit_price=Decimal("70.0")))
+    assert isinstance(ack, Accepted)
+    out = backend.cancel(ack.order_id)
+    assert isinstance(out, Cancelled)
+    assert out.cancelled_quantity == 1000
+
+
+def test_backend_amends_a_resting_equity_order():
+    backend = PlutusBackend.from_config(BASE_CONFIG)
+    ack = backend.submit(Order(ticker="FPT", side=Side.BUY, quantity=1000,
+                               order_type=OrderType.LIMIT, limit_price=Decimal("70.0")))
+    out = backend.amend(ack.order_id, quantity=500)
+    assert isinstance(out, Amended)
 
 
 @pytest.mark.skipif(not os.environ.get("PLUTUS_DATA_ROOT"),

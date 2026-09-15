@@ -11,9 +11,11 @@ from __future__ import annotations
 import json
 import tempfile
 from datetime import datetime
-from typing import List, Mapping, Union
+from decimal import Decimal
+from typing import List, Mapping, Optional, Union
 
-from plutus.market.session import ExchangeSession, Accepted, Rejected, Event
+from plutus.market.session import (ExchangeSession, Accepted, Rejected, Event,
+                                    Cancelled, Amended, OrderId)
 from plutus.market.protocol import Order
 
 
@@ -53,6 +55,25 @@ class PlutusBackend:
     # -- operations --------------------------------------------------------
     def submit(self, order: Order) -> Union[Accepted, Rejected]:
         return self.session.submit(order)
+
+    def cancel(self, order_id: OrderId) -> Union[Cancelled, Rejected]:
+        """Cancel a resting order — the maker requote / risk-pull seam.
+
+        A derivatives requote is cancel-and-resubmit (not amend): the session
+        refuses a derivatives ``amend`` so the margin requirement is re-run on a
+        fresh submit. Feed ``ack.order_id`` from the order's ``submit`` Accepted.
+        """
+        return self.session.cancel(order_id)
+
+    def amend(self, order_id: OrderId, *, quantity: Optional[int] = None,
+              limit_price: Optional[Decimal] = None) -> Union[Amended, Rejected]:
+        """Amend a resting order in place (equity strategies).
+
+        Re-runs admission and funding. Refused for derivatives orders by the
+        session — cancel and resubmit there.
+        """
+        return self.session.amend(order_id, quantity=quantity,
+                                  limit_price=limit_price)
 
     def advance_to(self, ts: datetime) -> List[Event]:
         return self.session.advance_to(ts)
