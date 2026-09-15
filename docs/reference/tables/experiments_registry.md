@@ -189,10 +189,124 @@ truth — read, not re-derived).
 
 ---
 
-## MM · Pair — pending (Phases 2–3)
+## MM — ProtoMarketMaker — pending (Phase 2)
 
-The futures market-maker (ProtoMarketMaker) and the cross-market pair (ProtoPair)
-are the high-intensity remainder of the spectrum; their rows land as each phase
-completes. The synthetic corroborators (population E1, the 381-book E2 re-dating,
-the equity-admission lag) are retained in `t4_measured_results.md` and quoted as
+The futures market-maker is the third point on the spectrum (SB → Grid →
+**MM** → Pair); its row lands once that phase completes. The synthetic
+corroborators (population E1, the 381-book E2 re-dating, the
+equity-admission lag) are retained in `t4_measured_results.md` and quoted as
 large-n backbone when page room allows.
+
+---
+
+## Pair — ProtoPair (cross-market VN30 basket vs `VN30F1M` future) · the settlement-asymmetry capstone
+
+The **fourth and final point** on the spectrum (SB → Grid → MM → **Pair**),
+and the only strategy that trades **two venues and two segregated pools at
+once**: an equal-lot VN30 proxy basket (long, HSX) against the front-month
+`VN30F1M` future (short, HNXDS). It is therefore the only point that
+exercises **settlement asymmetry** — the equity leg settles **T+2**, the
+futures leg settles **daily variation margin in cash**, and a naive
+single-ledger backtest nets both same-day and never sees the gap. ProtoPair
+inherits every lower-intensity axis the earlier phases established (equity
+admission, the futures margin ladder, T+2 recycling) plus two axes unique to
+it: the **no-short-sale asymmetry** (no operational stock short-selling in
+Vietnam, so only the future-rich side of the basis is executable — the
+mirror side is sat out and its forgone-signal count is itself a Tier-1
+finding) and the **continuous→dated-contract roll**. In-sample window
+2022-01-01 → 2023-12-31 (498 aligned trading days, 25 distinct dated
+front-month contracts). Like ProtoGrid, ProtoPair is an **execution-fidelity
+demonstrator**: settlement asymmetry (Tier-1) is the headline, P&L is Tier-2
+and de-emphasized — see `proto/ProtoPair/docs/hypothesis.md`
+(`rivf26-fidelity-not-pnl`).
+
+**Modelling choices (faithful arm).** Two venues (`['HSX','HNXDS']`), two
+segregated pools (securities / derivatives, no auto-transfer between them);
+capital **600,000,000đ** with a **comfortable** deposit target
+(**80,000,000đ**) as the headline and a **thin** deposit target
+(**62,000,000đ**) run as a stress variant (same capital, tighter derivatives
+buffer); `soft` fill policy as the headline, with a `hard` variant run for
+comparison; **T+2 settlement ON, sale advance OFF** as the headline (a
+T+2-locked equity sale cannot fund a same-session futures need), with a
+sale-advance-ON variant run to isolate the effect; the real dated derivatives
+PIT margin-ratio ladder (**0.13 → 0.17 on 2022-12-15**); daily resolution.
+Both arms read one identical frozen daily slice (`data/market/`).
+
+**Tier-1 (sign-free, the headline) — settlement asymmetry leads.** Of the
+naive engine's 22 executable (long-basket/short-future) entries, **16 stall
+on exit (72.7%)** — the equity legs bought to open cannot be sold again
+until they clear T+2, holding the position open **758 name-days** longer
+than the naive single ledger would (entry-side stalls: **0** — the
+funding-on-demand coordinator absorbs the entry side; it is the exit/closing
+sell of the equity leg where the pure T+2 hold bites). **Funding:** every
+one of the 22 entries needs an on-demand transfer (the derivatives pool
+opens at zero); all 22 are **`funded_in_aggregate`** and successfully funded
+— **22 cross-pool transfers, Σ1,760,000,000đ** — with **21 sweep-backs**
+(Σ1,701,303,129đ) returning the deposit to securities once each futures leg
+flattens, one fewer than the transfer count because the 22nd cycle's futures
+leg is still open at the window's end. **Abandonment is 0 at the headline**
+(and 0 again under the thin deposit ladder — Σ1,364,000,000đ
+transferred/Σ1,323,303,129đ swept back) — not because the abandon path is
+unreachable, but because this IS window never happens to starve it: a
+dedicated thin-book probe (2022-04-18, securities cash deliberately cut to
+209,839,500đ against a 205,725,000đ basket notional) demonstrates the path
+firing correctly once the shortfall (38,300,600đ) exceeds what the other
+pool can cover (3,750,361đ available) — `funded_in_aggregate=False` →
+**abandoned=True**, the 30 equity legs already placed are cancelled, no
+naked basket left resting. **Margin call / forced liquidation: 0/0**, at
+both the comfortable and the thin deposit target — the 2-contract
+derivatives size never stresses the ladder in this window. **Expiry:** both
+of the window's 2 dated-contract expiries needed a **`CLOSE_PROXY`**
+substitution (2/2). **No-short opportunity-set asymmetry:** the executable
+side fills **22/22 (100%)**; the mirror side (short-basket/long-future — 17
+actual naive-engine mirror trades, out of 29 SIT_OUT signal-days the pure
+signal registered) is refused **17/17 (100%)** — Vietnam's no operational
+stock short-sale makes the mirror side structurally unexecutable, not merely
+less profitable. **Refusals by cause:** essentially all land on HSX —
+**`UNSETTLED_HOLDING` 459** (these are mirror-side HSX sells with no settled
+deliverable — every leg of a mirror-side sell attempt lacks a *settled*
+position to deliver, whether the name was never held at all or was simply
+bought too recently to have cleared T+2 yet; not just never-held names) —
+with nothing persisting on HNXDS (the 22 initial `INSUFFICIENT_DEPOSIT`
+refusals there are all cured by the on-demand transfer above, so none
+survive as a final refusal). **Fill-policy spread** (indeterminate rate):
+`soft` **2.2%** (1,236 fills / 1,803 evaluations), `hard` **96.8%** (0
+fills) — at daily resolution with no book, the conservative `hard` policy
+cannot establish which side of an ambiguous bar actually traded and
+collapses to `INDETERMINATE` almost every time, the same
+tick/daily-resolution effect SB's and Grid's own fill-policy spreads already
+surface.
+
+**Attribution: the exit stall is a pure T+2 buy-side lag, not a cash-timing
+artifact.** Toggling `advance_sale_proceeds` ON does **not** move the exit
+stall count at all — 16 stalls with the advance off, 16 with it on. That is
+expected, not a bug: the sale advance only accelerates *sale* proceeds
+becoming available; the 16 stalls are **unsettled-*purchase*** stalls — the
+equity legs bought to open the position have not yet cleared T+2 by the
+time the signal says exit, and no amount of advancing *sale* proceeds
+touches when a *purchase* settles. This isolates the finding to the pure
+T+2 equity-settlement lag, independent of the funding-side sale-advance
+policy Grid's own Tier-1 varies.
+
+**Tier-2 (de-emphasized).** Naive Sharpe **+0.7183** → faithful **−0.7940**
+(Δ ≈ −1.51); HPR **+3.50%** → **−3.16%** (Δ ≈ −6.66 pp); max drawdown
+**2.32%** → **4.35%** (Δ ≈ +2.03 pp, roughly double). Nothing is gated on
+this: like Grid, ProtoPair demonstrates settlement fidelity, not alpha
+(memory: fidelity, not P&L) — and per `docs/hypothesis.md`'s
+`rivf26-fidelity-not-pnl` framing, this row may be omitted from the paper
+entirely.
+
+**Provenance / regenerate:**
+```bash
+cd proto/ProtoPair                 # branch rivf-2026
+pp-extract                          # freeze the daily slice (Drive-hosted; algotradeDB freeze folds in separately, pp-freeze-db)
+python -m proto_pair.experiments.pair_anchor   # naive vs faithful -> result/pair_anchor/is.json
+```
+The naive arm reproduces its committed baseline exactly
+(`tests/test_regression_baseline.py`, `tests/test_oos_regression.py`, and
+`plutus check` against `.plutus/manifest.yaml`); the faithful Tier-1 tallies
+above are the `faithful` block of `result/pair_anchor/is.json` (the source
+of truth — read, not re-derived). The credibility pre-check underlying the
+signal (IS basis ADF p ≈ 2.9507e-10, OU half-life ≈ 1.14 trading days) is
+itself reproducible from a committed script: `pp-credibility` →
+`result/credibility/is.json`.
