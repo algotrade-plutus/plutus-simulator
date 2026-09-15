@@ -12,10 +12,11 @@ import json
 import tempfile
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Mapping, Optional, Union
+from typing import List, Mapping, Optional, Tuple, Union
 
 from plutus.market.session import (ExchangeSession, Accepted, Rejected, Event,
-                                    Cancelled, Amended, OrderId)
+                                    Cancelled, Amended, Charge, OrderId, Pool,
+                                    Transferred)
 from plutus.market.protocol import Order
 
 
@@ -75,6 +76,18 @@ class PlutusBackend:
         return self.session.amend(order_id, quantity=quantity,
                                   limit_price=limit_price)
 
+    def transfer(self, source: Pool, destination: Pool,
+                 amount: Decimal) -> Union[Transferred, Rejected]:
+        """Move cash between the two segregated pools (securities <-> derivatives).
+
+        The funding-on-demand seam: there is no auto-transfer, so a strategy
+        that needs to fund a margin call or reclaim idle deposit must call
+        this explicitly. Delegates to ExchangeSession.transfer, which bounds
+        the move by ``Cash.available`` out of securities and by
+        ``MarginView.free_deposit`` out of the deposit.
+        """
+        return self.session.transfer(source, destination, amount)
+
     def advance_to(self, ts: datetime) -> List[Event]:
         return self.session.advance_to(ts)
 
@@ -95,6 +108,15 @@ class PlutusBackend:
 
     def margin(self):
         return self.session.margin()
+
+    def charges(self) -> Tuple[Charge, ...]:
+        """Every Charge levied so far, itemised, across both pools.
+
+        The Tier-1 fee read: a thin passthrough to ``ExchangeSession.charges``
+        for a strategy that needs to account for what trading has actually
+        cost so far.
+        """
+        return self.session.charges()
 
     def indeterminate_report(self):
         return self.session.indeterminate_report()
