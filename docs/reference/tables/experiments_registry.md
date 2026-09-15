@@ -189,13 +189,111 @@ truth — read, not re-derived).
 
 ---
 
-## MM — ProtoMarketMaker — pending (Phase 2)
+## MM — ProtoMarketMaker (VN30 index futures, 15s-cadence two-sided quoting) · the derivatives market-maker
 
-The futures market-maker is the third point on the spectrum (SB → Grid →
-**MM** → Pair); its row lands once that phase completes. The synthetic
-corroborators (population E1, the 381-book E2 re-dating, the
-equity-admission lag) are retained in `t4_measured_results.md` and quoted as
-large-n backbone when page room allows.
+The **third point** on the spectrum (SB → Grid → **MM** → Pair), and the
+highest-cadence strategy: a two-sided inventory-skewed quoter that requotes
+both sides every **15 seconds** (or immediately on a fill), so the gap
+between a naive fill model and a faithful one is where its edge lives or
+dies. Both arms replay the **identical** pure signal `strategy.quote(price,
+inventory, step)` at the optimized `step=3.1`; the ONLY difference is
+execution. Redated windows: in-sample 2022-01-01 → 2023-12-31 (498 trading
+days), out-of-sample 2024-01-01 → 2025-06-30 (**360 trading days, the
+headline below** — the only MM window that crosses the **KRX matching-engine
+cutover, 2025-05-05**). Like Grid and Pair, ProtoMarketMaker is an
+**execution-fidelity demonstrator**: Tier-1 (the maker-side counters) is the
+headline, P&L is Tier-2 and de-emphasized.
+
+**Modelling choices (faithful arm).** Real đồng throughout: account-level
+derivatives deposit **500,000,000đ** (`initial_deposit`, the same capital as
+the naive engine's 5e5-thousand-đồng once units reconcile), the real VN30F
+multiplier **100,000đ/index-point**, and the **dated VSD initial-margin**
+ratio — **13% before 2022-12-15, 17% on/after** — reached through
+`plutus.market.margin.vsd_initial_margin` per (contract, timestamp), not a
+flat assumption. Fills are decided by a **`book_walk`** policy sweeping the
+frozen depth ladder under the **`conservative`** queue (headline; the OOS
+window starts inside the displayed-size era so the conservative sweep can
+act), with a pre-2023-01-03 **`optimistic`**-queue fallback for windows that
+start before displayed sizes exist. Both arms replay the same frozen
+VN30F1M/F2M L2 depth + tape slice.
+
+**Tier-1 (sign-free, the headline) — OOS, 360 trading days.** The
+maker-queue axis is the first finding: replaying the *same* signal under
+four queue policies swings fills **conservative 402 → probabilistic 560 →
+optimistic 628 → soft (uncapped) 11,185** — a **35.99%**
+conservative-vs-optimistic swing, with the `soft` upper bound sitting almost
+an order of magnitude above the positioned queues. The conservative
+headline's own indeterminate rate is **99.94%** — it can decide almost
+nothing without displayed depth to sweep — and a dedicated pre-2023 probe
+(one week wholly before the size era) shows why: forcing the conservative
+queue there yields **100% INDETERMINATE** (zero fills, all `book_size`),
+because the reconstructed ladder before 2023-01-03 carries no displayed
+sizes at all. **Counter 2, the dated-margin affordability shift:** the same
+500,000,000đ deposit affords **37 contracts** at the 13% VSD-IM rate and
+**28** once it steps to 17% on 2022-12-15 — a **24% (9-contract)**
+affordability cut at an unchanged price — with **zero** margin calls or
+forced liquidations over the OOS run (**0/0**) and a peak margin utilisation
+of **52.3%**. Both of those are **intraday-flat** results: the faithful arm
+builds a fresh backend *per trading day* and flattens at each day's close
+(the naive arm instead carries inventory overnight), so the `0/0` reflects
+no *overnight* accumulation ever reaching a call, and the 52.3% peak reflects
+**intraday inventory build-up** (multiple lots accumulating within a trend
+session), not a near-flat book. **Counter 3, the KRX cutover (2025-05-05):**
+post-cutover fills fall to **65** against **337** pre-cutover (the
+post-cutover span is much shorter, not a decidability effect), and the
+**fill-time** INDETERMINATE rate — `book_size`+`volume`+`book`
+fill-evaluation events over fills-plus-that-sum, the rate that actually
+reconciles with this split — reads **99.92%** post-cutover against **99.94%**
+pre-, i.e. materially unchanged by the KRX matching-engine change; the
+maker-side finding is dominated by queue positioning, not the cutover
+itself. Submit-time `BAND_LIMIT` session rejections are a **separate**,
+largely immaterial channel at this window's resolution — **1,530 events,
+0.22%** of OOS submit attempts (larger in IS, 1,852, where it is likewise a
+submit-time channel, not a fill-decidability one: quoting the *blended*
+top-level indeterminate rate there, 0.7191, would overstate
+fill-undecidability — the clean IS **fill-time** rate is **≈0.4830**,
+matching `krx.pre_indeterminate_rate` exactly once `BAND_LIMIT` is
+excluded). All indeterminate/refusal counts above are **fill-evaluation
+events**, not orders — a resting order can be evaluated indeterminate and
+re-evaluated again on a later tick. **Maker gap:** the naive engine fills
+**910** times over the same OOS window against the faithful arm's **402** —
+a **≈2.3×** gap between assuming every crossing order fills and faithfully
+sweeping the reconstructed book. The naive arm's own OOS Sharpe/HPR
+(**0.766/0.5675**) reproduce the published Task-5/6 anchor **exactly**
+(`matches_published_oos_anchor: true`), so the Tier-1 counters above are
+measured against a naive baseline that is itself pinned.
+
+**Tier-2 (de-emphasized).**
+
+| Metric (daily) | naive | faithful (Plutus) | Δ |
+|---|--:|--:|--:|
+| Sharpe (annualised) | **0.766** | **1.449** | +0.683 |
+| HPR | 56.75% | 31.62% | −25.13 pp |
+| Max drawdown | −13.12% | −1.43% | +11.69 pp |
+
+Nothing is gated on this table — like Grid and Pair, ProtoMarketMaker
+demonstrates execution fidelity, not alpha (fidelity, not P&L) — and here the
+gap is a **doubly** unsafe P&L comparison to over-read: beyond the usual
+naive-vs-faithful execution difference, the faithful arm is
+**intraday-flat** while the naive arm **carries inventory overnight**, so
+part of this Sharpe/HPR/MDD delta is a carry-vs-flat difference, not purely
+an execution-fidelity effect. The Tier-1 counters above are unaffected (they
+are per-fill decisions on the same replayed signal), which is why this table
+stays Tier-2.
+
+**Provenance / regenerate:**
+```bash
+cd proto/ProtoMarketMaker           # branch rivf-2026
+uv run pmm-extract-l2               # freeze the VN30F1M/F2M L2 depth + tape slice
+uv run pmm-anchor                   # naive vs faithful -> result/mm_anchor.json
+```
+The naive arm reproduces its committed baseline exactly
+(`tests/test_regression_baseline.py` and `plutus check` against
+`.plutus/manifest.yaml`); the pre-registered activity/credibility gate
+(naive IS round-trips ≥ 300; faithful forced-liquidations bounded by days —
+never a Sharpe/HPR stop-gate) is `tests/test_proceed_gate.py`. The Tier-1
+tallies above are the `faithful` / `queue_spread` blocks of
+`result/mm_anchor.json` (the source of truth — read, not re-derived).
 
 ---
 
