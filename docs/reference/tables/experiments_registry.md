@@ -116,10 +116,83 @@ doc §4d/§4e
 
 ---
 
-## Grid · MM · Pair — pending (Phases 1–3)
+## Grid — ProtoGrid (equity, tick-resolution paired buy-low/sell-high grid) · the execution-fidelity demonstrator
 
-The equity grid (ProtoGrid), the futures market-maker (ProtoMarketMaker) and the
-cross-market pair (ProtoPair) are the high-intensity end of the spectrum; their
-rows land as each phase completes. The synthetic corroborators (population E1,
-the 381-book E2 re-dating, the equity-admission lag) are retained in
-`t4_measured_results.md` and quoted as large-n backbone when page room allows.
+The **second point** on the spectrum (SB → **Grid**), and the first with real
+execution intensity: a cost-aware paired grid that rests LIMIT orders at every
+rung and works them **tick-by-tick** on the continuous HOSE tape, re-anchored
+each calendar month to that month's open reference price. Three liquid VN30
+names (SSI, TCH, POW), capital **2,000,000,000đ**, 3 grids × 8 rungs, assumed
+round-trip cost **0.4%**. In-sample window 2021-02-17 → 2023-08-31 (637 trading
+days). ProtoGrid is an **execution-fidelity demonstrator**: Tier-1 (the
+execution divergence) is the headline; P&L is Tier-2 and **de-emphasized** — see
+`proto/ProtoGrid/docs/hypothesis.md`.
+
+**Modelling choices (faithful arm).** The *same* grid signals as the naive arm,
+replayed through `PlutusBackend` over the **identical** frozen tick slice:
+`soft` fill policy; orders as **LIMIT at each rung price**; real 100-share HOSE
+lots on the **dated tick grid** (`TICK_GRID` rejects a limit that is off-grid);
+price bands (`BAND_LIMIT` at admission); the **tick book-tier band lock**
+(`TICK_BOOK` evidence read from the resting ask/bid ladder — Grid's payoff over
+SmartBeta's daily-bar proxy); and **T+2 settlement with the sale advance OFF**,
+so a re-buy after a sell stalls on locked cash (`INSUFFICIENT_CASH`). Both arms
+read one identical frozen slice (`data/tick/` matched ticks + `data/band/` daily
+bands).
+
+| Metric (Tier-2, de-emphasized) | naive | faithful (Plutus) | Δ |
+|---|--:|--:|--:|
+| Sharpe (annualised) | **−0.067** | **−0.319** | −0.253 |
+| HPR | −19.0% | −34.2% | −15.2 pp |
+| Max drawdown | −63.1% | −68.1% | −5.0 pp |
+
+**Tier-1 (sign-free, the headline).** The same signals the naive engine fills
+**1,457** times fill only **151** times through the faithful market — close to
+an order-of-magnitude execution collapse, and the whole point of the row.
+Refusals by cause (the admission gauntlet): **`BAND_LIMIT` 6,573** (+ **93**
+graded *indeterminate* at submit), **`TICK_GRID` 2,409** (limit price off the
+dated tick grid), **`INSUFFICIENT_CASH` 248** (buy-side, cash-constrained),
+**`UNSETTLED_HOLDING` 67** (sell-side). The **248 `INSUFFICIENT_CASH`** are
+overwhelmingly a **capital/charge-budget** constraint, not settlement: the grid
+is sized to ~100% of the 2e9 account, so re-running with the sale advance ON
+(proceeds credited T+1 rather than locked to T+2) drops them only **248 → 242**,
+isolating **≈6 genuinely T+2-locked re-buys** (`t2_locked_rebuys: 6`). The
+sell-side **`UNSETTLED_HOLDING` 67** is the T+2 hold on not-yet-settled shares
+(≈unchanged, **67 → 66**, with the advance on). **Fill-time band-lock no-fills:
+6 of 6** — every one of the run's six close-at-the-band candidates failed to
+fill. This is **non-zero here, unlike SB's daily zero**: at Grid's **tick +
+book tier** a genuine full-session lock is observable in the resting ask/bid
+ladder, whereas SB's daily-bar proxy graded the same channel at zero — the
+proven "band refuses the fill" is a **tick-resolution** effect (the Grid/Pair
+book tier), consistent with SB's corpus-wide ladder audit. **Fill-policy spread**
+(indeterminate rate): `soft` **0.0%** (151 fills / 708 evaluations), `hard`
+**99.9%**, `probabilistic` **97.7%** — at tick resolution a bar carries **no
+volume/OHLC**, so the conservative policies cannot establish *which* order filled
+and collapse to `INDETERMINATE`; that rate **is** the finding, reported honestly
+rather than papered over.
+
+**Tier-2 (de-emphasized).** Net of the same assumed 0.4% round-trip cost,
+Sharpe moves **−0.067 → −0.319** and HPR **−19.0% → −34.2%** as fidelity bites,
+and max drawdown deepens **−63.1% → −68.1%**. Nothing is gated on this:
+ProtoGrid demonstrates execution fidelity, not alpha (memory: fidelity, not P&L).
+
+**Provenance / regenerate:**
+```bash
+cd proto/ProtoGrid                 # branch rivf-2026
+pg-extract                         # freeze the tick + daily-band slice (Drive-hosted, ~168 MiB)
+python -m proto_grid.experiments.grid_anchor   # naive vs faithful -> result/grid_anchor/is.json
+```
+The naive arm reproduces its committed baseline exactly
+(`tests/test_regression_baseline.py`, `tests/test_oos_regression.py`, and
+`plutus check` against `.plutus/manifest.yaml`); the faithful Tier-1 tallies
+above are the `faithful` block of `result/grid_anchor/is.json` (the source of
+truth — read, not re-derived).
+
+---
+
+## MM · Pair — pending (Phases 2–3)
+
+The futures market-maker (ProtoMarketMaker) and the cross-market pair (ProtoPair)
+are the high-intensity remainder of the spectrum; their rows land as each phase
+completes. The synthetic corroborators (population E1, the 381-book E2 re-dating,
+the equity-admission lag) are retained in `t4_measured_results.md` and quoted as
+large-n backbone when page room allows.
