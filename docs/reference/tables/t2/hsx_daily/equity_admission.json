@@ -1,0 +1,42 @@
+{
+  "stocks_lag0": {
+    "attempts": 205755,
+    "blocked": 27068,
+    "rate": 0.1315545187237248,
+    "lag": 0,
+    "population": "stocks",
+    "excluded_inverted": 1265,
+    "variant": "same_session_look_ahead",
+    "backs": "paper equity headline: share of naive momentum entries the exchange would not fill"
+  },
+  "stocks_lag1": {
+    "attempts": 205958,
+    "blocked": 12425,
+    "rate": 0.06032783383019839,
+    "lag": 1,
+    "population": "stocks",
+    "excluded_inverted": 1265,
+    "variant": "next_session_tradeable",
+    "backs": "paper equity headline: share of naive momentum entries the exchange would not fill"
+  },
+  "all_instruments_lag0": {
+    "attempts": 205755,
+    "blocked": 27068,
+    "rate": 0.1315545187237248,
+    "lag": 0,
+    "population": "all_instruments",
+    "excluded_inverted": 1265,
+    "variant": "same_session_look_ahead",
+    "backs": "paper equity headline: share of naive momentum entries the exchange would not fill"
+  },
+  "all_instruments_lag1": {
+    "attempts": 205958,
+    "blocked": 12425,
+    "rate": 0.06032783383019839,
+    "lag": 1,
+    "population": "all_instruments",
+    "excluded_inverted": 1265,
+    "variant": "next_session_tradeable",
+    "backs": "paper equity headline: share of naive momentum entries the exchange would not fill"
+  }
+}

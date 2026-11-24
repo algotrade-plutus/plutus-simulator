@@ -1,0 +1,26 @@
+{
+  "HSX all instruments": {
+    "universe": "HSX all instruments",
+    "observations": 186271,
+    "library_conformant": 186271,
+    "naive_conformant": 135872,
+    "unresolvable": 0,
+    "library_rate": 1.0,
+    "naive_rate": 0.7294318492948446,
+    "naive_baseline": "flat 0.1 grid over HSX closes",
+    "off_grid": [],
+    "backs": "paper claim: the library reproduces the exchange tick grid where a naive fixed grid does not"
+  },
+  "HSX stocks": {
+    "universe": "HSX stocks",
+    "observations": 186271,
+    "library_conformant": 186271,
+    "naive_conformant": 135872,
+    "unresolvable": 0,
+    "library_rate": 1.0,
+    "naive_rate": 0.7294318492948446,
+    "naive_baseline": "flat 0.1 grid over HSX closes",
+    "off_grid": [],
+    "backs": "paper claim: the library reproduces the exchange tick grid where a naive fixed grid does not"
+  }
+}

@@ -16,7 +16,7 @@ import json
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import duckdb
 
@@ -66,6 +66,8 @@ def measure_grid_conformity(
     data_root: str,
     *,
     stocks_only: bool = False,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
 ) -> ConformityResult:
     """Fraction of HSX closes lying on the legal grid, library rule vs naive.
 
@@ -73,6 +75,9 @@ def measure_grid_conformity(
     ``None`` -- it is annotated ``-> Decimal`` but falls off the end of its
     band table for prices no band matches. Those are counted as
     non-conformant rather than crashing or being silently skipped.
+
+    ``start``/``end`` bound the closes to ``[start, end)``; both default to
+    open, i.e. every close in ``quote_close``.
 
     The residual is real and is reported, not rounded away: 13 HSX stock
     closes in 2014-2015 sit at two-decimal values inside the 0.05 band (e.g.
@@ -83,6 +88,10 @@ def measure_grid_conformity(
     conn = duckdb.connect()
 
     stock_filter = ("AND tk.instrumenttype = 'stock'" if stocks_only else '')
+    if start is not None:
+        stock_filter += f" AND c.datetime >= '{start}'"
+    if end is not None:
+        stock_filter += f" AND c.datetime < '{end}'"
     rows = conn.execute(f"""
         SELECT c.tickersymbol, c.datetime, c.price
         FROM {_reader(root, 'quote_close')} c
@@ -122,11 +131,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--data-root', required=True)
     parser.add_argument('--json', type=Path, default=None)
+    parser.add_argument('--start', default=None,
+                        help='first close day (inclusive); default: all')
+    parser.add_argument('--end', default=None,
+                        help='last close day (exclusive); default: all')
     args = parser.parse_args()
 
     results: Dict[str, Any] = {}
     for stocks_only in (False, True):
-        r = measure_grid_conformity(args.data_root, stocks_only=stocks_only)
+        r = measure_grid_conformity(args.data_root, stocks_only=stocks_only,
+                                    start=args.start, end=args.end)
         results[r.universe] = r.to_dict()
         print(f'{r.universe:<22} n={r.observations:>9,}  '
               f'library {float(r.library_rate):>8.4%}  '

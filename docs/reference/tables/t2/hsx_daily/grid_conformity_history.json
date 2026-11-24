@@ -1,0 +1,136 @@
+{
+  "HSX all instruments": {
+    "universe": "HSX all instruments",
+    "observations": 1073191,
+    "library_conformant": 1073182,
+    "naive_conformant": 916302,
+    "unresolvable": 0,
+    "library_rate": 0.9999916137947485,
+    "naive_rate": 0.8538107382562843,
+    "naive_baseline": "flat 0.1 grid over HSX closes",
+    "off_grid": [
+      {
+        "ticker": "C47",
+        "date": "2014-06-30",
+        "price": 17.08,
+        "tick": 0.05
+      },
+      {
+        "ticker": "C47",
+        "date": "2014-07-01",
+        "price": 17.08,
+        "tick": 0.05
+      },
+      {
+        "ticker": "C47",
+        "date": "2014-12-03",
+        "price": 16.18,
+        "tick": 0.05
+      },
+      {
+        "ticker": "CCI",
+        "date": "2015-12-04",
+        "price": 11.87,
+        "tick": 0.05
+      },
+      {
+        "ticker": "MCP",
+        "date": "2015-09-23",
+        "price": 11.33,
+        "tick": 0.05
+      },
+      {
+        "ticker": "NLG",
+        "date": "2015-08-21",
+        "price": 19.31,
+        "tick": 0.05
+      },
+      {
+        "ticker": "NLG",
+        "date": "2015-08-24",
+        "price": 19.31,
+        "tick": 0.05
+      },
+      {
+        "ticker": "SVI",
+        "date": "2015-07-14",
+        "price": 30.42,
+        "tick": 0.05
+      },
+      {
+        "ticker": "SVI",
+        "date": "2015-07-15",
+        "price": 30.42,
+        "tick": 0.05
+      }
+    ],
+    "backs": "paper claim: the library reproduces the exchange tick grid where a naive fixed grid does not"
+  },
+  "HSX stocks": {
+    "universe": "HSX stocks",
+    "observations": 1073191,
+    "library_conformant": 1073182,
+    "naive_conformant": 916302,
+    "unresolvable": 0,
+    "library_rate": 0.9999916137947485,
+    "naive_rate": 0.8538107382562843,
+    "naive_baseline": "flat 0.1 grid over HSX closes",
+    "off_grid": [
+      {
+        "ticker": "C47",
+        "date": "2014-06-30",
+        "price": 17.08,
+        "tick": 0.05
+      },
+      {
+        "ticker": "C47",
+        "date": "2014-07-01",
+        "price": 17.08,
+        "tick": 0.05
+      },
+      {
+        "ticker": "C47",
+        "date": "2014-12-03",
+        "price": 16.18,
+        "tick": 0.05
+      },
+      {
+        "ticker": "CCI",
+        "date": "2015-12-04",
+        "price": 11.87,
+        "tick": 0.05
+      },
+      {
+        "ticker": "MCP",
+        "date": "2015-09-23",
+        "price": 11.33,
+        "tick": 0.05
+      },
+      {
+        "ticker": "NLG",
+        "date": "2015-08-21",
+        "price": 19.31,
+        "tick": 0.05
+      },
+      {
+        "ticker": "NLG",
+        "date": "2015-08-24",
+        "price": 19.31,
+        "tick": 0.05
+      },
+      {
+        "ticker": "SVI",
+        "date": "2015-07-14",
+        "price": 30.42,
+        "tick": 0.05
+      },
+      {
+        "ticker": "SVI",
+        "date": "2015-07-15",
+        "price": 30.42,
+        "tick": 0.05
+      }
+    ],
+    "backs": "paper claim: the library reproduces the exchange tick grid where a naive fixed grid does not"
+  }
+}
