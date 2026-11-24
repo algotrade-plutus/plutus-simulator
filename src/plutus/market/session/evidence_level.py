@@ -47,12 +47,13 @@ categorical :class:`AssumptionKind`, and the finer split is derivable from
 from __future__ import annotations
 
 from enum import Enum, IntEnum
+from typing import Optional
 
-from plutus.market.session.types import (FillDecision, FillEvidence,
-                                         FillOutcome)
+from plutus.market.session.types import (Event, EventKind, FillDecision,
+                                         FillEvidence, FillOutcome)
 
 __all__ = ["FillEvidenceLevel", "AssumptionKind", "fill_evidence_level",
-           "assumption_kind"]
+           "assumption_kind", "event_evidence_level"]
 
 
 class FillEvidenceLevel(IntEnum):
@@ -121,3 +122,27 @@ def assumption_kind(decision: FillDecision) -> AssumptionKind:
     if decision.evidence is FillEvidence.TOUCHED_AT_LIMIT:
         return AssumptionKind.TOUCH
     return AssumptionKind.MODELLED
+
+
+def event_evidence_level(event: Event) -> Optional[FillEvidenceLevel]:
+    """The FEL of a session :class:`~plutus.market.session.types.Event`.
+
+    The caller-side reading of :func:`fill_evidence_level`: a strategy sees the
+    events ``advance_to`` returns, not the :class:`FillDecision` behind them, and
+    each event carries what the decision rested on. ``FILLED`` and
+    ``PARTIALLY_FILLED`` are graded from the ``evidence`` they carry,
+    ``INDETERMINATE`` is :attr:`~FillEvidenceLevel.UNEVIDENCED`, and any other
+    kind (an acceptance, a rejection, a margin or settlement event) is not a
+    fill decision and returns ``None``. A definite NO_FILL emits no event, so
+    there is nothing to grade on that side; the order simply stays resting.
+
+    Classification is delegated to :func:`fill_evidence_level`, so the two can
+    never disagree.
+    """
+    if event.kind is EventKind.INDETERMINATE:
+        return FillEvidenceLevel.UNEVIDENCED
+    if event.kind in (EventKind.FILLED, EventKind.PARTIALLY_FILLED):
+        return fill_evidence_level(FillDecision(
+            outcome=FillOutcome.FILL, quantity=event.quantity or 0,
+            price=event.price, evidence=event.detail.get('evidence')))
+    return None

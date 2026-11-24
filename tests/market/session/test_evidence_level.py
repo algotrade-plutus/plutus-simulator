@@ -75,3 +75,37 @@ def test_every_outcome_maps_and_only_assumed_carries_a_kind():
         if assumption_kind(d) is not AssumptionKind.NONE:
             assert level is FillEvidenceLevel.ASSUMED
     assert seen_outcomes == set(FillOutcome)
+
+
+# -- the caller-side reading: grading the events advance_to returns ---------
+
+def _event(kind, evidence=None):
+    from datetime import datetime
+
+    from plutus.market.session.types import Event
+    detail = {} if evidence is None else {"evidence": evidence}
+    return Event(kind=kind, ts=datetime(2022, 11, 9, 15), seq=1,
+                 quantity=100, price=Decimal("10"), detail=detail)
+
+
+@pytest.mark.parametrize("evidence, level", [
+    (FillEvidence.TRADED_THROUGH, FillEvidenceLevel.PROVEN),
+    (FillEvidence.AUCTION_PRICE, FillEvidenceLevel.PROVEN),
+    (FillEvidence.TOUCHED_AT_LIMIT, FillEvidenceLevel.ASSUMED),
+    (FillEvidence.MODELLED, FillEvidenceLevel.ASSUMED),
+])
+def test_a_fill_event_is_graded_like_its_decision(evidence, level):
+    from plutus.market.session.evidence_level import event_evidence_level
+    from plutus.market.session.types import EventKind
+    for kind in (EventKind.FILLED, EventKind.PARTIALLY_FILLED):
+        assert event_evidence_level(_event(kind, evidence)) is level
+        assert level is fill_evidence_level(_fill(evidence))
+
+
+def test_an_indeterminate_event_is_unevidenced_and_other_kinds_are_not_graded():
+    from plutus.market.session.evidence_level import event_evidence_level
+    from plutus.market.session.types import EventKind
+    assert (event_evidence_level(_event(EventKind.INDETERMINATE))
+            is FillEvidenceLevel.UNEVIDENCED)
+    for kind in (EventKind.ACCEPTED, EventKind.REJECTED, EventKind.CANCELLED):
+        assert event_evidence_level(_event(kind)) is None
