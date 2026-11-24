@@ -106,6 +106,35 @@ def test_b7_buy_no_low_signal_is_indeterminate():
     assert "BAND_LOCK" in d.reason
 
 
+def test_buy_no_low_but_close_below_cap_is_passthrough():
+    # The low is absent, but a trade strictly below the ceiling is on record
+    # (low <= close < ceiling), so the session left the edge: traded through.
+    d = band_lock_decision(
+        _order(Side.BUY, CEIL),
+        _interval(high=None, low=None, close=Decimal("13.00"), volume=None,
+                  missing={DataField.LOW, DataField.HIGH, DataField.OPEN}))
+    assert d is None
+
+
+def test_sell_no_high_but_close_above_floor_is_passthrough():
+    # The daily-mark-only shape (no OHLC extreme, no book, no volume) a forced
+    # close at the floor meets: close > floor proves high > floor.
+    d = band_lock_decision(
+        _order(Side.SELL, FLOOR),
+        _interval(high=None, low=None, close=Decimal("12.00"), volume=None,
+                  missing={DataField.LOW, DataField.HIGH, DataField.OPEN}))
+    assert d is None
+
+
+def test_sell_no_high_close_on_floor_is_indeterminate():
+    # SELL mirror of B7: a close on the edge says nothing about the high.
+    d = band_lock_decision(
+        _order(Side.SELL, FLOOR),
+        _interval(high=None, low=None, close=FLOOR, volume=0,
+                  missing={DataField.LOW, DataField.HIGH, DataField.OPEN}))
+    assert d is not None and d.outcome is FillOutcome.INDETERMINATE
+
+
 # ---- SELL into the floor (limit-down), continuous ---------------------------
 
 def test_s4_sell_traded_above_floor_is_passthrough():

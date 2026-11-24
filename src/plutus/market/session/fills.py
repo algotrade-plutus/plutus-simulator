@@ -681,6 +681,15 @@ def band_lock_decision(order: OrderRecord,
             return None if by_book is _PASSTHROUGH else by_book
 
     instant, field = _lock_instant(side, interval)
+    if instant is None and interval.session is SessionPhase.CONTINUOUS:
+        # The continuous extreme is absent, but the close bounds it (low <=
+        # close <= high): a close strictly past the edge is a trade on record
+        # inside the band, so the session left the edge -- traded through. A
+        # close on the edge proves nothing about the extreme and stays below.
+        close = interval.close
+        if close is not None and (close < edge if side is Side.BUY
+                                  else close > edge):
+            return None   # rows B4/S4 by the close bound -> the policy fills
     if instant is None:
         return FillDecision.indeterminate(
             f'BAND_LOCK: this {side.value} order is marketable into the '
