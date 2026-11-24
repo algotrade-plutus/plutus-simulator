@@ -263,5 +263,5 @@ Effect on shipped results:
 - **SB 2022 tie (457 = 457 fills): report as is.** SB is the null anchor (admission-limited only), and a zero
   fill gap is what that predicts. §6 criterion 1's "<" is read as "≤" for SB. Return is still lower
   (−26.21% → −27.08%).
-- **SB base check: Google Drive check not done.** The owner may provide the original inputs. The coordinator's
+- **SB base check: Google Drive check skipped (owner decision).** The DB is the settled source; the coordinator's
   recommendation was to skip it, since the DB is the settled source and the drift is documented with evidence.
