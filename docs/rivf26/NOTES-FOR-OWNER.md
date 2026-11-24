@@ -100,8 +100,13 @@ With the algorithm A (naive MM) held fixed and only the environment changed:
 1. **Fill assumptions dominate the result.** Return ranges from −2.5% to −16.4% (im2022) and from −5.2% to −25.6%
    (krx2025 pre-cutover) across N0–N3, F-opt and F-con. For a market maker the fill model *is* the P&L.
 2. **Naive's bias has no fixed sign.** It flatters takers and grids (SB, Pair, Grid) but penalises this MM through
-   adverse selection: its touch-fill rule fills A as the market runs through the quote. Markout at 5 min per
-   fill: naive −2.24 pts vs faithful −0.78 (first 6 im2022 sessions; the full-window check is running).
+   adverse selection: its touch-fill rule fills A as the market runs through the quote. Full im2022 window
+   (40 sessions, ProtoMarketMaker `result/mm_markout/im2022_markout.md`): 5-min markout per contract N3 −0.71 pts,
+   F-opt +0.41, F-con −0.57; trading P&L N3 −27.9M đ, F-opt +72.4M, F-con +34.7M. The faithful arms take liquidity
+   in 65% / 91% of contracts (median improvement +0.50 / +0.30 pt). **Correction (2026-11-25):** the earlier
+   6-session figures (−2.24 vs −0.78; +76.5M vs −27.3M) came from a script that marked every fill against the F1
+   price on a roll day and zeroed carry at contract switches; they are withdrawn. The effect holds but is smaller,
+   and at 5 min N3 is close to F-con.
 3. **The faithful simulator gives a measured band with attribution**, not one misleading number.
 
 **To claim "closest to the true environment"**, compare with real fills: the handoff's open item, whether the
@@ -114,7 +119,7 @@ and naive can fall outside it in either direction.
 displayed, so every real queue position lies between them for the given data. Caveat: the conservative arm cannot
 place quotes beyond the observed depth (LIMITATIONS #3), which weakens that side of the band.
 (b) adverse selection measured from the tape (markouts);
-(c) no ghost fills (negative 1-min markouts);
+(c) ~~no ghost fills (negative 1-min markouts)~~ withdrawn: F-opt's 1-min markout is +0.21 on the full window;
 (d) exact accounting, complete rolls and dated margin.
 
 Paper claim: "naive can fall outside the faithful band in either direction; the band brackets every queue position
