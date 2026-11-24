@@ -289,7 +289,8 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
 - **Broker fields: 244 confirmed** (18 profiles: 14 firms + PLUTUS_DEFAULT + 3 vintages). Published 110, supplied 0
   as shipped (11 if `fill_from=PLUTUS_DEFAULT`), inferred 21, not published 113. "Published vs supplied" is really
   three-way.
-- **Maintenance effort:** the IM step is data-only (one tuple line), but 0.17 is also copied undated in 3 places.
+- **Maintenance effort:** the IM step is data-only in the engine: 15 rule-data lines in 2 units (one dated tuple
+  line plus the 14-line cited rulebook row) and 0 engine lines, but 0.17 is also copied undated in 3 places.
   The lot change is a code branch. KRX is 79 rule-data / 20 engine lines. The 2016-09-12 tick change is not
   encoded (the rulebook starts 2020-01-01). See `docs/reference/tables/t8_maintenance_effort.md`.
 - **API listing:** 8 lines, executed by `tests/test_api_listing.py` on the shipped fixture.
@@ -307,7 +308,11 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
   against the raw rows. The two band-lock-on-book-session tests are strict xfail (LIMITATIONS #1).
 - **Full unit suite: 2,162 passed, 0 failed, 2 xfailed, 453 skipped** (was 1 failed, 533 skipped).
 - `figures/e1_fill_divergence.json` and `figures/f2_indeterminate_rate.png` are regenerated with the camera-ready
-  values (`t4_camera_ready.md`).
+  values (`t4_camera_ready.md`). **Correction (2026-11-25):** `82a68cf` regenerated only the F2 PNG;
+  `figures/f2_indeterminate_rate.json` still held the old 66-day values (35.8% / 85.6% / 99.7%). It is now
+  re-rendered from `docs/reference/tables/t2/indeterminate_after_change2.json` with
+  `measurements/indeterminate_rate.py --from-json` (90 days, 32.6% / 10.1% / 60.2%); the JSON is byte-identical
+  to that file and the re-rendered PNG is byte-identical to the one committed in `82a68cf`.
 
 ## 4i. Band-edge orders on book sessions; soft market-order evidence (2026-11-25, LIMITATIONS #1 and #5)
 

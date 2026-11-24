@@ -1,73 +1,93 @@
 {
-  "population": "HSX instrument-days with BOTH a daily bar and a reconstructed order book (the extract's local_quote ladder -- its only HSX equity names): 66 days across 3 tickers, 2022-10-20..2022-11-30. A narrow population by design; F2 is a methodological contrast, and 66 days x a three-order probe is thousands of fill evaluations",
-  "instrument_days": 66,
+  "population": "HSX instrument-days with BOTH a daily bar and a reconstructed order book (the extract's local_quote ladder -- its only HSX equity names): 90 days across 3 tickers, 2022-10-20..2022-11-30. A narrow population by design; F2 is a methodological contrast, and 90 days x a three-order probe is thousands of fill evaluations",
+  "instrument_days": 90,
   "tickers": {
-    "FPT": 22,
-    "HPG": 22,
-    "HTV": 22
+    "FPT": 30,
+    "HPG": 30,
+    "HTV": 30
   },
   "arms": [
     {
       "label": "BAR / hard",
       "resolution": "bar",
       "policy": "hard",
-      "evaluations": 698,
-      "indeterminate": 250,
-      "rate": 0.35816618911174786,
-      "ci_low": 0.3234622946217809,
-      "ci_high": 0.39442270987382155,
+      "evaluations": 950,
+      "indeterminate": 310,
+      "rate": 0.3263157894736842,
+      "ci_low": 0.29725224399348016,
+      "ci_high": 0.3567783111388121,
       "by_cause": {
         "fill_unobservable_at_resolution": {
-          "count": 250,
-          "share": 0.35816618911174786,
+          "count": 310,
+          "share": 0.3263157894736842,
           "class": "resolution-limit"
         }
       },
-      "resolution_limit_share": 0.35816618911174786,
+      "resolution_limit_share": 0.3263157894736842,
       "data_ceiling_share": 0.0
     },
     {
       "label": "TICK / book-walk (optimistic)",
       "resolution": "tick",
       "policy": "book_walk:optimistic",
-      "evaluations": 1212,
-      "indeterminate": 1037,
-      "rate": 0.8556105610561056,
-      "ci_low": 0.8346983398779437,
-      "ci_high": 0.8742756745762903,
+      "evaluations": 1484,
+      "indeterminate": 150,
+      "rate": 0.10107816711590296,
+      "ci_low": 0.08675705624513627,
+      "ci_high": 0.11745923106112524,
       "by_cause": {
+        "book": {
+          "count": 48,
+          "share": 0.03234501347708895,
+          "class": "data-ceiling"
+        },
+        "low": {
+          "count": 48,
+          "share": 0.03234501347708895,
+          "class": "data-ceiling"
+        },
         "volume": {
-          "count": 1037,
-          "share": 0.8556105610561056,
+          "count": 102,
+          "share": 0.06873315363881402,
           "class": "data-ceiling"
         }
       },
       "resolution_limit_share": 0.0,
-      "data_ceiling_share": 0.8556105610561056
+      "data_ceiling_share": 0.1334231805929919
     },
     {
       "label": "TICK / book-walk (conservative)",
       "resolution": "tick",
       "policy": "book_walk:conservative",
-      "evaluations": 1545,
-      "indeterminate": 1541,
-      "rate": 0.997411003236246,
-      "ci_low": 0.9933618913847333,
-      "ci_high": 0.9989927432660526,
+      "evaluations": 1650,
+      "indeterminate": 994,
+      "rate": 0.6024242424242424,
+      "ci_low": 0.5785987008614898,
+      "ci_high": 0.6257739723456613,
       "by_cause": {
+        "book": {
+          "count": 48,
+          "share": 0.02909090909090909,
+          "class": "data-ceiling"
+        },
         "book_size": {
-          "count": 650,
-          "share": 0.42071197411003236,
+          "count": 842,
+          "share": 0.5103030303030303,
+          "class": "data-ceiling"
+        },
+        "low": {
+          "count": 48,
+          "share": 0.02909090909090909,
           "class": "data-ceiling"
         },
         "volume": {
-          "count": 891,
-          "share": 0.5766990291262136,
+          "count": 104,
+          "share": 0.06303030303030303,
           "class": "data-ceiling"
         }
       },
       "resolution_limit_share": 0.0,
-      "data_ceiling_share": 0.997411003236246
+      "data_ceiling_share": 0.6315151515151515
     }
   ],
   "finding": "Refining bar->tick does not remove the indeterminacy; it trades the resolution-limit cause (fill_unobservable_at_resolution, dominant at BAR, structurally ZERO at TICK) for data-ceiling causes (book_size/volume). The tick rate depends on the queue assumption (F3's axis): optimistic decides most touches so the rate falls; conservative names the full data ceiling so it does not -- but neither tick arm carries any resolution-limit cause.",

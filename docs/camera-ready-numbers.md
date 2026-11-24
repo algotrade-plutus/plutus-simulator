@@ -16,7 +16,7 @@ PYTHONPATH=src:. python measurements/check_numbers.py --write-doc  # regenerate 
 
 `tests/test_check_numbers.py` runs it against the repo and expects no FAIL.
 
-**Status when generated:** 280 entries: 260 PASS, 0 FAIL, 20 PENDING. The PENDING entries are the T8.3
+**Status when generated:** 284 entries: 264 PASS, 0 FAIL, 20 PENDING. The PENDING entries are the T8.3
 benchmark, the MM markouts (full-window run in progress), the test counts (to refresh at freeze), and numbers
 that so far exist only in prose with no committed result file (S2, J18, the property-test and validator counts).
 
@@ -122,22 +122,26 @@ sha256 of the unshipped population slices (from their working-folder manifests):
 Each item gives both values and both sources. The registry takes the **result file** in every case; the prose
 needs correcting, or the owner decides.
 
-1. **F2 figure data is stale.** `figures/f2_indeterminate_rate.json` (last changed `e1450de`) still holds the
-   old 66-day population: bar 35.8%, tick optimistic 85.6%, tick conservative 99.7%. The camera-ready values are
-   in `docs/reference/tables/t2/indeterminate_after_change2.json`: 90 days, 32.6% / 10.1% / 60.2%.
-   `docs/rivf26/T0-audit.md` §4h says the F2 figure was regenerated; commit `82a68cf` regenerated only the PNG.
-   The registry reads the T2 JSON. Regenerate the figure JSON (or check the PNG was drawn from the new data).
+1. **F2 figure data was stale. Fixed.** `figures/f2_indeterminate_rate.json` held the old 66-day population
+   (bar 35.8%, tick optimistic 85.6%, tick conservative 99.7%), while `docs/rivf26/T0-audit.md` §4h said F2 was
+   regenerated (`82a68cf` changed only the PNG). It is now re-rendered from
+   `docs/reference/tables/t2/indeterminate_after_change2.json` by `measurements/indeterminate_rate.py --from-json`
+   (90 days, 32.6% / 10.1% / 60.2%): the JSON is byte-identical to the T2 file, and the re-rendered PNG is
+   byte-identical to the committed one, so the PNG was already right. §4h is corrected; `f2.figure.*` checks it.
 2. **Unit-test count.** `docs/rivf26/T0-audit.md` §4h: "2,162 passed, 0 failed, 2 xfailed, 453 skipped". The
    coordinating session's later count is 2,169 passed + 2 xfailed, and `pytest --collect-only tests` at
    `7fbe16b` gives 2,624 = 2,169 + 2 + 453 (7 tests added after §4h). Both are superseded at freeze: the
    engine fix in flight turns the 2 xfails into passes, and `tests/test_check_numbers.py` adds 7 tests.
-3. **ProtoPair README engine commit.** `README.md` heads its results "plutus-simulator `0633a5b`"; both
-   `result/pair_anchor/w1.json` and `w2.json` record `plutus_simulator_commit` `b62e163`. The JSON is the run's
-   own record.
-4. **MM contract capacity at the IM step.** The submission (and handoff §5 T5) says 37 → 28. The run gives
-   **36 → 28** (`result/mm_anchor/im2022.json` `faithful.capacity`, 2022-12-14 → 2022-12-15). The
-   ProtoMarketMaker README also gives a static 36 → **27** at 1,059 points, next to the run's 36 → 28: the two
-   differ only in the price used. The registry takes the run (36 → 28).
+3. **ProtoPair README engine commit. Fixed** (ProtoPair `77aa71f`). The README headed its results "plutus-simulator
+   `0633a5b`"; both `result/pair_anchor/w*.json` record `b62e163`, which the README now states.
+4. **MM contract capacity at the IM step: 36 → 28, from the run** (`result/mm_anchor/im2022.json`
+   `faithful.capacity`, 2022-12-14 → 2022-12-15). The plutus-simulator docs written for the camera-ready already
+   say 36 → 28 (`NOTES-FOR-OWNER.md` §2, this map). Left for the owner, not edited:
+   - the submission text and handoff §5 T5 ("37 → 28");
+   - `docs/reference/tables/experiments_registry.md` line 232 ("affords **37 contracts** at the 13% VSD-IM rate and
+     **28** once it steps to 17%"), the record of the old, lost run;
+   - ProtoMarketMaker `README.md` (another agent's repo): a static 36 → **27** at 1,059 points next to the run's
+     36 → 28; the two differ only in the price used.
 5. **MM return for im2022 depends on which faithful arm.** `NOTES-FOR-OWNER.md` §2 and the MM README anchor
    table: faithful +2.19% vs naive −12.93% (flat each session, `result/mm_anchor/im2022.json`). The ladder
    (`result/mm_ladder/im2022.md`, algorithm A with overnight carry): F-con −11.47%, F-opt −2.52%. Both are
@@ -146,15 +150,13 @@ needs correcting, or the owner decides.
    (KRX cutover, fill-evaluation events; the registry text says the rate *fell*, while the paper says "rising")
    compares with krx2025 pre 99.76% (orders) and no post-cutover orders at all (every post-cutover session is
    refused), or with the im2022 IM step: 99.87% → 99.99% (orders). Owner picks the comparison.
-7. **Maintenance effort for the IM step.** `T0-audit.md` §4g and `NOTES-FOR-OWNER.md` §3: "data-only (one tuple
-   line)". `docs/reference/tables/t8_maintenance_effort.md`: 15 rule-data lines in 2 units (the tuple line plus
-   the 14-line cited rulebook row), 0 engine lines, 3 undated copies. `\nMaintDataLines` is registered as 15;
-   "one line" is true only of the value itself.
-8. **MM slice size.** `docs/reference/tables/data_provenance.md` says the committed MM slices are 29 MB;
-   `NOTES-FOR-OWNER.md` §2 says 15.1 MB and 8.2 MB. The committed `data/` files sum to 25,078,256 bytes
-   (krx2025 16,351,904; im2022 8,726,352). The smaller fixtures differ too (provenance: strategies parquet
-   40 KB, scenarios daily 88 KB, book 224 KB; committed bytes 20,875, 65,178, 192,379), probably disk blocks
-   vs bytes. Both need restating as bytes from the manifests.
+7. **Maintenance effort for the IM step. Fixed.** `T0-audit.md` §4g said "data-only (one tuple line)";
+   `docs/reference/tables/t8_maintenance_effort.md` gives 15 rule-data lines in 2 units (the tuple line plus the
+   14-line cited rulebook row), 0 engine lines, 3 undated copies. §4g and `NOTES-FOR-OWNER.md` §3.6 now say so;
+   `\nMaintDataLines` = 15, `\nMaintCodeLines` = 0.
+8. **Slice sizes. Fixed.** `data_provenance.md` said MM was 29 MB and `NOTES-FOR-OWNER.md` §2 said 15.1 MB and
+   8.2 MB; the smaller fixtures were also off (40 KB, 88 KB, 224 KB, ...). Both docs now give exact committed
+   bytes: MM 25,078,256 B (krx2025 16,351,904; im2022 8,726,352), and every other row of the provenance table.
 9. **SB signal manifests list a file that is not committed.** `ProtoSmartBeta/data/signal/w20{22,23}/DATA-MANIFEST.md`
    list an empty (0-row) `quote_ticker.parquet` that is not in the repo (`--no-ticker-master`). Harmless; the
    checker allows it by name.
@@ -180,7 +182,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### E1: fill-policy divergence over the 2022 HSX population
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `ee16521` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `11ba6cd` when generated)
 - **Command:** `PYTHONPATH=src:. python -m measurements.e1_regenerate run --data-dir <rivf26-data>/t2-e1`, then `python measurements/e1_publish.py --data-root <rivf26-data>/t2-e1 --out docs/reference/tables/t2/e1_published`
 - **Data slice:** `rivf26/data/t2-e1/` (391 HSX tickers, 2022; not shipped, statistics only; sha256 in the map's slice table)
 
@@ -234,8 +236,8 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### F2: the indeterminate rate, bar vs tick
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `ee16521` when generated)
-- **Command:** `PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices (see `docs/reference/tables/t2/indeterminate.md`)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `11ba6cd` when generated)
+- **Command:** `PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices (see `docs/reference/tables/t2/indeterminate.md`); the figure and its JSON are re-rendered with `measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_change2.json`
 - **Data slice:** `rivf26/data/t2-indeterminate/{daily,book}` (FPT, HPG, HTV, 2022-10-20..11-30; not shipped)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
@@ -253,11 +255,15 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 | `f2.tick_con.n` |  | tick conservative, fill evaluations | 1,545 → **1,650** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (conservative)].evaluations` | PASS |
 | `f2.tick_con.before_change2` |  | tick conservative before change 2 (`e528633`) | 99.7% → **78.2%** | `docs/reference/tables/t2/indeterminate_before_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
 | `f2.bar.resolution_limit` |  | bar: share whose cause is the resolution limit | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=BAR / hard].resolution_limit_share` | PASS |
+| `f2.figure.days` |  | figure data (`figures/f2_indeterminate_rate.json`) carries the same days | 66 → **90** | `figures/f2_indeterminate_rate.json` @ `e1450de` :: `instrument_days` | PASS |
+| `f2.figure.bar` |  | figure data: bar | 35.8% → **32.6%** | `figures/f2_indeterminate_rate.json` @ `e1450de` :: `arms.[label=BAR / hard].rate` | PASS |
+| `f2.figure.tick_opt` |  | figure data: tick optimistic | 85.6% → **10.1%** | `figures/f2_indeterminate_rate.json` @ `e1450de` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
+| `f2.figure.tick_con` |  | figure data: tick conservative | 99.7% → **60.2%** | `figures/f2_indeterminate_rate.json` @ `e1450de` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
 | `f2.tick.resolution_limit` |  | tick (both queues): resolution-limit share | **0** (unchanged) | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: computed from `docs/reference/tables/t2/indeterminate_after_change2.json` `arms.[label=TICK / book-walk (optimistic)].resolution_limit_share`; `docs/reference/tables/t2/indeterminate_after_change2.json` `arms.[label=TICK / book-walk (conservative)].resolution_limit_share` | PASS |
 
 ### F3: fill-policy axis (S1) and queue axis (S9)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `ee16521` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `11ba6cd` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_f3_cross_policy.py strategies/test_s9_queue_sensitivity.py` (writes `figures/f3_cross_policy_divergence.json`)
 - **Data slice:** `strategies/fixtures/parquet/` (DATA-MANIFEST, checked below) and `strategies/fixtures/extract/` (no sha256 manifest; `PROVENANCE.md` only)
 
@@ -278,7 +284,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Derivatives margin: regime split, the IM step, margin-call incidence
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `ee16521` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `11ba6cd` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/t2_futures_margin.py <rivf26-data>/t2-futures-margin`
 - **Data slice:** `rivf26/data/t2-futures-margin/` (VN30F front month, 2021-06-01..2022-12-30; sha256 in `docs/reference/tables/t2/futures_margin.md`)
 
@@ -300,7 +306,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Equity admission, band agreement, tick-grid conformity
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `ee16521` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `11ba6cd` when generated)
 - **Command:** `measurements/equity_admission.py`, `band_conformance.py`, `grid_conformity.py` (exact invocations in `docs/reference/tables/t2/hsx_daily.md`)
 - **Data slice:** `rivf26/data/t2-hsx-daily/` and `t2-hsx-daily-grid-history/` (sha256 in `docs/reference/tables/t2/hsx_daily.md`)
 
@@ -325,7 +331,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### T8: rule versions, broker fields, maintenance effort, validator, properties, benchmark
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `ee16521` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `11ba6cd` when generated)
 - **Command:** `PYTHONPATH=src python measurements/t8_counts.py`; `python measurements/maintenance_effort.py --markdown`; `PYTHONPATH=src:. python measurements/perf_benchmark.py`
 - **Data slice:** none (engine source and git history)
 
@@ -359,7 +365,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Test-suite counts (F4)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `ee16521` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `11ba6cd` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest tests`; `pytest scenarios`; `pytest strategies` (each on its own)
 - **Data slice:** shipped fixtures
 
@@ -374,7 +380,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Scenario and strategy findings quoted in the text
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `ee16521` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `11ba6cd` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_s2_*.py scenarios`
 - **Data slice:** shipped fixtures
 
@@ -437,7 +443,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Table II, ProtoPair
 
-- **Repo:** `ProtoPair` (branch `rivf26`, HEAD `adee6db` when generated)
+- **Repo:** `ProtoPair` (branch `rivf26`, HEAD `77aa71f` when generated)
 - **Command:** `.venv/bin/pp-anchor`; `.venv/bin/pp-credibility`
 - **Data slice:** `data/market/<w>/` (DATA-MANIFEST, checked under `slice.*`)
 
@@ -555,7 +561,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Data-slice integrity (sha256 of every committed slice file vs its manifest)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `ee16521` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `11ba6cd` when generated)
 - **Command:** this checker
 - **Data slice:** each manifest named in the row
 

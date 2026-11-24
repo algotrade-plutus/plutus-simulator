@@ -67,7 +67,7 @@ Mechanisms visible:
    for like on the 20 it quoted. I'd quote both.
 
 Also:
-- MM's slices are 15.1 MB and 8.2 MB (L2 depth 1–3 with sizes plus tape, 40 sessions). Both are over the
+- MM's committed slices are 16,351,904 B (krx2025) and 8,726,352 B (im2022), 25,078,256 B in all (L2 depth 1–3 with sizes plus tape, 40 sessions). Both are over the
   size flag and need your sign-off before any push.
 - ceil/floor are missing for VN30F2212 on 2022-12-02, 12-05 and 12-06, in both the DB and the archive.
 
@@ -90,6 +90,9 @@ Also:
    and some ticks before their source dates; two deliberate VSDC charge switches), all resolving to UNKNOWN.
    `_pick()` now raises on overlap.
 5. **Property tests:** 14 Hypothesis properties, 3,850 examples plus 26 boundary cases, none falsified.
+6. **Maintenance effort** (`docs/reference/tables/t8_maintenance_effort.md`): the 13% → 17% IM step is 15 rule-data
+   lines in 2 units (the dated tuple line plus its 14-line cited rulebook row) and 0 engine lines, plus 3 undated
+   copies of 0.17. So `\nMaintDataLines` = 15 and `\nMaintCodeLines` = 0; "one line" is true only of the value.
 
 ## 4. MarketMaker: the stronger framing (owner idea, 2026-11-25)
 

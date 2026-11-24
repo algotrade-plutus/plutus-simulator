@@ -22,21 +22,23 @@ signs off on the slices and their sizes. Population measurements ship statistics
 
 ## Per experiment
 
-| Experiment | Tickers / instruments | Window | Selection | Source | Shipped in repo | Committed size |
+Committed bytes = the exact sum of the file sizes git tracks in the folder (data, manifests and request files), in bytes (B).
+
+| Experiment | Tickers / instruments | Window | Selection | Source | Shipped in repo | Committed bytes |
 |---|---|---|---|---|---|---:|
-| Scenarios J1–J37 (daily) | as logged (21 scenarios) | per scenario | logged reads | DB | `scenarios/fixtures/daily/` | 88 KB |
-| Scenarios J13, J21, J28–J36 (book/tape) | FPT, HPG (book); FPT (tape) | 2022-11-09 | logged reads; HPG tape left out on purpose (J35) | archive | `scenarios/fixtures/book/` | 224 KB |
-| Strategy tests S1–S9, F3 (daily) | as logged | per test | logged reads | DB | `strategies/fixtures/parquet/` | 40 KB |
-| S8/S9 book/tape | FPT 2022-11-09; VN30F2504 2025-04-08 | 1 day each | carried from 2026-08-29, checked against DB and archive | old extract (identical values) | `strategies/fixtures/extract/` | 436 KB |
-| S2 lock-queue proof | DIG | 14 floor-close days in 2022-09-05..11-15 | close == floor | archive | `strategies/fixtures/s2_lock/` | 1.0 MB |
+| Scenarios J1–J37 (daily) | as logged (21 scenarios) | per scenario | logged reads | DB | `scenarios/fixtures/daily/` | 65,178 B |
+| Scenarios J13, J21, J28–J36 (book/tape) | FPT, HPG (book); FPT (tape) | 2022-11-09 | logged reads; HPG tape left out on purpose (J35) | archive | `scenarios/fixtures/book/` | 192,379 B |
+| Strategy tests S1–S9, F3 (daily) | as logged | per test | logged reads | DB | `strategies/fixtures/parquet/` | 20,875 B |
+| S8/S9 book/tape | FPT 2022-11-09; VN30F2504 2025-04-08 | 1 day each | carried from 2026-08-29, checked against DB and archive | old extract (identical values) | `strategies/fixtures/extract/` | 402,877 B |
+| S2 lock-queue proof | DIG | 14 floor-close days in 2022-09-05..11-15 | close == floor | archive | `strategies/fixtures/s2_lock/` | 1,058,677 B |
 | E1 fill divergence | 391 HSX stocks, ≥200 sessions | 2022 | `SELECTION_SQL` in `e1_regenerate.py` | DB | **statistics only** (`docs/reference/tables/t2/e1_published/`) | — |
 | F2 indeterminate rate | FPT, HPG, HTV | 2022-10-20..11-30 | logged reads | DB (daily) + archive (book) | not shipped | — |
 | Equity admission, band, grid | stocks on HSX/HNX/UPCOM | 2021-02-05..2022-12-30 (grid: all history) | script rules | DB | not shipped | — |
-| Margin incidence, regime split | VN30F front month (20 contracts) | 2021-06-01..2022-12-30 | `futurecode='VN30F1M'` | DB | not shipped (6.5 KB, eligible) | — |
-| ProtoSmartBeta | names the strategy ranks (71 / 79) | 2022, 2023 (12 rebalances each) | per-rebalance filter | DB | `proto/ProtoSmartBeta/data/` | 988 KB |
-| ProtoPair | equal-lot VN30 basket + VN30F1M | 2022-08-01..2023-08-04; 2023-08-07..2024-02-02 | VN30 membership + roll map | DB | `proto/ProtoPair/data/` | 408 KB |
-| ProtoGrid | SSI, TCH, POW | 2022-10-03..11-30; 2021-11-01..12-31 | spec names | DB (tick) | `proto/ProtoGrid/data/` | 2.9 MB |
-| ProtoMarketMaker | VN30F1M/F2M (dated contracts) | ±20 sessions around 2025-05-05 and 2022-12-15 | spec | DB (2025) + archive (2022 book) | `proto/ProtoMarketMaker/data/` | **29 MB**: over the flag, owner sign-off |
+| Margin incidence, regime split | VN30F front month (20 contracts) | 2021-06-01..2022-12-30 | `futurecode='VN30F1M'` | DB | not shipped (6,573 B in 2 files, eligible) | — |
+| ProtoSmartBeta | names the strategy ranks (71 / 79) | 2022, 2023 (12 rebalances each) | per-rebalance filter | DB | `proto/ProtoSmartBeta/data/` | 967,897 B |
+| ProtoPair | equal-lot VN30 basket + VN30F1M | 2022-08-01..2023-08-04; 2023-08-07..2024-02-02 | VN30 membership + roll map | DB | `proto/ProtoPair/data/` | 359,593 B |
+| ProtoGrid | SSI, TCH, POW | 2022-10-03..11-30; 2021-11-01..12-31 | spec names | DB (tick) | `proto/ProtoGrid/data/` | 2,932,667 B |
+| ProtoMarketMaker | VN30F1M/F2M (dated contracts) | ±20 sessions around 2025-05-05 and 2022-12-15 | spec | DB (2025) + archive (2022 book) | `proto/ProtoMarketMaker/data/` | **25,078,256 B** (krx2025 16,351,904; im2022 8,726,352): over the flag, owner sign-off |
 
 ## Preprocessing
 

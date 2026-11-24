@@ -64,6 +64,10 @@ RUN
     .venv/bin/python measurements/indeterminate_rate.py \
         --data-root <parquet> --tick-root <extract> \
         --json figures/f2_indeterminate_rate.json --png figures/f2_indeterminate_rate.png
+
+    # re-render the figure and its JSON from a saved result (no data needed):
+    .venv/bin/python measurements/indeterminate_rate.py \
+        --from-json docs/reference/tables/t2/indeterminate_after_change2.json
 """
 from __future__ import annotations
 
@@ -235,6 +239,18 @@ class IndeterminateRateResult:
     instrument_days: int
     tickers: Dict[str, int]
     arms: List[ArmResult]
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "IndeterminateRateResult":
+        """Inverse of :meth:`to_dict` (rates round-trip exactly; shares are recomputed from counts)."""
+        arms = [ArmResult(label=a["label"], resolution=a["resolution"], policy=a["policy"],
+                          evaluations=a["evaluations"], indeterminate=a["indeterminate"],
+                          rate=Decimal(repr(a["rate"])), ci_low=Decimal(repr(a["ci_low"])),
+                          ci_high=Decimal(repr(a["ci_high"])),
+                          by_cause={k: v["count"] for k, v in a["by_cause"].items()})
+                for a in d["arms"]]
+        return cls(population=d["population"], instrument_days=d["instrument_days"],
+                   tickers=dict(d["tickers"]), arms=arms)
 
     def arm(self, label: str) -> ArmResult:
         for a in self.arms:
@@ -574,20 +590,26 @@ def render(result: IndeterminateRateResult, out: Path) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-root", default=DEFAULT_BAR_ROOT,
-                        required=DEFAULT_BAR_ROOT is None,
                         help="daily-bar root (env PLUTUS_F2_BAR_ROOT or "
                              "PLUTUS_DATA_ROOT)")
     parser.add_argument("--tick-root", default=DEFAULT_TICK_ROOT,
-                        required=DEFAULT_TICK_ROOT is None,
                         help="local_quote book/tape root (env PLUTUS_F2_TICK_ROOT "
                              "or PLUTUS_DEPTH_ROOT)")
     parser.add_argument("--json", type=Path,
                         default=_REPO / "figures" / "f2_indeterminate_rate.json")
     parser.add_argument("--png", type=Path,
                         default=_REPO / "figures" / "f2_indeterminate_rate.png")
+    parser.add_argument("--from-json", type=Path,
+                        help="re-render from a saved result JSON (e.g. docs/reference/tables/t2/"
+                             "indeterminate_after_change2.json) instead of measuring; needs no data")
     args = parser.parse_args()
 
-    result = measure_indeterminate_rate(args.data_root, args.tick_root)
+    if args.from_json:
+        result = IndeterminateRateResult.from_dict(json.loads(args.from_json.read_text()))
+    else:
+        if args.data_root is None or args.tick_root is None:
+            parser.error("--data-root and --tick-root are required unless --from-json is given")
+        result = measure_indeterminate_rate(args.data_root, args.tick_root)
     print(f"population : {result.population}")
     print(f"tickers    : {result.tickers}")
     for a in result.arms:

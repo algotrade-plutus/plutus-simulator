@@ -296,7 +296,9 @@ GROUPS: dict[str, Group] = {
                 SL_E1),
     "f2": Group("F2: the indeterminate rate, bar vs tick", SIM,
                 "`PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices "
-                "(see `docs/reference/tables/t2/indeterminate.md`)", SL_F2),
+                "(see `docs/reference/tables/t2/indeterminate.md`); the figure and its JSON are re-rendered with "
+                "`measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_change2.json`",
+                SL_F2),
     "f3": Group("F3: fill-policy axis (S1) and queue axis (S9)", SIM,
                 "`env -u PLUTUS_DATA_ROOT pytest strategies/test_f3_cross_policy.py strategies/test_s9_queue_sensitivity.py` "
                 "(writes `figures/f3_cross_policy_divergence.json`)",
@@ -448,6 +450,14 @@ def _registry() -> list[Entry]:
             arm(F2B, CON, "rate"), decimals=1),
         pct("f2.bar.resolution_limit", "f2", "bar: share whose cause is the resolution limit", "35.8%", "32.6%",
             arm(F2A, BAR, "resolution_limit_share"), decimals=1),
+        num("f2.figure.days", "f2", "figure data (`figures/f2_indeterminate_rate.json`) carries the same days",
+            "66", "90", J(SIM, "figures/f2_indeterminate_rate.json", "instrument_days")),
+        pct("f2.figure.bar", "f2", "figure data: bar", "35.8%", "32.6%",
+            arm("figures/f2_indeterminate_rate.json", BAR, "rate"), decimals=1),
+        pct("f2.figure.tick_opt", "f2", "figure data: tick optimistic", "85.6%", "10.1%",
+            arm("figures/f2_indeterminate_rate.json", OPT, "rate"), decimals=1),
+        pct("f2.figure.tick_con", "f2", "figure data: tick conservative", "99.7%", "60.2%",
+            arm("figures/f2_indeterminate_rate.json", CON, "rate"), decimals=1),
         num("f2.tick.resolution_limit", "f2", "tick (both queues): resolution-limit share", "0", "0",
             CALC(lambda x, y: x + y, arm(F2A, OPT, "resolution_limit_share"), arm(F2A, CON, "resolution_limit_share"))),
     ]
