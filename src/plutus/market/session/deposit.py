@@ -1696,6 +1696,7 @@ class DerivativesAccount:
             realised = (direction * Decimal(closed) * multiplier
                         * (fill.price - reference))
 
+        settled_ref = self._settlement_reference.get(code)
         position = self.contracts.apply_fill(
             fill, multiplier, self._expiries.get(code))
         self._marks[code] = fill.price
@@ -1703,6 +1704,21 @@ class DerivativesAccount:
         if position is None:
             # Flat: the baseline described a position that no longer exists.
             self._settlement_reference.pop(code, None)
+        elif settled_ref is not None:
+            # A position that has been through a settlement now holds two kinds
+            # of contract (VSDC S II.3): carried ones mark from the previous
+            # DSP, ones opened today from their own fill price. One baseline
+            # per contract can still be exact -- it is their quantity-weighted
+            # mean -- so the next settlement, or a close, measures each lot
+            # from where it really started.
+            if before is None or before.is_long != (position.net_quantity > 0):
+                # Flipped: every contract now held was opened by this fill.
+                self._settlement_reference.pop(code, None)
+            elif position.abs_quantity > before.abs_quantity:
+                added = position.abs_quantity - before.abs_quantity
+                self._settlement_reference[code] = (
+                    (settled_ref * before.abs_quantity + fill.price * added)
+                    / position.abs_quantity)
 
         if realised != 0:
             self._move(realised, stamp,

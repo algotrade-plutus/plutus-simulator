@@ -1606,3 +1606,51 @@ def test_the_forced_rung_is_qd26_dieu_13s_binary_test_off_by_equality():
             is not MarginStatus.FORCED)
 
     assert 'assets == ' in BrokerTerms.PROVENANCE['forced_close_utilisation']
+
+
+# --------------------------------------------------------------------------
+# The VM baseline when a settled position changes (RIVF'26, found by the MM
+# faithful-A run: the deposit drifted 40-64M below true P&L).
+# VSDC S II.3: carried contracts mark against the previous DSP, contracts
+# opened today against their own opening price. A position that has been
+# through a settlement and then grows or flips holds both kinds.
+# --------------------------------------------------------------------------
+
+def test_contracts_added_after_a_settlement_mark_from_their_own_fill_price():
+    account, _ = build_account(deposit=Decimal('100000000'))
+    account.apply_fill(fill(quantity=1, price=Decimal('1000')), None)
+    account.settle_daily({VN30F: Decimal('900')}, TS)            # -10,000,000
+    account.apply_fill(fill(quantity=1, price=Decimal('920'), ts=NEXT,
+                            fill_id='F-2', order_id='O-2'), None)
+
+    flow = account.settle_daily({VN30F: Decimal('950')}, NEXT)
+
+    # carried lot: 1 x (950 - 900); added lot: 1 x (950 - 920) -> 80 points
+    assert flow == Decimal('8000000')
+
+
+def test_a_settled_position_that_flips_marks_the_new_side_from_the_fill():
+    account, _ = build_account(deposit=Decimal('100000000'))
+    account.apply_fill(fill(quantity=1, price=Decimal('1000')), None)
+    account.settle_daily({VN30F: Decimal('900')}, TS)
+    effect = account.apply_fill(fill(side=Side.SELL, quantity=3, price=Decimal('920'),
+                                     ts=NEXT, fill_id='F-2', order_id='O-2'), None)
+    assert effect.realised == Decimal('2000000')                 # long 1 closed 900 -> 920
+
+    flow = account.settle_daily({VN30F: Decimal('950')}, NEXT)
+
+    # the new short 2 opened at 920: -2 x (950 - 920)
+    assert flow == Decimal('-6000000')
+
+
+def test_over_a_positions_life_the_deposit_moves_by_its_trade_pnl():
+    """Buy 1 @1000, settle 900, buy 1 @920, sell 2 @960: the lots made
+    -40 and +40 points, so every cash flow together must net to zero."""
+    account, _ = build_account(deposit=Decimal('100000000'))
+    account.apply_fill(fill(quantity=1, price=Decimal('1000')), None)
+    account.settle_daily({VN30F: Decimal('900')}, TS)
+    account.apply_fill(fill(quantity=1, price=Decimal('920'), ts=NEXT,
+                            fill_id='F-2', order_id='O-2'), None)
+    account.apply_fill(fill(side=Side.SELL, quantity=2, price=Decimal('960'), ts=NEXT,
+                            fill_id='F-3', order_id='O-3'), None)
+    assert account.deposit_balance == Decimal('100000000')
