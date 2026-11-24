@@ -70,3 +70,23 @@ Also:
 - MM's slices are 15.1 MB and 8.2 MB (L2 depth 1–3 with sizes plus tape, 40 sessions). Both are over the
   size flag and need your sign-off before any push.
 - ceil/floor are missing for VN30F2212 on 2022-12-02, 12-05 and 12-06, in both the DB and the archive.
+
+## 3. T8 findings that touch the paper (2026-11-24)
+
+1. **A broker profile can relax VSDC on derivatives** (equity is protected: `BrokerTermLooserThanLaw`). Two paths:
+   - a negative `BrokerProfile.margin_buffer` margins below VSDC's rate;
+   - a `forced_close_utilisation` above 1.00 grades a full QĐ 26 Điều 13 breach as CALL instead of FORCED.
+
+   Behaviour is unchanged; 3 strict-xfail tests show it (`tests/market/session/test_broker_cannot_relax.py`,
+   FEATURES D72). **Decide:** add guards (small engine change: the xfails then pass), or disclose. If the paper
+   says brokers "can only tighten", it must say "on equity" or the guard must land first.
+2. **The 2016-09-12 tick revision is not in the engine.** The rulebook starts 2020-01-01; before that every order is
+   INDETERMINATE. The paper (`main.tex:203`) claims "the Vietnamese tick grid with its dated 2016-09-12 revision".
+   **Decide:** reword, or encode the pre-2020 grid (needs a source; `dated_rules.py` says the pre-2016 grid was
+   never sourced).
+3. **Corrected counts:** 114 rule versions, not 97 (341 → 358); 244 broker fields confirmed, but
+   published/supplied/inferred is three-way (110 / 0 / 21, plus 113 not published).
+4. **Rule-table validator:** 12 tables, 93 keys, 114 rows; no overlaps or gaps; 12 uncovered edges (widened bands
+   and some ticks before their source dates; two deliberate VSDC charge switches), all resolving to UNKNOWN.
+   `_pick()` now raises on overlap.
+5. **Property tests:** 14 Hypothesis properties, 3,850 examples plus 26 boundary cases, none falsified.
