@@ -1265,7 +1265,7 @@ class SoftFillPolicy(_CappedFillPolicy):
                     [DataField.CLOSE, DataField.LAST],
                 )
             return self._sized_fill(order, interval, rules, price,
-                                    FillEvidence.TRADED_THROUGH,
+                                    _market_evidence(side, interval, price),
                                     already_filled=already_filled,
                                     instrument=instrument)
 
@@ -2762,6 +2762,30 @@ def _reach(side: Side, observed: Decimal, limit: Decimal) -> int:
     if observed > limit:
         return 1
     return 0 if observed == limit else -1
+
+
+def _market_evidence(side: Side, interval: MarketInterval,
+                     price: Decimal) -> FillEvidence:
+    """What a soft market-family fill rests on, graded like a limit at the edge.
+
+    A market order is marketable into the band edge on its side (ceiling for a
+    buy, floor for a sell), so it is the limit-order rule with the edge as the
+    limit: ``TRADED_THROUGH`` only where a trade strictly inside the band is
+    observed -- the session extreme toward the order (the low for a buy, the
+    high for a sell), or the fill's own traded price where the extreme is
+    absent -- and ``TOUCHED_AT_LIMIT`` where the day sat on the edge, so the
+    fill is the soft assumption rather than an observation. With no edge on
+    the state there is nothing to be pinned against, and the print is the
+    observation.
+    """
+    edge = _band_edge(side, interval.state)
+    if edge is None:
+        return FillEvidence.TRADED_THROUGH
+    observed, _ = _extreme_toward(side, interval)
+    if observed is None:
+        observed = price
+    return (FillEvidence.TRADED_THROUGH if _reach(side, observed, edge) > 0
+            else FillEvidence.TOUCHED_AT_LIMIT)
 
 
 class _PriceVerdict(Enum):

@@ -45,6 +45,10 @@ from plutus.market.session.fills import (DivergenceReport, FillPolicy,
                                          parse_fill_policy_config,
                                          participation_cap, policy_of,
                                          probabilistic_sweep, stamp_policy)
+from plutus.market.session.evidence_level import (AssumptionKind,
+                                                  FillEvidenceLevel,
+                                                  assumption_kind,
+                                                  fill_evidence_level)
 from plutus.market.session.types import (DataField, Fill, FillDecision,
                                          FillEvidence, FillOutcome,
                                          FillPolicyConfig, MarketInterval,
@@ -733,6 +737,55 @@ def test_soft_fills_a_market_order_at_the_observed_price():
         _interval(close=Decimal('97.0'), low=Decimal('97.0')), HSX_EXCHANGE)
     assert decision.outcome is FillOutcome.FILL
     assert decision.price == Decimal('97.0')
+
+
+# -- soft's evidence label on a market order (LIMITATIONS #5) ----------------
+#
+# A market order is marketable into the band edge on its side, so it is graded
+# like a limit at that edge: TRADED_THROUGH only where a trade strictly inside
+# the band is observed, TOUCHED_AT_LIMIT (ASSUMED/TOUCH) on a day pinned at the
+# edge, where the fill is the soft assumption and not an observation.
+
+_MARKET = dict(order_type=OrderType.MARKET_IMMEDIATE_OR_CANCEL, limit=None)
+
+
+@pytest.mark.parametrize('side,extreme', [
+    (Side.BUY, dict(low=Decimal('101.6'))),
+    (Side.SELL, dict(high=Decimal('88.4'))),
+], ids=['buy_pinned_at_ceiling', 'sell_pinned_at_floor'])
+def test_soft_labels_a_market_fill_on_a_pinned_day_as_a_touch(side, extreme):
+    edge = Decimal('101.6') if side is Side.BUY else Decimal('88.4')
+    decision = SoftFillPolicy().evaluate(
+        _order(side=side, **_MARKET), _interval(close=edge, **extreme),
+        HSX_EXCHANGE)
+    assert decision.outcome is FillOutcome.FILL
+    assert decision.price == edge
+    assert decision.evidence is FillEvidence.TOUCHED_AT_LIMIT
+    assert fill_evidence_level(decision) is FillEvidenceLevel.ASSUMED
+    assert assumption_kind(decision) is AssumptionKind.TOUCH
+
+
+@pytest.mark.parametrize('side,extreme', [
+    (Side.BUY, dict(low=Decimal('97.0'))),
+    (Side.SELL, dict(high=Decimal('97.0'))),
+], ids=['buy', 'sell'])
+def test_soft_labels_a_market_fill_inside_the_band_as_traded_through(
+        side, extreme):
+    decision = SoftFillPolicy().evaluate(
+        _order(side=side, **_MARKET),
+        _interval(close=Decimal('97.0'), **extreme), HSX_EXCHANGE)
+    assert decision.outcome is FillOutcome.FILL
+    assert decision.evidence is FillEvidence.TRADED_THROUGH
+    assert fill_evidence_level(decision) is FillEvidenceLevel.PROVEN
+
+
+def test_soft_market_fill_on_a_close_inside_the_band_without_the_extreme():
+    """The close-bound path (``68e1c33``): no low, but a close strictly inside
+    the band is a trade on record off the edge -- observed, so traded through."""
+    decision = SoftFillPolicy().evaluate(
+        _order(**_MARKET), _interval(close=Decimal('97.0')), HSX_EXCHANGE)
+    assert decision.outcome is FillOutcome.FILL
+    assert decision.evidence is FillEvidence.TRADED_THROUGH
 
 
 def test_soft_fills_an_auction_at_the_clearing_price_including_at_the_margin():
