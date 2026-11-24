@@ -120,6 +120,42 @@ whole range is pinned (high = low = floor). The paper's S2 claim ("only three sa
 force-sold it, under repeated floor locks") has to be re-verified with session HIGH/LOW in T3.3. Its
 counts may change.
 
+### 4b resolved: owner chose the weaker, graded claim (2026-11-24)
+
+What the evidence showed:
+- DIG 2022-10-03 → 11-15 has 15 floor-close days. Only 3 (11-07, 11-08, 11-15) were pinned at the floor
+  all session (high = floor), and even those traded at the floor: 2.48M, 1.24M and 1.08M shares.
+- The DB's 2022 price ladder confirms a one-sided book at the floor on those 3 days. It has **no queue sizes
+  before 2023-01-03** (DIG's first `bidsize` row), and `totalask`/`totalbid` are empty, so no day in the
+  window can **prove** the forced sale was blocked.
+- S2's 7 forced sales are all LIMIT at the floor, and all fill under `soft`. 6 are graded `TRADED_THROUGH`;
+  the one on 11-07 is graded `TOUCHED_AT_LIMIT` (assumed). `hard` answers INDETERMINATE there.
+- The old check `instructed (15) > completed (7)` passed for a bookkeeping reason: each tranche logs
+  `FORCED_SALE_INSTRUCTED` twice (unrounded at the 15:00 notice, lot-rounded at the next open).
+
+Paper wording to replace "completed only three sales … under repeated floor locks": *the leveraged long
+lost 77% (100M → 23.3M), drew 10 margin calls and was force-sold in 7 tranches; on the day the book sat
+pinned at the floor all session the simulator only assumes the fill (TOUCHED_AT_LIMIT), and the strict
+policy refuses to call it.* (Numbers are on the patched fixture; T3 regenerates them from DB slices.)
+
+Test changes (`strategies/test_s2_equity_margin_momentum.py`):
+- `test_s2_forced_sale_is_blocked_by_a_downlock` is replaced by `test_s2_floor_sale_is_graded_by_evidence`.
+  It sells LIMIT at the floor, as the broker does. On 11-07, soft gives a TOUCHED_AT_LIMIT fill and hard
+  gives INDETERMINATE with the position still held. On 10-20, both fill TRADED_THROUGH.
+- In the main test, the double-counted check is replaced by "the 11-07 forced fill is graded TOUCHED_AT_LIMIT".
+- Both pass on the fixture plus DB `quote_max`/`quote_min`. As shipped, they still fail until T3 regenerates
+  the fixture (4a).
+
+### 4c. Open defect for the OWNER: soft grades every market-family fill `TRADED_THROUGH`
+
+`SoftFillPolicy._continuous` (`src/plutus/market/session/fills.py`, market-family branch) labels every
+MTL/MOK/MAK fill `TRADED_THROUGH`, even when `band_lock_decision` passed it through as matched-at-the-edge
+(the ASSUMED tier, rows B6/S6). Example: a soft MTL sell of DIG on 2022-11-07 (O=H=L=C=floor) is graded
+TRADED_THROUGH. The fill *outcome* is as designed (soft fills the assumed tier); only the evidence *label* is
+wrong, so per-evidence tallies (E1 and similar) overstate observed fills. `hard` is unaffected: it never
+fills the market family. S2's forced sales are LIMIT orders and are unaffected. Not fixed: changing it
+moves evidence counts the paper reports, so it needs an owner decision before T2.
+
 ## 5. Findings that correct the handoff
 
 1. The 18.9% queue swing reproduces from the shipped fixtures, but it comes from **S9**, not F3:

@@ -42,9 +42,19 @@ EXPECTED — Tier 2
       margin_debt > 0), and not on day one.
     * A margin CALL is issued as DIG's slide erodes the maintenance ratio.
     * A forced sale FIRES and EXECUTES — the account is sold out, not carried.
-    * A lock bites: at least one order (the forced sale, or a same-day attempt)
-      is admitted but rests unfilled (``BAND_LOCK``) on a limit-down day — the
-      stop that could not clear.
+    * The exit is graded, not granted: the broker's forced sale is a LIMIT at
+      the floor, and on the day DIG sat pinned at its floor all session
+      (2022-11-07: O=H=L=C=15.45, 2,477,300 shares matched at the floor) its
+      fill rests on ``TOUCHED_AT_LIMIT`` — an assumption about queue position,
+      not an observation. ``hard`` refuses to call that sale (INDETERMINATE);
+      on a day that traded above the floor both policies fill it.
+
+    CORRECTION (2026-11-24, RIVF'26 camera-ready). An earlier version claimed
+    the forced sale was *blocked* by limit-down locks. That rested on the
+    ``close == floor`` proxy. With the session high wired, 12 of DIG's 15
+    floor-close days in this window traded above the floor first, and the DB
+    holds no queue sizes before 2023-01-03, so no day here proves a block.
+    The claim was weakened to the graded one above (owner decision).
 
 RUN
     .venv/bin/python strategies/test_s2_equity_margin_momentum.py
@@ -61,6 +71,7 @@ from plutus.market.adapters.datahub import DataHubSource
 from plutus.market.session import ExchangeSession, Accepted, Venue  # noqa: F401
 from plutus.market.session.calendar import weekday_settlement_calendar
 from plutus.market.session.equity_margin import EquityMarginAccount
+from plutus.market.session.types import FillEvidence
 from plutus.market.session.margin_lending import (
     BrokerMarginTerms, DayCount, ForcedSalePrice, InterestTier,
     LiquidationOrder, MarginEligibility, ProceedsComponent, SecurityEligibility)
@@ -79,6 +90,10 @@ LEVERAGE = Decimal("1.8")          # press the edge on borrowed money (imr 50% f
 LOT = 100                          # HSX round lot (post-2021)
 INITIAL_CASH = 100_000_000
 PRICE_SCALE = 1000                 # corpus prices are in thousands of đồng (27.0 == 27,000đ)
+
+# The two days the graded-exit check compares (DB daily bars, thousands of đồng):
+FULL_FLOOR_DAY = date(2022, 11, 7)   # O=H=L=C=floor 15.45; 2,477,300 matched at the floor
+TRADEABLE_DAY = date(2022, 10, 20)   # floor 24.30, high 26.25: traded well above the floor
 
 CONFIG = {
     "period": {"start": "2022-09-05", "end": "2022-11-15"},
@@ -186,33 +201,50 @@ def _count_events(account, kind_value: str) -> int:
                if getattr(e.kind, "value", e.kind) == kind_value)
 
 
-def _sell_verdict_on(sell_day: date):
-    """Hold real DIG, then try to sell it on ``sell_day``. Returns the held
-    quantity, the verdict, the events from evaluating it, and the quantity
-    still held afterwards — used to prove directly that a limit-down lock
-    rests a sale unfilled rather than refusing it at admission (J11's
-    contract)."""
+def _sale_at_floor(sell_day: date, fill_policy: dict):
+    """Hold real DIG, then offer it at the floor on ``sell_day`` under
+    ``fill_policy`` -- the order the broker's forced sale sends
+    (``ForcedSalePrice.FLOOR``). Returns the held quantity, the verdict, the
+    sale's own events from evaluating it, and the quantity still held after.
+
+    The setup buy is a LIMIT at 2022-10-04's ceiling rather than a market order,
+    so it fills under ``hard`` too (``hard`` never fills the market family: the
+    depth it would walk is not observable). The buy is not the point."""
     src = DataHubSource.for_root(data_root())
     session = build_session(
-        {**CONFIG, "period": {"start": "2022-10-03", "end": "2022-11-15"}},
+        {**CONFIG, "period": {"start": "2022-10-03", "end": "2022-11-15"},
+         "fill_policy": fill_policy},
         source=src)
-    session.advance_to(datetime(2022, 10, 4, 11, 0))
+    buy_time = datetime(2022, 10, 4, 11, 0)
+    session.advance_to(buy_time)
     session.submit(Order(ticker=TICKER, side=Side.BUY, quantity=2000,
-                         order_type=OrderType.MARKET_WITH_LEFTOVER_AS_LIMIT))
+                         order_type=OrderType.LIMIT,
+                         limit_price=src.state_at(TICKER, buy_time).ceiling))
     session.advance_to(datetime(2022, 10, 4, 14, 0))
     session.advance_to(datetime(2022, 10, 11, 11, 0))     # settle T+2
     held = int(getattr(session.holdings(TICKER), "settled", 0) or 0)
     sell_time = datetime(sell_day.year, sell_day.month, sell_day.day, 11, 0)
+    floor = src.state_at(TICKER, sell_time).floor
     session.advance_to(sell_time)
     verdict = session.submit(Order(ticker=TICKER, side=Side.SELL,
                                    quantity=held or 1000,
-                                   order_type=OrderType.MARKET_WITH_LEFTOVER_AS_LIMIT))
+                                   order_type=OrderType.LIMIT, limit_price=floor))
     # The sell was submitted after the advance above, so it has not had a
     # fill-evaluation pass yet -- the bar is evaluated by the advance that
-    # lands inside its day (see ExchangeSession.advance_to). A second advance,
-    # same instant, gives the resting sell its chance to cross the lock.
+    # lands inside its day (see ExchangeSession.advance_to).
     events = session.advance_to(sell_time)
-    return held, verdict, events, _held(session, TICKER)
+    own = [e for e in events
+           if e.order_id == getattr(verdict, "order_id", None)]
+    return held, verdict, own, _held(session, TICKER)
+
+
+def _kinds(events) -> list:
+    return [getattr(e.kind, "value", e.kind) for e in events]
+
+
+def _evidence(events):
+    return [(e.detail or {}).get("evidence") for e in events
+            if getattr(e.kind, "value", e.kind) == "filled"]
 
 
 @pytest.mark.skipif(not data_available(),
@@ -234,15 +266,20 @@ def test_s2_equity_margin_momentum():
     assert _count_events(account, "forced_sale_result_sent") >= 1, \
         "the forced sale never completed a sale"
 
-    # J11, in the run — the forced sale was *instructed* far more often than it
-    # *completed*, because the limit-down locks kept blocking it. (DIG has 14
-    # limit-down-lock days in this window; the mechanism is proven directly in
-    # test_s2_forced_sale_is_blocked_by_a_downlock below.)
-    instructed = _count_events(account, "forced_sale_instructed")
-    completed = _count_events(account, "forced_sale_result_sent")
-    assert instructed > completed, \
-        f"expected locks to stay the forced sale (instructed {instructed} " \
-        f"vs completed {completed})"
+    # The forced sale is graded by its evidence. (The former check here,
+    # ``instructed > completed``, passed for a bookkeeping reason: each tranche
+    # logs FORCED_SALE_INSTRUCTED twice, once unrounded at the 15:00 notice and
+    # once lot-rounded at the next open.) On the pinned-at-floor day the fill
+    # is an assumption, and the run must say so rather than call it traded.
+    forced_ids = {getattr(o, "order_id", o) for o in account.forced_sale_orders}
+    forced_fills = [e for _, e in ledger.events
+                    if e.order_id in forced_ids
+                    and getattr(e.kind, "value", e.kind) == "filled"]
+    assert forced_fills, "no forced-sale fill was recorded"
+    touched = [e for e in forced_fills
+               if (e.detail or {}).get("evidence") is FillEvidence.TOUCHED_AT_LIMIT]
+    assert any(e.ts.date() == FULL_FLOOR_DAY for e in touched), \
+        "the forced sale on the pinned-at-floor day was not graded TOUCHED_AT_LIMIT"
 
     # The leverage did its work in reverse: the account was blown up.
     start_eq, end_eq = ledger.equity_curve[0][1], ledger.equity_curve[-1][1]
@@ -251,35 +288,43 @@ def test_s2_equity_margin_momentum():
 
 @pytest.mark.skipif(not data_available(),
                     reason="market-data corpus not found; set PLUTUS_DATA_ROOT")
-def test_s2_forced_sale_is_blocked_by_a_downlock():
-    """J11, directly and user-observably: a sale into a limit-down lock is
-    ``Accepted`` and rests -- it does not fill, and the position stays fully
-    held; the same sale on a tradeable day is ``Accepted`` and fills. This is
-    the mechanism that stays S2's forced sale."""
-    held_lock, locked, lock_events, held_after_lock = \
-        _sell_verdict_on(date(2022, 10, 24))                    # a DN-LOCK day
-    held_ok, tradeable, ok_events, held_after_ok = \
-        _sell_verdict_on(date(2022, 10, 20))                    # a normal day
-    assert held_lock > 0 and held_ok > 0, (held_lock, held_ok)
+def test_s2_floor_sale_is_graded_by_evidence():
+    """J11's contract on real DIG data, graded by evidence.
 
-    # Locked day: admitted and rests. BAND_LOCK is a fill-time refusal now,
-    # not an admission one -- no fill event, and the position is still fully
-    # held: the stop that could not clear.
-    assert isinstance(locked, Accepted), "a sale into a limit-down lock was refused at admission"
-    lock_fills = [e for e in lock_events
-                 if getattr(e.kind, "value", e.kind) == "filled"
-                 and e.order_id == locked.order_id]
-    assert not lock_fills, "a sale into a limit-down lock must not fill"
-    assert held_after_lock == held_lock, \
-        "the position must still be held -- the down-locked sale never got out"
+    A sale at the floor is a legal price: admitted, never refused at entry.
+    Whether it fills is a market fact the data may not settle. On 2022-11-07
+    DIG was pinned at its floor all session, and sellers did get out
+    (2,477,300 shares matched at 15.45), but whether *this* order was reached
+    depends on the sell queue ahead of it, which no 2022 data records. So:
+    ``soft`` fills it and labels the fill TOUCHED_AT_LIMIT (an assumption);
+    ``hard`` refuses to call it (INDETERMINATE) and the position stays held.
+    On a day that traded above the floor both fill it, TRADED_THROUGH."""
+    soft = {"kind": "soft", "max_participation": 0.10}
+    hard = {"kind": "hard", "max_participation": 0.10}
 
-    # Tradeable day: admitted, and it actually fills and clears the position.
-    assert isinstance(tradeable, Accepted), "a sale on a tradeable day was refused"
-    ok_fills = [e for e in ok_events
-               if getattr(e.kind, "value", e.kind) == "filled"
-               and e.order_id == tradeable.order_id]
-    assert ok_fills, "a sale on a tradeable day never filled"
-    assert held_after_ok == 0, "a sale on a tradeable day must clear the position"
+    for policy in (soft, hard):
+        for day in (FULL_FLOOR_DAY, TRADEABLE_DAY):
+            held, verdict, _, _ = _sale_at_floor(day, policy)
+            assert held > 0, (policy["kind"], day, "setup buy never settled")
+            assert isinstance(verdict, Accepted), \
+                (policy["kind"], day, "a sale at the floor was refused at entry")
+
+    # Pinned-at-floor day.
+    _, _, ev, _ = _sale_at_floor(FULL_FLOOR_DAY, soft)
+    assert _evidence(ev) == [FillEvidence.TOUCHED_AT_LIMIT], \
+        f"soft on the pinned day must fill as an assumption, got {_kinds(ev)} {_evidence(ev)}"
+
+    held, _, ev, after = _sale_at_floor(FULL_FLOOR_DAY, hard)
+    assert "filled" not in _kinds(ev) and "indeterminate" in _kinds(ev), \
+        f"hard must refuse to call the pinned-day sale, got {_kinds(ev)}"
+    assert after == held, "hard: the position must still be held"
+
+    # Tradeable day: both policies fill, on observed evidence, and clear it.
+    for policy in (soft, hard):
+        _, _, ev, after = _sale_at_floor(TRADEABLE_DAY, policy)
+        assert _evidence(ev) == [FillEvidence.TRADED_THROUGH], \
+            (policy["kind"], _kinds(ev), _evidence(ev))
+        assert after == 0, (policy["kind"], "the sale must clear the position")
 
 
 if __name__ == "__main__":
@@ -294,10 +339,10 @@ if __name__ == "__main__":
     print(f"  margin calls:        {len(acc.calls())}")
     print(f"  forced sale: instructed {_count_events(acc,'forced_sale_instructed')}, "
           f"completed {_count_events(acc,'forced_sale_result_sent')} "
-          f"(locks stayed the rest)")
+          f"(each tranche is logged twice)")
     for label, test in (("lifecycle", test_s2_equity_margin_momentum),
-                        ("downlock rests the sale unfilled (J11)",
-                         test_s2_forced_sale_is_blocked_by_a_downlock)):
+                        ("floor sale graded by evidence (J11)",
+                         test_s2_floor_sale_is_graded_by_evidence)):
         try:
             test()
             print(f"  TIER 2 [{label}]: PASS")
