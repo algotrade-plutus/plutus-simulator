@@ -31,3 +31,6 @@ cred/
 *credential*
 *.pgpass
 rivf26-raw/
+
+# Hypothesis example database
+.hypothesis/
