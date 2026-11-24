@@ -254,3 +254,14 @@ Effect on shipped results:
 - MM (T5) is the main consumer. Its conservative headline can now decide fills.
 - Unit suite: +7 tests, same single pre-existing failure. The 12 hidden `test_book_walk.py` failures
   (with `PLUTUS_DEPTH_ROOT`) are unchanged.
+
+## Owner decisions, 2026-11-24 (late)
+
+- **E1 publication: statistics only**, at a finer grain than the paper's single numbers so readers can check
+  them: `docs/reference/tables/t2/e1_published/` (month × intent, ticker × intent, outcome counts only, summing
+  exactly to the headline). The raw 2022 slice and the per-decision table stay unpublished.
+- **SB 2022 tie (457 = 457 fills): report as is.** SB is the null anchor (admission-limited only), and a zero
+  fill gap is what that predicts. §6 criterion 1's "<" is read as "≤" for SB. Return is still lower
+  (−26.21% → −27.08%).
+- **SB base check: Google Drive check not done.** The owner may provide the original inputs. The coordinator's
+  recommendation was to skip it, since the DB is the settled source and the drift is documented with evidence.

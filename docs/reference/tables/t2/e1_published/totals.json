@@ -1,0 +1,8 @@
+{
+ "questions": 484949,
+ "agreed": 332549,
+ "agreement_rate": 0.6857401499951541,
+ "tickers": 391,
+ "ticker_days": 97269,
+ "population": "HSX stock ticker-days, 2022: 391 tickers x >= 200 sessions, 2022-01-04..2022-12-30; five on-grid intents each, under soft/hard/probabilistic"
+}
