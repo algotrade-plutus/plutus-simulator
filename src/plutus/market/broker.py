@@ -207,6 +207,16 @@ class BrokerTerms:
                 f'utilisation ladder must be non-decreasing '
                 f'(warning <= call <= forced close), got {ladder}'
             )
+        if self.forced_close_utilisation > Decimal('1'):
+            # A broker may tighten the law, never relax it (as QD 87 is enforced
+            # for equity). QD 26 Dieu 13: assets below the margin requirement --
+            # utilisation above 1.00 -- is the breach that forces a close, so a
+            # top rung above 1.00 would grade that breach as a mere CALL.
+            from plutus.market.session.margin_lending import BrokerTermLooserThanLaw
+            raise BrokerTermLooserThanLaw(
+                'forced_close_utilisation', self.forced_close_utilisation,
+                Decimal('1'), 'QD 26/QD-VSDC Dieu 13',
+                'Assets below the margin requirement must be force-closed.')
         if self.advance_on_sale_daily_rate < 0:
             raise ValueError(
                 f'advance_on_sale_daily_rate must not be negative, got '

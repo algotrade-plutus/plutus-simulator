@@ -36,8 +36,11 @@ DERIV_SEVERITY = {MarginStatus.OK: 0, MarginStatus.WARNING: 1,
 EQUITY_SEVERITY = {MarginAccountStatus.OK: 0, MarginAccountStatus.CALL: 1,
                    MarginAccountStatus.FORCE_SELL: 2}
 
-#: Two-decimal levels and money, so products and quotients stay exact.
-LEVELS = st.integers(min_value=1, max_value=200).map(lambda n: D(n) / 100)
+#: Two-decimal levels and money, so products and quotients stay exact. Capped at
+#: 1.00: a forced-close rung above the QD 26 Dieu 13 breach is refused at
+#: construction (BrokerTermLooserThanLaw, test_broker_cannot_relax.py), so a
+#: legal ladder lives in (0, 1].
+LEVELS = st.integers(min_value=1, max_value=100).map(lambda n: D(n) / 100)
 MONEY = st.integers(min_value=1, max_value=10**9).map(D)
 
 

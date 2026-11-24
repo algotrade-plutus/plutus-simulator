@@ -2552,6 +2552,16 @@ class BrokerProfile:
     margin_profile: Optional[Any] = None
     block_opening_utilisation: Optional[Decimal] = None
 
+    def __post_init__(self) -> None:
+        # A broker may add to the depository's initial-margin ratio, never
+        # subtract from it (it is added to the VSDC rate in deposit.py).
+        if Decimal(str(self.margin_buffer)) < 0:
+            from plutus.market.session.margin_lending import BrokerTermLooserThanLaw
+            raise BrokerTermLooserThanLaw(
+                'margin_buffer', self.margin_buffer, Decimal('0'),
+                'the VSDC initial-margin ratio',
+                'A negative buffer would margin below the depository rate.')
+
     @classmethod
     def from_margin_profile(cls, profile: Any, *,
                             margin_buffer: Decimal = Decimal('0'),

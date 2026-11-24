@@ -77,33 +77,33 @@ def test_binding_policy_never_loosens_when_the_floor_rises():
 # Derivatives margin: NOT enforced
 # --------------------------------------------------------------------------
 
-@pytest.mark.xfail(strict=True, reason=(
-    'FINDING T8.1: BrokerProfile.margin_buffer has no sign check '
-    '(types.py BrokerProfile, deposit.py account_margin_requirement and '
-    'DerivativesAccount.reserve add it to the VSDC rate), so a negative '
-    'buffer relaxes the depository initial-margin ratio.'))
+# Guarded since 2026-11-24 (owner decision): a broker may tighten VSDC's
+# derivatives rules but never relax them, as for equity (QD 87). Refused at
+# construction with BrokerTermLooserThanLaw.
+
 def test_a_negative_margin_buffer_is_refused():
-    with pytest.raises(ValueError):
+    with pytest.raises(BrokerTermLooserThanLaw):
         BrokerProfile(name='relaxing', margin_buffer=D('-0.05'))
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    'FINDING T8.1: as above, through the session config path.'))
 def test_a_negative_margin_buffer_in_config_is_refused():
-    with pytest.raises(ValueError):
+    with pytest.raises(BrokerTermLooserThanLaw):
         BrokerProfile.from_config({'name': 'relaxing',
                                    'margin_buffer': -0.05})
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    'FINDING T8.1: BrokerTerms.__post_init__ (market/broker.py) checks only '
-    'that the ladder is non-decreasing, so forced_close_utilisation > 1.00 is '
-    'accepted and deposit.margin_status grades assets < MR -- the QD 26 '
-    'Dieu 13 breach -- as CALL instead of FORCED.'))
-def test_a_broker_cannot_grade_a_dieu13_breach_below_forced():
-    terms = BrokerTerms(forced_close_utilisation=D('1.50'))
-    # assets 90 < required 100: VSDC's binary breach.
-    assert margin_status(D('100'), D('90'), terms) is MarginStatus.FORCED
+def test_a_forced_close_rung_above_the_dieu13_breach_is_refused():
+    """QD 26 Dieu 13: assets below the margin requirement is the breach, so a
+    forced-close rung above utilisation 1.00 would grade it CALL. Refused."""
+    with pytest.raises(BrokerTermLooserThanLaw):
+        BrokerTerms(forced_close_utilisation=D('1.50'))
+
+
+def test_a_stricter_derivatives_ladder_and_buffer_are_accepted():
+    BrokerProfile(name='tight', margin_buffer=D('0.02'),
+                  terms=BrokerTerms(warning_utilisation=D('0.70'),
+                                    margin_call_utilisation=D('0.80'),
+                                    forced_close_utilisation=D('0.90')))
 
 
 def test_at_the_default_ladder_a_dieu13_breach_is_forced():
