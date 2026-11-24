@@ -187,6 +187,10 @@ _TICK_PRICE = (('datetime', pa.timestamp('us')), ('tickersymbol', pa.string()),
                ('price', DEC))
 _TICK_QTY = (('datetime', pa.timestamp('us')), ('tickersymbol', pa.string()),
              ('quantity', pa.int64()))
+#: Continuous-code map (``VN30F1M`` etc.) per contract and day; starts 2021-06-01.
+#: Read by ``measurements/margin_incidence.py``'s front-month query.
+_FUTURE_CODE = (('datetime', pa.date32()), ('tickersymbol', pa.string()),
+                ('futurecode', pa.string()))
 _MASTER = (('tickersymbol', pa.string()), ('exchangeid', pa.string()),
            ('lastupdated', pa.date32()), ('instrumenttype', pa.string()),
            ('startdate', pa.date32()), ('expdate', pa.date32()))
@@ -196,6 +200,7 @@ DB_TABLES: Dict[str, Tuple[Tuple[str, pa.DataType], ...]] = {
     **{t: _DAILY_PRICE for t in ('close', 'open', 'max', 'min', 'ceil',
                                  'floor', 'reference')},
     'dailyvolume': _DAILY_QTY,
+    'futurecontractcode': _FUTURE_CODE,
     'bidprice': _BOOK_PRICE, 'askprice': _BOOK_PRICE,
     'bidsize': _BOOK_QTY, 'asksize': _BOOK_QTY,
     'matched': _TICK_PRICE, 'total': _TICK_QTY, 'matchedvolume': _TICK_QTY,
