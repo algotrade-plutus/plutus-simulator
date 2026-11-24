@@ -123,3 +123,19 @@ S2 is not rerun on the book. The daily run stands (−77%, forced sale in tranch
 (`measurements/s2_lock_queue.py`, archive book + tape) proves the 2022-11-07 floor sale was blocked by a full lock,
 where the daily run assumed a fill (graded `TOUCHED_AT_LIMIT`). No locked-book rule is added to the engine; the
 ghost-side limitation (LIMITATIONS item 2) stays disclosed. Not assessed: S2's equity if the 11-07 tranche is carried.
+
+## 6. Decisions of 2026-11-25
+
+- **Principle:** the repos keep every experiment value faithfully, documented in full and easy to follow. The paper
+  picks a coherent, succinct subset and a narrative; the details stay in the repo documents.
+- **F2:** report the reversal openly (tick 10.1% undecided vs bar 32.6%); it supports the paper's case. Test to be
+  rewritten to pin these values.
+- **2016 tick revision:** disclose (the rulebook starts on 2020-01-01; earlier dates resolve to UNKNOWN). Not sourced.
+- **12 uncovered rule edges:** disclose with the count; pinned by `test_rule_tables.py::OPEN_EDGES`.
+- **Slices:** the 6.2 MB indeterminate book slice is approved. The MarketMaker slice (29 MB) is to be trimmed to the
+  sessions the ladder and markouts need, after the full-window runs, with a check that no number moves.
+- **ProtoPair:** may go public (push still needs the owner's go-ahead).
+- **Beyond 3 book levels:** stay undecided; the queue band carries the result (no data in this context).
+- **MarketMaker in the paper:** decided later. Meanwhile, the repo gets a full preliminary report
+  (`ProtoMarketMaker/result/REPORT.md`).
+- **Post-KRX derivatives orders:** open (see the discussion of 2026-11-25).
