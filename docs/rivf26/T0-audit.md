@@ -308,3 +308,26 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
 - **Full unit suite: 2,162 passed, 0 failed, 2 xfailed, 453 skipped** (was 1 failed, 533 skipped).
 - `figures/e1_fill_divergence.json` and `figures/f2_indeterminate_rate.png` are regenerated with the camera-ready
   values (`t4_camera_ready.md`).
+
+## 4i. Band-edge orders on book sessions; soft market-order evidence (2026-11-25, LIMITATIONS #1 and #5)
+
+- **Book sessions (`a729b7e`).** Root cause: a `BookSessionSource` tick interval carries no book of its own (the
+  book walk reads it through `book_at`), withholds high/low/volume, and carries the *day's* close and a `BAR_PROXY`
+  lock. So `band_lock_decision` fell to the daily-bar tier, and on any day that closed on the edge every market
+  order or limit at the ceiling/floor was INDETERMINATE `{book, low|high}`, however open the book was. Fix: a policy
+  that reads its own book (`READS_ITS_OWN_BOOK`, set by the book walk) skips the bar tier on a continuous interval
+  with no book. An instantaneous lock on the state is honoured one direction only (`TICK_BOOK` → NO_FILL, `UNKNOWN`
+  → INDETERMINATE `{book}`, the pre-`348e010` fill-time refusal); otherwise the walk decides. A ghost lock still
+  comes back INDETERMINATE through the walk's crossed/stale refusals (#2 is unchanged). Daily sessions and the
+  soft/hard/probabilistic policies are untouched. The two strict-xfail tests pass; four new tests pin the real
+  interval shape (buy market / limit at ceiling, sell at floor fill from the book; HPG ghost stays INDETERMINATE).
+- **soft market-order label (`694ae11`).** A market fill is now graded like a limit at its band edge:
+  `TRADED_THROUGH` only when a trade strictly inside the band is observed, `TOUCHED_AT_LIMIT` (ASSUMED/TOUCH) on a
+  pinned day. Outcomes, prices and quantities do not move.
+- **No outcome changes.** Scenarios 39 passed, strategies 18 passed + 2 skipped, as before. Instrumented runs: no
+  band-lock gate decision changed in either suite, and all 3 (scenarios) + 39 (strategies) soft market fills stay
+  `TRADED_THROUGH`. No committed E1 table carries evidence (`e1_published/`, `e1_aggregates.*` and
+  `figures/e1_fill_divergence.json` count outcomes only), so none moves. Only the uncommitted
+  `rivf26/data/t2-e1/e1_decisions.parquet` `evidence` column (soft × `market_buy` on days pinned at the ceiling)
+  would change on a rerun.
+- **Full unit suite: 2,180 passed, 0 xfailed, 453 skipped** (was 2,169 passed, 2 xfailed).

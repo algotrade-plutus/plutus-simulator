@@ -911,7 +911,7 @@ class TestTheBandLock:
         assert fillable == 14_775
         assert absent == 0
 
-    # -- a book session's real interval shape (LIMITATIONS #1) -----------
+    # -- a book session's real interval shape (was LIMITATIONS #1) -------
     #
     # ``BookSessionSource.interval`` carries the day's band and the day's close,
     # withholds open/high/low/volume, and has no book of its own (the policy

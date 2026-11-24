@@ -739,7 +739,7 @@ def test_soft_fills_a_market_order_at_the_observed_price():
     assert decision.price == Decimal('97.0')
 
 
-# -- soft's evidence label on a market order (LIMITATIONS #5) ----------------
+# -- soft's evidence label on a market order (was LIMITATIONS #5) ------------
 #
 # A market order is marketable into the band edge on its side, so it is graded
 # like a limit at that edge: TRADED_THROUGH only where a trade strictly inside

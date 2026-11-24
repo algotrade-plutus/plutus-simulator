@@ -3,15 +3,14 @@
 Everything here is known, reproducible and left as is on purpose. In each case the engine reports the limit
 (INDETERMINATE, UNKNOWN, or a counted event) rather than guessing. Fixed during camera-ready work, so **no longer**
 limitations: the conservative queue's taker sweeps (`e528633`); the derivatives VM baseline on adds and flips
-(`8295502`); brokers relaxing VSDC derivatives terms (`52c6d5c`).
+(`8295502`); brokers relaxing VSDC derivatives terms (`52c6d5c`); band-edge orders on book (tick) sessions, now
+decided from the book walk (`a729b7e`); `soft` labelling every market-order fill `TRADED_THROUGH`, now graded like
+a limit at the band edge (`694ae11`). Their numbers (1 and 5) are kept as stubs so references to the others stay
+valid.
 
 ## Engine
 
-1. **Band-edge orders on book (tick) sessions are undecided.** The shared band-lock check
-   (`fills.band_lock_decision`) reads the daily OHLC, which a `BookSessionSource` tick interval does not carry, and
-   it runs before the book walk. So a market order, or a limit at the ceiling or floor, returns INDETERMINATE
-   (`book`, `low`/`high`) instead of being decided from the book. Two `test_book_walk.py` tests record this. Daily
-   sessions are unaffected.
+1. *(Fixed in `a729b7e`: band-edge orders on book sessions are decided from the book walk.)*
 2. **A locked book cannot be read from the depth data.** The data has no deletion records, so when one side empties
    at a lock it keeps its last (auction) quotes as a stale "ghost". The book walk refuses crossed or stale books
    rather than trading on them. Consequence: a lock is proven from the queue size and the tape outside the engine
@@ -24,9 +23,7 @@ limitations: the conservative queue's taker sweeps (`e528633`); the derivatives 
    unresolved there (`margin_model()` raises `UnresolvedRule`). Margin is then computed on the pre-KRX shape and
    each such mark is counted (`margin_model.unsourced`). Only a strategy-side guard refuses to trade (S6, MM). A
    strategy without the guard is simulated on an unsourced margin rule, and the run says so in its counters.
-5. **`soft` labels every market-order fill `TRADED_THROUGH`**, including on a day pinned at the band edge, where the
-   fill is only an assumption. Fill outcomes are right; per-evidence tallies overstate observed fills for market
-   orders. Limit orders are labelled correctly.
+5. *(Fixed in `694ae11`: `soft` grades a market-order fill like a limit at the band edge.)*
 6. **The book walk has no auction arm by default**: orders resting into the ATC come back INDETERMINATE unless an
    auction policy is composed in.
 
