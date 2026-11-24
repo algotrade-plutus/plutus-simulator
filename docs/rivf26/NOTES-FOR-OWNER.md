@@ -116,3 +116,10 @@ place quotes beyond the observed depth (LIMITATIONS #3), which weakens that side
 
 Paper claim: "naive can fall outside the faithful band in either direction; the band brackets every queue position
 the data allows."
+
+## 5. S2: keep the current proof (owner decision, 2026-11-25)
+
+S2 is not rerun on the book. The daily run stands (−77%, forced sale in tranches). The queue measurement
+(`measurements/s2_lock_queue.py`, archive book + tape) proves the 2022-11-07 floor sale was blocked by a full lock,
+where the daily run assumed a fill (graded `TOUCHED_AT_LIMIT`). No locked-book rule is added to the engine; the
+ghost-side limitation (LIMITATIONS item 2) stays disclosed. Not assessed: S2's equity if the 11-07 tranche is carried.
