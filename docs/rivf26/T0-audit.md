@@ -280,3 +280,16 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
   - scenarios (39 pass) and strategies (18 pass, 2 skip).
 - Not affected by construction: SB, Grid, E1, HSX daily (equities only); the old flat-each-session MM anchor.
 - MM faithful-A (overnight carry) is being rerun on `8295502`.
+
+## 4g. T8.4–T8.6 results that correct the paper (merged `61a9fc7`)
+
+- **Rule versions: 114, not 97** (93 keys, 12 families; 87 HIGH, 11 MEDIUM, 9 LOW, 7 UNVERIFIED; 11 record an
+  absence). The 97 was a text-match count in `PAPER-COMPENDIUM.md` (`141d547`) that missed rows built in loops.
+  So "341 encoded in the engine" becomes 358, and "only a handful medium/low/unverified" is 27 of 114.
+- **Broker fields: 244 confirmed** (18 profiles: 14 firms + PLUTUS_DEFAULT + 3 vintages). Published 110, supplied 0
+  as shipped (11 if `fill_from=PLUTUS_DEFAULT`), inferred 21, not published 113. "Published vs supplied" is really
+  three-way.
+- **Maintenance effort:** the IM step is data-only (one tuple line), but 0.17 is also copied undated in 3 places.
+  The lot change is a code branch. KRX is 79 rule-data / 20 engine lines. The 2016-09-12 tick change is not
+  encoded (the rulebook starts 2020-01-01). See `docs/reference/tables/t8_maintenance_effort.md`.
+- **API listing:** 8 lines, executed by `tests/test_api_listing.py` on the shipped fixture.

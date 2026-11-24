@@ -1664,3 +1664,10 @@ MUST #4 (daily-VM) changes at the time, against which S1/S7 and one margin-incid
 red (WIP, not a committed defect). `scenarios` is green; the `tests/datahub/test_cli.py`
 subprocess tests a bare pytest reported as 17 failures pass under the venv (a PYTHONPATH
 collision, not a logic failure).
+
+## `event_evidence_level(event)` (added 2026-11-24, RIVF'26 T8.4)
+
+`plutus.market.session.event_evidence_level` maps a fill event returned by `ExchangeSession.advance_to` to its
+evidence level (PROVEN / ASSUMED / UNEVIDENCED). It delegates to the existing `fill_evidence_level`, so the two
+cannot disagree. It exists so the 8-line API listing (`docs/reference/api_listing.md`, executed by
+`tests/test_api_listing.py`) can report evidence from the public surface alone.
