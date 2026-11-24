@@ -102,9 +102,26 @@ __all__ = [
     "measure_indeterminate_rate", "render", "RESOLUTION_LIMIT", "DATA_CEILING",
 ]
 
-# -- default corpora (the two roots on the authoring machine) ----------------
-DEFAULT_BAR_ROOT = str(Path.home() / "algotrade-research/dataset/hermes-parquet")
-DEFAULT_TICK_ROOT = str(Path.home() / "algotrade-research/dataset/hermes-dev-extract")
+# -- default corpora: from the environment, never a machine path ------------
+#: The daily-bar root (``quote_*.parquet``) and the tick root (the
+#: ``local_quote_*`` book and sized tape). Read from ``PLUTUS_F2_BAR_ROOT`` /
+#: ``PLUTUS_F2_TICK_ROOT`` first, then the engine-wide ``PLUTUS_DATA_ROOT`` /
+#: ``PLUTUS_DEPTH_ROOT``; ``None`` when neither is set (the CLI then requires
+#: ``--data-root`` / ``--tick-root``). The RIVF'26 slices are two separate roots:
+#: daily bars from the DB, the sized book/tape from the local archive.
+DEFAULT_BAR_ROOT: Optional[str] = (os.environ.get("PLUTUS_F2_BAR_ROOT")
+                                   or os.environ.get("PLUTUS_DATA_ROOT"))
+DEFAULT_TICK_ROOT: Optional[str] = (os.environ.get("PLUTUS_F2_TICK_ROOT")
+                                    or os.environ.get("PLUTUS_DEPTH_ROOT"))
+
+#: The declared candidate population (the paper's F2 window): the three HSX
+#: names the old tick extract carried, over its window. The measured population
+#: is still *derived* (book days x bar days, :func:`discover_population`); this
+#: candidate set only drives the logged extraction run (:func:`log_run`), which
+#: cannot discover days from a book it has not fetched yet.
+POPULATION_TICKERS = ("FPT", "HPG", "HTV")
+POPULATION_START = date(2022, 10, 20)        # inclusive
+POPULATION_END = date(2022, 12, 1)           # exclusive
 
 #: The tick extract's HSX equity book lives under this table prefix (the
 #: ``local_quote_*`` family, the same one S8/S9 read for FPT). ``quote_*`` in the
@@ -354,8 +371,8 @@ def _run_tick(mm, ticker: str, day: date, close: Decimal, floor: Decimal,
 # --------------------------------------------------------------------------
 
 def measure_indeterminate_rate(
-    bar_root: str = DEFAULT_BAR_ROOT,
-    tick_root: str = DEFAULT_TICK_ROOT,
+    bar_root: Optional[str] = None,
+    tick_root: Optional[str] = None,
     *,
     queues: Sequence[str] = ("optimistic", "conservative"),
     population: Optional[Sequence[Tuple[str, date]]] = None,
@@ -369,6 +386,11 @@ def measure_indeterminate_rate(
     (``PLUTUS_DATA_ROOT`` for the daily band, ``PLUTUS_DEPTH_ROOT`` for the book)
     are pointed at ``bar_root``/``tick_root`` here.
     """
+    bar_root = bar_root or DEFAULT_BAR_ROOT
+    tick_root = tick_root or DEFAULT_TICK_ROOT
+    if not bar_root or not tick_root:
+        raise ValueError("bar_root and tick_root are required (or set "
+                         "PLUTUS_F2_BAR_ROOT / PLUTUS_F2_TICK_ROOT)")
     os.environ["PLUTUS_DATA_ROOT"] = bar_root
     os.environ["PLUTUS_DEPTH_ROOT"] = tick_root
 
@@ -424,6 +446,29 @@ def measure_indeterminate_rate(
             f"fill evaluations"
         ),
         instrument_days=n, tickers=dict(sorted(per_ticker.items())), arms=arms)
+
+
+def candidate_population(
+    tickers: Sequence[str] = POPULATION_TICKERS,
+    start: date = POPULATION_START, end: date = POPULATION_END,
+) -> List[Tuple[str, date]]:
+    """Every ``(ticker, weekday)`` in ``[start, end)``. Holidays and days with no
+    bar drop out in :func:`measure_indeterminate_rate` (no close/floor)."""
+    days = [date.fromordinal(o) for o in range(start.toordinal(), end.toordinal())
+            if date.fromordinal(o).weekday() < 5]
+    return [(t, d) for t in sorted(tickers) for d in days]
+
+
+def log_run() -> IndeterminateRateResult:
+    """The extraction target for ``scripts/rivf26_extract.py log --callable``.
+
+    Runs all three arms over the declared candidate population against whatever
+    roots the logger has pointed ``PLUTUS_DATA_ROOT`` / ``PLUTUS_DEPTH_ROOT`` at,
+    so the adapters record exactly the (ticker, day, field) set F2 reads.
+    """
+    return measure_indeterminate_rate(
+        os.environ["PLUTUS_DATA_ROOT"], os.environ["PLUTUS_DEPTH_ROOT"],
+        population=candidate_population())
 
 
 # --------------------------------------------------------------------------
@@ -528,8 +573,14 @@ def render(result: IndeterminateRateResult, out: Path) -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data-root", default=DEFAULT_BAR_ROOT)
-    parser.add_argument("--tick-root", default=DEFAULT_TICK_ROOT)
+    parser.add_argument("--data-root", default=DEFAULT_BAR_ROOT,
+                        required=DEFAULT_BAR_ROOT is None,
+                        help="daily-bar root (env PLUTUS_F2_BAR_ROOT or "
+                             "PLUTUS_DATA_ROOT)")
+    parser.add_argument("--tick-root", default=DEFAULT_TICK_ROOT,
+                        required=DEFAULT_TICK_ROOT is None,
+                        help="local_quote book/tape root (env PLUTUS_F2_TICK_ROOT "
+                             "or PLUTUS_DEPTH_ROOT)")
     parser.add_argument("--json", type=Path,
                         default=_REPO / "figures" / "f2_indeterminate_rate.json")
     parser.add_argument("--png", type=Path,
