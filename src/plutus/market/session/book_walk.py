@@ -620,6 +620,43 @@ class ConservativeQueue:
         return f'ConservativeQueue(prints={self.prints!r})'
 
 
+class TapeConservativeQueue(ConservativeQueue):
+    """The conservative queue with its subsequent prints read from the sized tape.
+
+    :class:`BookWalkFillPolicy` swaps this in for a plain ``ConservativeQueue()``
+    when it is given a tape, so the *taker* walk can decide the same way the maker
+    arm already does. The prints depend on the order (it counts only what traded
+    after the order arrived), so the walk uses :meth:`bound`, a
+    ``ConservativeQueue`` whose ``prints`` are tied to one order and one interval.
+    The signature says where the prints came from, so a run with them and one
+    without never share a provenance string.
+
+    The prints that clear a level are counted from the **resting** side's view
+    (``TapeSource.prints_through``): an ask at ``p`` is cleared by trades at ``p``
+    or above. So a BUY taker asks the tape for SELL-side prints at the ask's
+    price, and the reverse for a SELL. The window is the maker arm's:
+    ``[order.submitted_at, interval.start)``.
+    """
+
+    def __init__(self, tape: 'TapeProvider') -> None:
+        super().__init__(prints=None)
+        self.tape = tape
+
+    @property
+    def signature(self) -> str:
+        return 'conservative(prints=tape)'
+
+    def bound(self, submitted_at: datetime, until: datetime) -> ConservativeQueue:
+        def prints(request: QueueRequest) -> Optional[int]:
+            resting = Side.SELL if request.side is Side.BUY else Side.BUY
+            return self.tape.prints_through(request.ticker, request.level.price,
+                                            resting, submitted_at, until)
+        return ConservativeQueue(prints=prints)
+
+    def __repr__(self) -> str:
+        return 'TapeConservativeQueue()'
+
+
 def queue_draw_key(request: QueueRequest) -> str:
     """The identity of one queue question, as a stable string.
 
@@ -1508,6 +1545,11 @@ class BookWalkFillPolicy(_CappedFillPolicy):
                 f'{signature!r}; it would make the policy stamp unreadable')
         self.tape = tape
         self.auction = auction
+        # A conservative queue with no prints of its own decides nothing as a
+        # taker; with a tape it can, from the same prints the maker arm reads.
+        if (tape is not None and type(queue) is ConservativeQueue
+                and queue.prints is None):
+            self.queue = TapeConservativeQueue(tape)
 
     # -- what a run records ---------------------------------------------
 
@@ -1582,7 +1624,10 @@ class BookWalkFillPolicy(_CappedFillPolicy):
         if self._is_marketable(order.order, book):
             walk = walk_book(
                 book, side=order.order.side, limit=order.order.limit_price,
-                quantity=order.remaining_quantity, queue=self.queue,
+                quantity=order.remaining_quantity,
+                queue=(self.queue.bound(order.submitted_at, interval.start)
+                       if isinstance(self.queue, TapeConservativeQueue)
+                       else self.queue),
                 order_id=str(order.order_id), max_staleness=self.max_staleness,
             )
             return self._decide(walk, order, interval, rules,

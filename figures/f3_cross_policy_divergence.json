@@ -30,8 +30,8 @@
     },
     "conservative": {
       "maker_shares": 123700,
-      "taker_shares": 0,
-      "indeterminate_rate": 0.16666666666666666
+      "taker_shares": 3100,
+      "indeterminate_rate": 0.0
     },
     "probabilistic": {
       "maker_shares": 137600,

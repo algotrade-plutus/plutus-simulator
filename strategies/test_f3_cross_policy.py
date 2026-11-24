@@ -10,9 +10,11 @@ quotes one policy hides both. Two panels, one per policy axis:
   and ``probabilistic`` will not fill its market orders so it never trades -- but
   they cannot *decide* half its flow, which the indeterminate rate says out loud.
 * **queue axis** -- S8 (intraday maker) under the three book-walk queue
-  assumptions. The maker fill moves ~19% across the assumptions, and the
-  ``conservative`` arm -- which needs sized subsequent prints this corpus lacks --
-  leaves one sixth of its flow indeterminate.
+  assumptions. The maker fill moves ~19% across the assumptions. (Until
+  2026-11-24 the ``conservative`` arm also left one sixth of its flow
+  indeterminate: its *taker* walk had no subsequent prints. It now reads them
+  from the same sized tape the maker arm uses, so it decides its whole flow and
+  the spread is a pure queue-assumption effect. RIVF'26 camera-ready.)
 
 Each arm's ``indeterminate_report().rate`` is read beside its divergence metric,
 so the figure carries the divergence and the ignorance together rather than a
@@ -133,12 +135,13 @@ def test_f3_cross_policy_divergence():
     assert fa["hard"]["indeterminate_rate"] > 0.3
     assert fa["soft"]["indeterminate_rate"] < fa["hard"]["indeterminate_rate"]
 
-    # Queue axis: the maker fill moves materially across the assumptions, and the
-    # conservative arm leaves a real share indeterminate where the others do not.
+    # Queue axis: the maker fill moves materially across the assumptions, and
+    # with the sized tape feeding its taker walk the conservative arm now
+    # decides its whole flow, so the spread is the queue assumption alone.
     spread = (qa["optimistic"]["maker_shares"] - qa["conservative"]["maker_shares"]) \
         / qa["optimistic"]["maker_shares"]
     assert spread > 0.15
-    assert qa["conservative"]["indeterminate_rate"] > 0.1
+    assert qa["conservative"]["indeterminate_rate"] == 0.0
     assert qa["optimistic"]["indeterminate_rate"] == 0.0
 
 

@@ -234,3 +234,23 @@ That is for T2/F4.
 2. The strategy suite fails, rather than runs, at the handoff commit (4a).
 3. 32 of the 37 J-scenarios skip, not about 22.
 4. The single-invocation audit command fails on a `_harness` name clash (Section 3).
+
+## 4e. Change 2: the conservative queue reads the sized tape for taker sweeps (2026-11-24)
+
+Owner-approved. `BookWalkFillPolicy` given `queue=conservative` and a tape now swaps in a
+`TapeConservativeQueue` (`src/plutus/market/session/book_walk.py`). Each taker walk counts the prints at a
+level from the resting side's view, over the maker arm's window `[submitted_at, interval.start)`, so a
+marketable order fills at a level only once more than its displayed depth has traded there since it
+arrived. Provenance reads `queue=conservative(prints=tape)`. Without a tape nothing changes. Pinned by
+`tests/market/session/test_book_walk_conservative_tape.py` (7 tests, on the in-repo extract, no skip).
+
+Effect on shipped results:
+- **S9: unchanged.** Maker fills 152,600 / 123,700 / 137,600, so **18.9%**. Conservative's incidental taker
+  fills go 0 → 3,100 (now decided).
+- **F3 figure (paper): changes.** The queue panel's conservative arm goes from **16.7% indeterminate to
+  0%**. The spread is unchanged. The fill panel is identical. F3's test and docstring are updated; the PNG
+  and JSON are regenerated. **Paper session:** the F3 caption or text claiming the conservative arm leaves a
+  sixth of its flow undecided must change.
+- MM (T5) is the main consumer. Its conservative headline can now decide fills.
+- Unit suite: +7 tests, same single pre-existing failure. The 12 hidden `test_book_walk.py` failures
+  (with `PLUTUS_DEPTH_ROOT`) are unchanged.
