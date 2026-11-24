@@ -26,10 +26,14 @@ limit, tick = data ceiling -- and the KIND, not the magnitude, is the finding.
 
 This runs the measurement on a small deterministic slice for speed; the full
 population and the figure come from ``measurements/indeterminate_rate.py``. It
-gates on BOTH corpora being present and skips cleanly otherwise.
+gates on BOTH corpora being present and skips cleanly otherwise. The two roots
+are read from ``PLUTUS_F2_BAR_ROOT`` / ``PLUTUS_F2_TICK_ROOT`` (falling back to
+``PLUTUS_DATA_ROOT`` / ``PLUTUS_DEPTH_ROOT``): the RIVF'26 slices keep the daily
+bars and the sized ``local_quote`` book in separate directories.
 
 RUN
-    .venv/bin/python -m pytest strategies/test_f2_resolution_indeterminacy.py -v
+    PLUTUS_F2_BAR_ROOT=<daily slice> PLUTUS_F2_TICK_ROOT=<book slice> \
+        .venv/bin/python -m pytest strategies/test_f2_resolution_indeterminacy.py -v
     .venv/bin/python measurements/indeterminate_rate.py   # full population + figure
 """
 from __future__ import annotations
@@ -40,8 +44,7 @@ from pathlib import Path
 import pytest
 
 from measurements.indeterminate_rate import (
-    DEFAULT_BAR_ROOT, DEFAULT_TICK_ROOT, DataField, discover_population,
-    measure_indeterminate_rate,
+    DataField, discover_population, measure_indeterminate_rate,
 )
 
 #: Per-ticker cap for the test slice: enough days across every ticker for a
@@ -51,21 +54,33 @@ DAYS_PER_TICKER = 4
 _FILL_UNOBSERVABLE = DataField.FILL_UNOBSERVABLE_AT_RESOLUTION.value
 
 
-def _data_ready() -> bool:
-    """Both corpora present: the daily bar Parquet and the local_quote book."""
+def _roots():
+    """``(bar_root, tick_root)`` from the environment, captured at import so the
+    measurement (which repoints ``PLUTUS_DATA_ROOT``/``PLUTUS_DEPTH_ROOT``) cannot
+    move them under the test. Either may be ``None``."""
     import os
 
-    bar = Path(os.environ.get("PLUTUS_DATA_ROOT", DEFAULT_BAR_ROOT))
-    tick = Path(os.environ.get("PLUTUS_DEPTH_ROOT", DEFAULT_TICK_ROOT))
-    return ((bar / "quote_close.parquet").exists()
-            and (tick / "local_quote_bidprice.parquet").exists())
+    bar = os.environ.get("PLUTUS_F2_BAR_ROOT") or os.environ.get("PLUTUS_DATA_ROOT")
+    tick = (os.environ.get("PLUTUS_F2_TICK_ROOT")
+            or os.environ.get("PLUTUS_DEPTH_ROOT"))
+    return bar, tick
+
+
+BAR_ROOT, TICK_ROOT = _roots()
+
+
+def _data_ready() -> bool:
+    """Both corpora present: the daily bar Parquet and the local_quote book."""
+    return bool(BAR_ROOT and TICK_ROOT
+                and (Path(BAR_ROOT) / "quote_close.parquet").exists()
+                and (Path(TICK_ROOT) / "local_quote_bidprice.parquet").exists())
 
 
 def _slice() -> list:
     """A deterministic subset: the first ``DAYS_PER_TICKER`` days of each ticker."""
     per = defaultdict(int)
     out = []
-    for ticker, day in discover_population(DEFAULT_BAR_ROOT, DEFAULT_TICK_ROOT):
+    for ticker, day in discover_population(BAR_ROOT, TICK_ROOT):
         if per[ticker] < DAYS_PER_TICKER:
             out.append((ticker, day))
             per[ticker] += 1
@@ -80,7 +95,7 @@ def test_f2_resolution_indeterminacy():
     assert population, "no bar+tick instrument-days discovered"
 
     result = measure_indeterminate_rate(
-        DEFAULT_BAR_ROOT, DEFAULT_TICK_ROOT,
+        BAR_ROOT, TICK_ROOT,
         queues=("optimistic", "conservative"), population=population)
 
     bar = result.arm("BAR / hard")
@@ -133,7 +148,7 @@ if __name__ == "__main__":
     if not _data_ready():
         raise SystemExit("F2 needs both the daily corpus and the tick extract")
     r = measure_indeterminate_rate(
-        DEFAULT_BAR_ROOT, DEFAULT_TICK_ROOT, population=_slice())
+        BAR_ROOT, TICK_ROOT, population=_slice())
     print("F2 -- indeterminate rate per (resolution x cause)  [test slice]")
     for a in r.arms:
         print(f"  {a.label:34} rate={float(a.rate):.1%}  "
