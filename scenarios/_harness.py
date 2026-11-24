@@ -28,8 +28,14 @@ from plutus.market.protocol import LockEvidence, Resolution
 from plutus.market.session import ExchangeSession
 from plutus.market.session.types import DataField
 
-#: Fallback corpus (author's machine). Override with PLUTUS_DATA_ROOT.
-DEFAULT_DATA_ROOT = str(Path.home() / "algotrade-research/dataset/hermes-parquet")
+#: Fallback data: the shipped in-repo fixtures, so every scenario runs on a bare
+#: clone (RIVF'26 T3). ``daily/`` is the minimal daily slice the daily scenarios
+#: read; ``book/`` is the minimal book + tape slice the intraday scenarios read,
+#: with the daily band rows they need beside it. Each carries a DATA-MANIFEST.md.
+#: Override with PLUTUS_DATA_ROOT / PLUTUS_DEPTH_ROOT to read a full corpus.
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+DEFAULT_DATA_ROOT = str(FIXTURES / "daily")
+DEFAULT_DEPTH_ROOT = str(FIXTURES / "book")
 
 #: The daily-resolution adapter over the corpus. A scenario may override it.
 DEFAULT_ADAPTER = "plutus.market.adapters.datahub.DataHubSource"
@@ -38,6 +44,13 @@ DEFAULT_ADAPTER = "plutus.market.adapters.datahub.DataHubSource"
 def data_root() -> str:
     """The market-data corpus root — ``PLUTUS_DATA_ROOT`` or the fallback."""
     return os.environ.get("PLUTUS_DATA_ROOT", DEFAULT_DATA_ROOT)
+
+
+def depth_root() -> str:
+    """The book/tape root (``local_quote_*`` / ``quote_*`` ladders and tape, plus
+    the daily bands the book scenarios price against) -- ``PLUTUS_DEPTH_ROOT`` or
+    the shipped fixture."""
+    return os.environ.get("PLUTUS_DEPTH_ROOT", DEFAULT_DEPTH_ROOT)
 
 
 def data_available() -> bool:

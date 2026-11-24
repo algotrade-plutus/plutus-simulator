@@ -48,8 +48,9 @@ from plutus.market.adapters.book_session import BookSessionSource
 from plutus.market.protocol import Order
 from plutus.core.order import OrderType, Side
 
-EXTRACT = Path(str(Path.home() / "algotrade-research/dataset/hermes-dev-extract"))
-PRICES = str(Path.home() / "algotrade-research/dataset/hermes-parquet")
+from _harness import depth_root  # noqa: E402  (shipped fixture, or PLUTUS_DEPTH_ROOT)
+EXTRACT = Path(depth_root())
+PRICES = depth_root()
 TICKER = "HPG"                       # book present, but the tape carries FPT only
 PRICE = Decimal("12.50")             # below the ask -> rests as a maker
 SUBMIT = datetime(2022, 11, 9, 10, 0)

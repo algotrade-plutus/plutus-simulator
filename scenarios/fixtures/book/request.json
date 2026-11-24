@@ -1,0 +1,203 @@
+{
+ "files": [
+  {
+   "depth": [
+    1,
+    3
+   ],
+   "file": "local_quote_askprice.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ],
+    "HPG": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "depth": [
+    1,
+    3
+   ],
+   "file": "local_quote_asksize.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ],
+    "HPG": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "depth": [
+    1,
+    3
+   ],
+   "file": "local_quote_bidprice.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ],
+    "HPG": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "depth": [
+    1,
+    3
+   ],
+   "file": "local_quote_bidsize.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ],
+    "HPG": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "local_quote_matched.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "local_quote_total.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quote_ceil.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ],
+    "HPG": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quote_close.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ],
+    "HPG": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quote_dailyvolume.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ],
+    "HPG": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quote_floor.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ],
+    "HPG": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quote_reference.parquet",
+   "tickers": {
+    "FPT": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ],
+    "HPG": [
+     [
+      "2022-11-09",
+      "2022-11-10"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quote_ticker.parquet",
+   "tickers": {
+    "FPT": null,
+    "HPG": null
+   }
+  }
+ ],
+ "version": 1
+}

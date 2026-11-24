@@ -193,6 +193,40 @@ wrong, so per-evidence tallies (E1 and similar) overstate observed fills. `hard`
 fills the market family. S2's forced sales are LIMIT orders and are unaffected. Not fixed: changing it
 moves evidence counts the paper reports, so it needs an owner decision before T2.
 
+## 4d. T3 result: scenarios and strategies run from shipped data (2026-11-24)
+
+With **no** `PLUTUS_*` variables set, at this commit:
+
+| Directory | Collected | Before (T0) | After (T3) |
+|---|---:|---|---|
+| `scenarios/` | 39 | 5 passed, 34 skipped | **39 passed, 0 skipped** |
+| `strategies/` | 20 | 5 passed, 7 failed, 2 skipped (of 14) | **18 passed, 2 skipped** (E1, F2: need a full corpus / tick archive, T2) |
+| `tests/` | 2,540 | not run at T0 | 2,006 passed, **533 skipped**, 1 failed (pre-existing, see above) |
+
+What changed:
+- `scenarios/_harness.py` falls back to `scenarios/fixtures/{daily,book}` and gains `depth_root()`. The 11
+  book/tape scenarios no longer hard-code the old machine's paths.
+- `scenarios/fixtures/daily/` (88 KB): from the **DB**, by a logged run of the 21 daily J-scenarios (22 tests).
+- `scenarios/fixtures/book/` (224 KB): from the **archive** (book sizes before 2023), by a logged run of J13,
+  J21, J28–J36, with HPG's tape deliberately left out (J35 tests a ticker the tape does not cover).
+- `strategies/fixtures/parquet/`: regenerated from the DB by a logged run, now with `quote_max`/`quote_min`.
+  `strategies/fixtures/extract/` kept as shipped. Its VN30F2504 part is identical to the DB row for row, and
+  its FPT book is value-identical to the archive (`extract/PROVENANCE.md`).
+- **J32 and J33 re-pinned** (2,000 → 2,300; 1,000 → 400). The old tape stamped each price change ~70 µs
+  after the trade that caused it, so 344 of 1,569 FPT trades carried the previous price. The DB and archive
+  stamp both at the same instant. Both versions of each number were reproduced by a direct count over the raw
+  tape that doesn't use `TapeSource`; the engine is unchanged.
+
+Paper-cited findings, re-checked on the shipped fixtures: S2 (−77%, 10 calls; 11-07 floor sale blocked by
+the queue), S6 (opens pre-KRX, refuses post-KRX with `UnresolvedRule`), J17 (50 shares: no ROUND_LOT
+rejection on 2020-12-31, ROUND_LOT on 2021-01-05), J18 (13% → 17% IM: deposit **+30.8%**, the F1
+expectation), J19 (pre-KRX `pre_margin`, post-KRX `UnresolvedRule`). All hold.
+
+Not done in T3: the 533 skipped **unit** tests. They are corpus-gated too (384 "No daily corpus found",
+94 "No depth extract found", 26 "No corpus found", 14 "No tick archive found", …). The handoff's T3 target
+names scenarios and strategies only, but the paper's unit-test count (F4) depends on how these are counted.
+That is for T2/F4.
+
 ## 5. Findings that correct the handoff
 
 1. The 18.9% queue swing reproduces from the shipped fixtures, but it comes from **S9**, not F3:

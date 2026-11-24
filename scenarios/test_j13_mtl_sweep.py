@@ -46,7 +46,8 @@ from plutus.market.adapters.depth import DepthSource
 from plutus.market.session.book_walk import walk_book, OptimisticQueue
 from plutus.core.order import Side
 
-EXTRACT = Path(str(Path.home() / "algotrade-research/dataset/hermes-dev-extract"))
+from _harness import depth_root  # noqa: E402  (shipped fixture, or PLUTUS_DEPTH_ROOT)
+EXTRACT = Path(depth_root())
 FPT_CLEAN = datetime(2022, 11, 9, 9, 16, 5, 290870)
 
 

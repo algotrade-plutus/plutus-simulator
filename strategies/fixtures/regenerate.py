@@ -1,4 +1,15 @@
-"""Regenerate the in-repo strategy-suite fixtures (Workstream W7).
+"""SUPERSEDED (RIVF'26, 2026-11-24): this script copies rows out of the old corpus
+(``hermes-parquet`` / ``hermes-dev-extract``), which no longer exists. The daily
+fixture ``parquet/`` is now regenerated from the Algotrade DB by a logged run:
+
+    python scripts/rivf26_extract.py log --source db --experiment strategies-daily \
+        -- strategies/test_f3_cross_policy.py strategies/test_s{1,...,9}_*.py
+
+keeping the daily files only (see ``parquet/DATA-MANIFEST.md``). ``extract/`` is
+kept as shipped and checked against the DB and the archive (``extract/PROVENANCE.md``).
+The original description follows.
+
+Regenerate the in-repo strategy-suite fixtures (Workstream W7).
 
 WHAT THIS IS
     The Sx strategy suite (``strategies/test_s1..s9``) is a *fidelity* suite: it

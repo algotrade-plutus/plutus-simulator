@@ -48,8 +48,9 @@ from plutus.market.adapters.book_session import BookSessionSource
 from plutus.market.protocol import Order
 from plutus.core.order import OrderType, Side
 
-EXTRACT = Path(str(Path.home() / "algotrade-research/dataset/hermes-dev-extract"))  # the book
-PRICES = str(Path.home() / "algotrade-research/dataset/hermes-parquet")             # bands/instrument
+from _harness import depth_root  # noqa: E402  (shipped fixture, or PLUTUS_DEPTH_ROOT)
+EXTRACT = Path(depth_root())  # the book
+PRICES = depth_root()             # bands/instrument
 TICKER = "FPT"
 TS = datetime(2022, 11, 9, 9, 16, 5, 290870)   # a clean book instant
 ASK = Decimal("73.400000")                       # the visible ask level

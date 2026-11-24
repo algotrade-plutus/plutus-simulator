@@ -10,13 +10,13 @@ measured.
 
 THE AUTHOR'S EXAMPLE, on real data. FPT, 2022-11-09. A SELL of 6,000 is posted
     at **73.40** at 09:16:05, when **5,800 shares are already displayed** at that
-    price (the queue ahead). By 09:20 **6,800 shares have printed** at or through
+    price (the queue ahead). By 09:20 **6,200 shares have printed** at or through
     73.40 — just past the visible queue. So:
 
-    * **Optimistic** (we are at the front): all 6,800 are ours to take, capped at
+    * **Optimistic** (we are at the front): all 6,200 are ours to take, capped at
       the order — filled **6,000**.
     * **Conservative** (we are at the back): the first 5,800 clear the queue
-      ahead, leaving **1,000** — filled 1,000.
+      ahead, leaving **400** — filled 400.
     * **Probabilistic** (a seeded draw in between): filled between the two,
       reproducibly.
 
@@ -32,10 +32,20 @@ POLICY (oracle) — the queue position is UNSOURCED, our modelling choice, named
 
 EXPECTED — Tier 2
     * The three queues give **three different fills** — the spread is real.
-    * Optimistic (6,000) > conservative (1,000): the front fills more than the
+    * Optimistic (6,000) > conservative (400): the front fills more than the
       back, as the axis requires.
     * Probabilistic lies **between** the two and is reproducible under its seed.
     * Each run's provenance names ``book_walk`` and its queue.
+
+DATA NOTE (RIVF'26 camera-ready, 2026-11-24). The numbers were first pinned on the
+old dev extract, whose tape stamped each price change a few tens of microseconds
+*after* the trade that caused it, so every price-moving trade was attributed to
+the previous price. The shipped fixture (scenarios/fixtures/book/, from the
+Algotrade dataset) stamps the trade and its price at the same instant, so each
+trade carries the price it printed at. That leaves 600 fewer shares "at or
+through 73.40" by 09:20: 6,200 instead of 6,800, so the back of the queue
+clears 400, not 1,000. Verified independently of
+TapeSource from the raw tape; the maker arm is unchanged.
 
 RUN
     python scenarios/test_j33_maker_queue_spread.py
@@ -54,13 +64,14 @@ from plutus.market.adapters.book_session import BookSessionSource
 from plutus.market.protocol import Order
 from plutus.core.order import OrderType, Side
 
-EXTRACT = Path(str(Path.home() / "algotrade-research/dataset/hermes-dev-extract"))
-PRICES = str(Path.home() / "algotrade-research/dataset/hermes-parquet")
+from _harness import depth_root  # noqa: E402  (shipped fixture, or PLUTUS_DEPTH_ROOT)
+EXTRACT = Path(depth_root())
+PRICES = depth_root()
 TICKER = "FPT"
 PRICE = Decimal("73.40")
 QUANTITY = 6000
 SUBMIT = datetime(2022, 11, 9, 9, 16, 5)     # 5,800 displayed ahead at 73.40
-END = datetime(2022, 11, 9, 9, 20, 0)        # 6,800 printed through by here
+END = datetime(2022, 11, 9, 9, 20, 0)        # 6,200 printed through by here
 
 
 def _tape_available() -> bool:
@@ -116,7 +127,7 @@ def test_j33_maker_queue_spread():
 
     # The bounds are the author's example, exactly.
     assert opt == 6000, opt          # front of queue: the whole order
-    assert con == 1000, con          # back of queue: only what cleared 5,800
+    assert con == 400, con           # back of queue: only what cleared 5,800
 
     # Three different fills from one tape -- the queue assumption is the spread.
     assert opt > con, (opt, con)
@@ -140,7 +151,7 @@ if __name__ == "__main__":
         raise SystemExit("sized tape (local_quote_total) not found")
     obs = run_j33()
     print("J33 — Maker queue spread on one tape (FPT, SELL 6000 @ 73.40)")
-    print("  5,800 displayed ahead at 09:16:05; 6,800 printed through by 09:20")
+    print("  5,800 displayed ahead at 09:16:05; 6,200 printed through by 09:20")
     for name in ("optimistic", "conservative", "probabilistic"):
         filled, prov = obs[name]
         print(f"  {name:14} filled {filled:>5} of {QUANTITY}   [{prov}]")

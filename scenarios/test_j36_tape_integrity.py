@@ -44,7 +44,8 @@ import pytest
 
 from plutus.market.adapters.tape import TapeSource
 
-EXTRACT = Path(str(Path.home() / "algotrade-research/dataset/hermes-dev-extract"))
+from _harness import depth_root  # noqa: E402  (shipped fixture, or PLUTUS_DEPTH_ROOT)
+EXTRACT = Path(depth_root())
 TICKER = "FPT"
 DAY = date(2022, 11, 9)
 DAILY_VOLUME = 697700          # == quote.dailyvolume (independent table)
