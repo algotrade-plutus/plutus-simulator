@@ -293,3 +293,18 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
   The lot change is a code branch. KRX is 79 rule-data / 20 engine lines. The 2016-09-12 tick change is not
   encoded (the rulebook starts 2020-01-01). See `docs/reference/tables/t8_maintenance_effort.md`.
 - **API listing:** 8 lines, executed by `tests/test_api_listing.py` on the shipped fixture.
+
+## 4h. Band-lock fix and the full unit suite green (2026-11-24)
+
+- **The long-standing failure** `test_a_forced_liquidation_reports_and_executes` was an engine bug introduced in
+  `c9c4c06` (2026-09-11), confirmed by running the test at that commit and the one before. On a bar with a close but
+  no high/low, every order marketable into the band edge was INDETERMINATE, even when the close itself proves the
+  edge was traded through. The forced close is always priced at the floor, so it never filled. Fixed in `68e1c33`:
+  a close strictly inside the band passes through to the fill policy, and a close on the edge stays INDETERMINATE.
+  **E1, F2 and F3 are unchanged** (rerun on the fix).
+- **`test_book_walk.py`** runs on a shipped 207 KB fixture (96 pass, 0 skip; was 18 pass, 80 skip). One re-pin (HTV
+  cross-side skew 259.7 s → 259.086 s; the archive stamps the bid's last size update 0.63 s earlier), checked
+  against the raw rows. The two band-lock-on-book-session tests are strict xfail (LIMITATIONS #1).
+- **Full unit suite: 2,162 passed, 0 failed, 2 xfailed, 453 skipped** (was 1 failed, 533 skipped).
+- `figures/e1_fill_divergence.json` and `figures/f2_indeterminate_rate.png` are regenerated with the camera-ready
+  values (`t4_camera_ready.md`).
