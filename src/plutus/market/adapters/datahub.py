@@ -308,10 +308,21 @@ class DataHubSource:
                 for row in rows]
 
     def state_at(self, ticker: str, ts: datetime) -> Optional[MarketState]:
+        """The day's state for ``ticker``, cached per (ticker, calendar day).
+
+        A daily state is a fact about the whole day (the query is by date
+        only), and ``MarketState`` is frozen, so one cached object per key is
+        exactly the uncached answer. A tick session asks for it about six times
+        per advance; without the cache that SQL was 84% of a MarketMaker run.
+        A day with no bar is cached as ``None``.
+        """
         day = ts.date() if isinstance(ts, datetime) else ts
-        for state in self.states(ticker, day, day + timedelta(days=1)):
-            return state
-        return None
+        cache = self.__dict__.setdefault('_state_cache', {})
+        key = (ticker, day)
+        if key not in cache:
+            cache[key] = next(
+                iter(self.states(ticker, day, day + timedelta(days=1))), None)
+        return cache[key]
 
     def _ohlc(self, ticker: str, day: date) -> Tuple[
             Optional[Decimal], Optional[Decimal], Optional[Decimal]]:
