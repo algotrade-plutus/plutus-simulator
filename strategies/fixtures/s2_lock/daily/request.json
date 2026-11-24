@@ -1,0 +1,42 @@
+{
+ "files": [
+  {
+   "file": "quote_close.parquet",
+   "tickers": {
+    "DIG": [
+     [
+      "2022-09-05",
+      "2022-11-15"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quote_floor.parquet",
+   "tickers": {
+    "DIG": [
+     [
+      "2022-09-05",
+      "2022-11-15"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quote_max.parquet",
+   "tickers": {
+    "DIG": [
+     [
+      "2022-09-05",
+      "2022-11-15"
+     ]
+    ]
+   }
+  },
+  {
+   "file": "quote_ticker.parquet",
+   "tickers": {}
+  }
+ ],
+ "version": 1
+}

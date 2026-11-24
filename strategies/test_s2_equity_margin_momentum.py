@@ -51,10 +51,15 @@ EXPECTED — Tier 2
 
     CORRECTION (2026-11-24, RIVF'26 camera-ready). An earlier version claimed
     the forced sale was *blocked* by limit-down locks. That rested on the
-    ``close == floor`` proxy. With the session high wired, 12 of DIG's 15
-    floor-close days in this window traded above the floor first, and the DB
-    holds no queue sizes before 2023-01-03, so no day here proves a block.
-    The claim was weakened to the graded one above (owner decision).
+    ``close == floor`` proxy. With the session high wired, most of DIG's
+    floor-close days in this window traded above the floor first, so a daily
+    bar proves no block, and this test claims only the graded fill above.
+    The block itself is measured from the sell queue, which a daily bar cannot
+    see, in ``measurements/s2_lock_queue.py`` (pinned by
+    ``test_s2_lock_queue.py``): on 2022-11-07, the day S2's broker sold at the
+    floor, 8,657,000 shares were queued ahead at 10:00 and 775,000 traded
+    afterwards, so that sale could not have filled unless >91% of the queue
+    cancelled first. The daily run's fill there is the assumption it is graded as.
 
 RUN
     .venv/bin/python strategies/test_s2_equity_margin_momentum.py

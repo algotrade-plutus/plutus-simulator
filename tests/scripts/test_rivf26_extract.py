@@ -280,3 +280,64 @@ def test_db_errors_are_scrubbed_of_host_and_credentials():
     scrubbed = rx._scrub(exc)
     assert str(scrubbed) == 'OperationalError'
     assert 'secret' not in str(scrubbed) and '10.0.0.1' not in str(scrubbed)
+
+
+# ---------------------------------------------------------------------------
+# The local archive source (book sizes the DB lacks before 2023)
+# ---------------------------------------------------------------------------
+
+def _tiny_archive(root: Path) -> Path:
+    """A miniature of the archive layout: ``<instrument>/<group>/<table>.parquet``
+    with float prices (as the archive stores them) and ``_meta/ticker.parquet``."""
+    import pyarrow as pa
+    (root / 'stock' / 'book').mkdir(parents=True)
+    (root / 'stock' / 'intraday').mkdir(parents=True)
+    (root / 'futures' / 'book').mkdir(parents=True)
+    (root / '_meta').mkdir()
+    ts = [T(2022, 11, 7, 10, 0), T(2022, 11, 7, 10, 0), T(2022, 11, 8, 10, 0)]
+    pq.write_table(pa.table({
+        'datetime': ts, 'tickersymbol': ['DIG', 'DIG', 'DIG'],
+        'price': [15.45, 15.5, 14.4], 'depth': pa.array([1, 2, 1], pa.int16())}),
+        root / 'stock' / 'book' / 'askprice.parquet')
+    pq.write_table(pa.table({
+        'datetime': [T(2022, 11, 7, 10, 0)], 'tickersymbol': ['VN30F2211'],
+        'price': [950.0], 'depth': pa.array([1], pa.int16())}),
+        root / 'futures' / 'book' / 'askprice.parquet')
+    pq.write_table(pa.table({
+        'datetime': [T(2022, 11, 7, 0, 0), T(2022, 11, 7, 10, 0)],
+        'tickersymbol': ['DIG', 'DIG'], 'quantity': [2477300, 1793900]}),
+        root / 'stock' / 'intraday' / 'total.parquet')
+    pq.write_table(pa.table({
+        'tickersymbol': ['DIG', 'FPT'], 'exchangeid': ['HSX', 'HSX'],
+        'lastupdated': [D(2024, 9, 30)] * 2, 'instrumenttype': ['stock'] * 2,
+        'startdate': [None, None], 'expdate': [None, None]}),
+        root / '_meta' / 'ticker.parquet')
+    return root
+
+
+def test_archive_client_answers_the_tools_range_sql(tmp_path):
+    db = rx.ArchiveClient(_tiny_archive(tmp_path / 'arc'))
+    rows = rx.fetch_range(db, 'local_quote_askprice', 'DIG',
+                          D(2022, 11, 7), D(2022, 11, 8), depth=(None, 1))
+    # Only DIG, only the day, only depth 1: the futures file and depth 2 are out.
+    assert [(r[0], r[1], float(r[2]), r[3]) for r in rows] == [
+        (T(2022, 11, 7, 10, 0), 'DIG', 15.45, 1)]
+    tape = rx.fetch_range(db, 'local_quote_total', 'DIG',
+                          D(2022, 11, 7), D(2022, 11, 8))
+    assert len(tape) == 2          # the archive's 00:00 end-of-day row is kept, as in the DB
+    assert [r[0] for r in rx.fetch_master(db, ['DIG'])] == ['DIG']
+
+
+def test_archive_slice_has_exact_decimal_prices_and_names_its_source(tmp_path):
+    db = rx.ArchiveClient(_tiny_archive(tmp_path / 'arc'))
+    req = rx.request_from_declared(['local_quote_askprice'], ['DIG'],
+                                   D(2022, 11, 7), D(2022, 11, 9))
+    res = rx.extract(db, req, tmp_path / 'out')
+    prices = pq.read_table(tmp_path / 'out' / 'local_quote_askprice.parquet'
+                           ).column('price').to_pylist()
+    assert Decimal('15.45') in prices and Decimal('14.4') in prices
+    text = rx.write_manifest(tmp_path / 'out', experiment='t', mode='declared',
+                             reproduces='unit', command='x', results=res,
+                             source=db.describe()).read_text()
+    assert 'archive' in text.lower() and 'PostgreSQL' not in text
+    assert str(tmp_path) not in text   # no local paths leak into a published manifest

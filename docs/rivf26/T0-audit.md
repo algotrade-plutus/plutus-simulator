@@ -146,6 +146,43 @@ Test changes (`strategies/test_s2_equity_margin_momentum.py`):
 - Both pass on the fixture plus DB `quote_max`/`quote_min`. As shipped, they still fail until T3 regenerates
   the fixture (4a).
 
+### 4b, continued: the lock is proven from the sell queue (2026-11-24)
+
+The owner pointed to the local archive `vn_quote_2020-12_2024-09`, which has bid/ask **sizes from 2021-07-01**
+(the remote DB has none before 2023-01-03). Running S2 itself on the book is blocked by the depth data
+having no deletion records: on the lock days the reconstructed bid side is a stale "ghost" (09:00 auction
+bids, 60 min old), so the book walk correctly refuses to decide. The owner chose a measurement instead:
+`measurements/s2_lock_queue.py`, pinned by `strategies/test_s2_lock_queue.py` on the slice
+`strategies/fixtures/s2_lock/` (DIG, 5 KB daily + 1.0 MB book/tape on the 14 floor-close days, level 1 only).
+
+A floor sale at S2's 10:00 mark joins the back of the floor queue. It is **blocked** when the best ask is the
+floor, every later print is at the floor, and the queue ahead exceeds all volume after 10:00 (closing auction
+included):
+
+| Day | Pinned all day | Queue ahead @10:00 | Volume after | Verdict |
+|---|---|---:|---:|---|
+| 2022-11-07 | yes | 8,657,000 | 775,000 | **blocked**: fills only if >91% of the queue cancels |
+| 2022-11-08 | yes | 26,674,900 | 875,500 | **blocked** (>97%) |
+| 2022-11-14 | no | 1,463,000 | 1,149,600 | blocked, weak evidence (>21%) |
+| other 11 floor-close days | no | | | not locked at 10:00 (ask above the floor, or prints above it later) |
+
+S2's daily run sold at the floor on 2022-11-07, a blocked day, and graded that fill TOUCHED_AT_LIMIT.
+Its other six forced tranches fell on days that were not locked at 10:00. Proposed paper wording: *the
+leveraged long lost 77% and was force-sold in tranches; on the day the broker's floor sale met a full lock,
+8.7M shares were queued ahead of it and 0.78M traded all day, so it could not fill; the simulator grades its
+daily fill there as an assumption, never as observed.* "Completed only three sales" cannot be restored: it
+came from the close == floor proxy.
+
+Not assessed: how S2's equity path changes if the 11-07 tranche is carried (11-08 was also blocked, so the
+next chance was 11-09, at least 1 tick lower). That needs the engine to model a locked book, which the
+ghost-bid problem prevents for now.
+
+### Pre-existing failure, not caused by RIVF'26 work
+
+`tests/validation/test_runner.py::test_a_forced_liquidation_reports_and_executes` fails at `5b54b53` (the
+handoff commit) as well as now. Not investigated yet. Full unit suite at this commit: 2,006 passed, 533
+skipped, this 1 failed (with the `[mcp]` extra installed; without it, collection stops on `fastmcp`).
+
 ### 4c. Open defect for the OWNER: soft grades every market-family fill `TRADED_THROUGH`
 
 `SoftFillPolicy._continuous` (`src/plutus/market/session/fills.py`, market-family branch) labels every

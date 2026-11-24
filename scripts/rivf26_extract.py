@@ -132,6 +132,7 @@ import importlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -153,6 +154,11 @@ DEFAULT_OUT_ROOT = Path(os.environ.get(
     'RIVF26_DATA', REPO_ROOT.parent / 'rivf26' / 'data'))
 CRED_FILE = Path(os.environ.get(
     'RIVF26_CRED_FILE', REPO_ROOT.parents[1] / 'system' / 'cred' / 'amz-database.env'))
+#: The owner's local parquet archive. It holds bid/ask **sizes from 2021-07-01**,
+#: which the remote DB lacks before 2023-01-03 (see its README).
+ARCHIVE_ROOT = Path(os.environ.get(
+    'VN_QUOTE_ARCHIVE',
+    Path.home() / 'data' / 'plutus-open-source' / 'vn_quote_2020-12_2024-09'))
 STATEMENT_TIMEOUT_MS = 120_000
 #: Slices above this many bytes are flagged in the manifest for a justification.
 SIZE_FLAG_BYTES = 3 * 1024 * 1024
@@ -412,6 +418,68 @@ class PgClient:
     def close(self):
         with contextlib.suppress(Exception):
             self._conn.close()
+
+    @staticmethod
+    def describe() -> str:
+        return ('Algotrade PostgreSQL DB, schema `quote` (read-only transaction). '
+                'File `<prefix>_<x>.<ext>` holds rows of DB table `quote.<x>`.')
+
+
+class ArchiveClient:
+    """The local parquet archive, answering the same SQL :class:`PgClient` gets.
+
+    ``fetch(sql, params)`` takes the tool's own parameterised queries
+    (:func:`range_query`, :data:`MASTER_QUERY`) and runs them in DuckDB with
+    ``quote.<x>`` replaced by every archive file named ``<x>.parquet`` under
+    ``{stock,futures,index}/{daily,intraday,book}/`` (``_meta/`` for the ticker
+    master). The ticker filter then picks the instrument, so the caller need not
+    say which file a ticker lives in. Values arrive as the archive stores them
+    (prices as floats) and :func:`normalise_rows` coerces them exactly as it does
+    the DB's, so a slice is byte-identical in layout whichever source wrote it.
+    """
+
+    _INSTRUMENTS = ('stock', 'futures', 'index')
+    _GROUPS = ('daily', 'intraday', 'book')
+
+    def __init__(self, root: Path = ARCHIVE_ROOT):
+        import duckdb  # local: only this source needs it here
+        self.root = Path(root)
+        if not self.root.is_dir():
+            raise FileNotFoundError(f'archive root not found: {self.root}')
+        self._conn = duckdb.connect()
+        self.queries = 0
+
+    def _files(self, table: str) -> List[Path]:
+        if table in ('ticker', 'futurecontractcode'):
+            meta = self.root / '_meta' / f'{table}.parquet'
+            return [meta] if meta.exists() else []
+        return [p for i in self._INSTRUMENTS for g in self._GROUPS
+                if (p := self.root / i / g / f'{table}.parquet').exists()]
+
+    def fetch(self, sql: str, params: Sequence) -> List[tuple]:
+        table = re.search(r'FROM quote\.(\w+)', sql).group(1)
+        files = self._files(table)
+        if not files:
+            return []
+        source = ('read_parquet([' + ', '.join(f"'{f}'" for f in files)
+                  + '], union_by_name=true)')
+        q = (sql.replace(f'quote.{table}', source)
+                .replace('tickersymbol = ANY(%s)', 'list_contains(?, tickersymbol)')
+                .replace('%s', '?'))
+        self.queries += 1
+        return self._conn.execute(q, list(params)).fetchall()
+
+    def close(self):
+        with contextlib.suppress(Exception):
+            self._conn.close()
+
+    @staticmethod
+    def describe() -> str:
+        return ('Algotrade Vietnam market dataset, local parquet archive '
+                '`vn_quote_2020-12_2024-09` (bid/ask sizes from 2021-07-01; book '
+                'rows from the 2025-10 backup dumps, timestamps offset from the '
+                'trade tables by tens of ms). File `<prefix>_<x>.<ext>` holds rows '
+                'of archive table `<x>`.')
 
 
 def range_query(stem: str, depth: Optional[Sequence[Optional[int]]] = None
@@ -919,14 +987,14 @@ def write_manifest(out_dir: Path, *, experiment: str, mode: str,
                    reproduces: str, command: str, results: List[FileResult],
                    log: Optional[AccessLog] = None,
                    run_outcome: Optional[str] = None,
-                   verify_outcome: Optional[str] = None) -> Path:
+                   verify_outcome: Optional[str] = None,
+                   source: Optional[str] = None) -> Path:
     total = sum(r.bytes for r in results)
     L = [f'# DATA-MANIFEST: {experiment}', '',
          f'- **Reproduces:** {reproduces or "TODO: name the result (table/figure/test) this slice reproduces."}',
          f'- **Extraction mode:** `{mode}`',
          f'- **Command:** `{command}`',
-         f'- **Source:** Algotrade PostgreSQL DB, schema `quote` (read-only '
-         f'transaction). File `<prefix>_<x>.<ext>` holds rows of DB table `quote.<x>`.',
+         f'- **Source:** {source or PgClient.describe()}',
          f'- **Extracted on:** {date.today().isoformat()} with '
          f'`scripts/rivf26_extract.py` (pyarrow {pa.__version__}; writer '
          f'settings fixed in `WRITER`).',
@@ -1068,6 +1136,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         p.add_argument('--force', action='store_true',
                        help='replace a slice this tool wrote earlier')
         p.add_argument('--cred-file', type=Path, default=CRED_FILE)
+        p.add_argument('--source', choices=('db', 'archive'), default='db',
+                       help='db: the remote Algotrade DB (default); archive: the '
+                            'local parquet archive, for book sizes before 2023')
+        p.add_argument('--archive-root', type=Path, default=ARCHIVE_ROOT)
     lp = sub.choices['log']
     lp.add_argument('--callable', help='module:function to run instead of pytest')
     lp.add_argument('--sys-path', action='append', default=[],
@@ -1091,7 +1163,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     out_dir = args.out_root / args.experiment
     _prepare_out(out_dir, args.force)
 
-    db = PgClient(args.cred_file)
+    db = (ArchiveClient(args.archive_root) if args.source == 'archive'
+          else PgClient(args.cred_file))
     try:
         log = None
         run_outcome = verify_outcome = None
@@ -1126,7 +1199,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     args.start, args.end, args.max_depth,
                     ticker_master=not args.no_ticker_master)
         results = extract(db, request, out_dir)
-        print(f'DB queries issued: {db.queries}')
+        print(f'{args.source} queries issued: {db.queries}')
     finally:
         db.close()
 
@@ -1136,7 +1209,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f'verify: {verify_outcome}')
     write_manifest(out_dir, experiment=args.experiment, mode=args.mode,
                    reproduces=args.reproduces, command=command, results=results,
-                   log=log, run_outcome=run_outcome, verify_outcome=verify_outcome)
+                   log=log, run_outcome=run_outcome, verify_outcome=verify_outcome,
+                   source=db.describe())
     _print_results(out_dir, results)
     return 0
 
