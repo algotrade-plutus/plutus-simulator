@@ -265,3 +265,18 @@ Effect on shipped results:
   (−26.21% → −27.08%).
 - **SB base check: Google Drive check skipped (owner decision).** The DB is the settled source; the coordinator's
   recommendation was to skip it, since the DB is the settled source and the drift is documented with evidence.
+
+## 4f. Numbers moved by the VM-baseline fix (`8295502`)
+
+The fix corrects contracts added to (or flipped from) a derivatives position after a daily settlement. Rechecked:
+
+- **F3 fill axis, S1 under `soft`: −75.5% → −76.4%**, forced liquidations 2 → 3 (end equity 9,801,722 → 9,421,686đ
+  on 40,000,000đ). S1 adds to a settled position, so its deposit had been overstated. Figure JSON and PNG are
+  regenerated. **Paper: the S1 return in F3 / T4 changes.**
+- Unchanged:
+  - F3 hard/probabilistic and the whole queue panel;
+  - margin incidence (all six rows);
+  - ProtoPair (both windows, all variants);
+  - scenarios (39 pass) and strategies (18 pass, 2 skip).
+- Not affected by construction: SB, Grid, E1, HSX daily (equities only); the old flat-each-session MM anchor.
+- MM faithful-A (overnight carry) is being rerun on `8295502`.

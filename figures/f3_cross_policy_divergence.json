@@ -1,10 +1,10 @@
 {
   "fill_axis": {
     "soft": {
-      "end_equity": 9801722.0,
-      "return_pct": -0.75495695,
+      "end_equity": 9421686.0,
+      "return_pct": -0.76445785,
       "fills": 5,
-      "forced": 2,
+      "forced": 3,
       "indeterminate_rate": 0.0
     },
     "hard": {
