@@ -117,6 +117,8 @@ __all__ = [
     'RuleName', 'RuleStatus', 'RuleResolution', 'RuleInterval',
     'SessionSchedule', 'UnresolvedRule', 'RuleSet', 'Rulebook', 'SymbolRouter',
     'TickSizeFunction', 'VenueListing', 'RULEBOOK_IDS',
+    'OverlappingRuleRows', 'RuleTableFinding', 'RuleTableReport',
+    'validate_rule_tables',
 ]
 
 
@@ -342,19 +344,43 @@ def _key_token(value: Any) -> str:
     return value.value if isinstance(value, Enum) else str(value)
 
 
-def _pick(series: Sequence[RuleInterval], on: date) -> Optional[RuleInterval]:
-    """The single row in force on ``on``.
+class OverlappingRuleRows(ValueError):
+    """Two rows of one key both claim the same date. A data defect, raised.
 
-    Returns the *last* covering row so that a table whose rows are appended in
-    chronological order is read correctly even if two rows overlap by mistake;
-    an overlap is a data defect, and preferring the later row makes it behave
-    like a correction rather than like a silent revert.
+    Not an :class:`UnresolvedRule`: nothing is *unknown* here -- the table
+    asserts two answers at once, which is a transcription error in this module,
+    not a gap in the evidence, and it must not be counted as INDETERMINATE.
     """
-    found = None
-    for row in series:
-        if row.covers(on):
-            found = row
-    return found
+
+    def __init__(self, on: date, rows: Sequence[RuleInterval]):
+        self.on = on
+        self.rows = tuple(rows)
+        spans = '; '.join(
+            f'{r.value!r} [{r.effective_from}, {r.effective_to or "open"})'
+            for r in self.rows)
+        super().__init__(
+            f'{len(self.rows)} rows cover {on}: {spans}. Rule intervals are '
+            f'half-open and must partition the timeline per key; run '
+            f'validate_rule_tables() to list every overlap.')
+
+
+def _pick(series: Sequence[RuleInterval], on: date) -> Optional[RuleInterval]:
+    """The single row in force on ``on``; ``None`` where no row covers it.
+
+    **Raises** :class:`OverlappingRuleRows` when more than one row covers
+    ``on``. It used to return the *last* covering row, on the theory that an
+    overlap behaves like a correction; but the same overlap is equally likely
+    to be a successor typed one day early, and then "the later row wins"
+    silently changes the answer at the boundary while reporting a sourced
+    value. The shipped tables validate clean (``validate_rule_tables()``:
+    no overlap in any key), so raising costs nothing today and turns the next
+    slip into a traceback naming both rows. Decision recorded in
+    ``docs/reference/FEATURES.md`` section 4.
+    """
+    found = [row for row in series if row.covers(on)]
+    if len(found) > 1:
+        raise OverlappingRuleRows(on, found)
+    return found[0] if found else None
 
 
 # --------------------------------------------------------------------------
@@ -1871,6 +1897,156 @@ def _matches_pin(pin_path: Sequence[str], rule: RuleName,
         return False
     return all(k is not None and _key_token(k) == want
                for want, k in zip(rest, key))
+
+
+# --------------------------------------------------------------------------
+# Table validation -- every key must partition the timeline
+# --------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class RuleTableFinding:
+    """One defect, or one owner decision, in one key of one rule table.
+
+    ``kind`` is one of:
+
+    * ``'overlap'`` -- two rows cover ``span``. Always a defect; ``_pick``
+      raises on it.
+    * ``'gap'`` -- no row covers ``span``, between two rows of the key. Always
+      a defect: an absence must be a row (``_unsourced``), not a hole.
+    * ``'empty'`` -- a row whose ``effective_to <= effective_from``.
+    * ``'edge'`` -- the key's first row starts after ``COVERAGE_START``, or its
+      last row ends before ``COVERAGE_END``, so inside the coverage window the
+      key has no row at all on ``span``. Not a defect by itself (a rule may
+      genuinely begin inside the window), but the absence is *implicit*.
+
+    ``span`` is half-open, ``[start, end)``, like the rows. ``falls_through_to``
+    lists the less specific keys (the resolver's wildcard candidates) that hold
+    a KNOWN row somewhere in ``span``: a gap or edge with one of these is the
+    dangerous case, because the resolver then answers with a value written for
+    a different key instead of saying UNKNOWN.
+    """
+
+    kind: str
+    rule: RuleName
+    key: Tuple[Any, ...]
+    span: Tuple[date, date]
+    rows: Tuple[RuleInterval, ...] = ()
+    falls_through_to: Tuple[Tuple[Any, ...], ...] = ()
+
+    def __str__(self) -> str:
+        key = tuple(_key_token(k) if k is not None else None for k in self.key)
+        extra = (f' -> falls through to {self.falls_through_to}'
+                 if self.falls_through_to else '')
+        return (f'{self.kind}: {self.rule.value}{key} '
+                f'[{self.span[0]}, {self.span[1]}){extra}')
+
+
+@dataclass(frozen=True)
+class RuleTableReport:
+    """What :func:`validate_rule_tables` checked, and what it found."""
+
+    tables: int
+    keys: int
+    rows: int
+    findings: Tuple[RuleTableFinding, ...]
+
+    @property
+    def defects(self) -> Tuple[RuleTableFinding, ...]:
+        """Overlaps, interior gaps, empty rows, and any fall-through."""
+        return tuple(f for f in self.findings
+                     if f.kind != 'edge' or f.falls_through_to)
+
+
+def _falls_through(table: Mapping[Tuple[Any, ...], Sequence[RuleInterval]],
+                   key: Tuple[Any, ...], span: Tuple[date, date],
+                   ) -> Tuple[Tuple[Any, ...], ...]:
+    """Less specific keys with a KNOWN row overlapping ``span``."""
+    start, end = span
+    hits = []
+    for candidate in _candidate_keys(key)[1:]:
+        for r in table.get(candidate, ()):
+            r_end = r.effective_to or date.max
+            if (r.status is RuleStatus.KNOWN
+                    and r.effective_from < end and start < r_end):
+                hits.append(candidate)
+                break
+    return tuple(hits)
+
+
+def validate_rule_tables(
+    tables: Optional[Mapping[RuleName, Mapping[Tuple[Any, ...],
+                                               Sequence[RuleInterval]]]] = None,
+    *,
+    coverage: Tuple[date, date] = (COVERAGE_START, COVERAGE_END),
+) -> RuleTableReport:
+    """Check that every key of every rule table partitions the timeline.
+
+    Per key: no two rows overlap, no row is empty, no date between the first
+    and the last row is uncovered (an explicit ``_unsourced`` row is a row, so
+    it closes a gap -- that is its purpose), and any span of the coverage
+    window before the first row or after the last one is reported as an
+    ``'edge'``. Gaps and edges are also checked for fall-through to a less
+    specific key's KNOWN row. ``tables`` defaults to the shipped
+    ``vn-2020-2026`` tables; ``coverage`` is inclusive at both ends, like the
+    module constants.
+
+    Total and non-raising: every finding is returned, so a caller (the test
+    suite, a data-entry check) can show all of them at once.
+    """
+    if tables is None:
+        tables = _build_tables(RULEBOOK_IDS[0])
+    cov_start, cov_end = coverage[0], coverage[1] + timedelta(days=1)
+    findings = []
+    n_keys = n_rows = 0
+    for rule, table in tables.items():
+        for key, series in table.items():
+            n_keys += 1
+            n_rows += len(series)
+            for r in series:
+                if r.effective_to is not None and r.effective_to <= r.effective_from:
+                    findings.append(RuleTableFinding(
+                        'empty', rule, key, (r.effective_from, r.effective_to),
+                        rows=(r,)))
+            rows = sorted((r for r in series
+                           if r.effective_to is None
+                           or r.effective_to > r.effective_from),
+                          key=lambda r: (r.effective_from,
+                                         r.effective_to or date.max))
+            if not rows:
+                continue
+            # Overlaps: compare every pair, so three-way overlaps name each.
+            for i, a in enumerate(rows):
+                a_end = a.effective_to or date.max
+                for b in rows[i + 1:]:
+                    if b.effective_from >= a_end:
+                        break
+                    b_end = b.effective_to or date.max
+                    findings.append(RuleTableFinding(
+                        'overlap', rule, key,
+                        (b.effective_from, min(a_end, b_end)), rows=(a, b)))
+            # Interior gaps: walk the union of the rows.
+            reach = rows[0].effective_to or date.max
+            for prev, nxt in zip(rows, rows[1:]):
+                if nxt.effective_from > reach:
+                    span = (reach, nxt.effective_from)
+                    findings.append(RuleTableFinding(
+                        'gap', rule, key, span, rows=(prev, nxt),
+                        falls_through_to=_falls_through(table, key, span)))
+                reach = max(reach, nxt.effective_to or date.max)
+            # Edges inside the coverage window.
+            first = rows[0]
+            if first.effective_from > cov_start:
+                span = (cov_start, min(first.effective_from, cov_end))
+                findings.append(RuleTableFinding(
+                    'edge', rule, key, span, rows=(first,),
+                    falls_through_to=_falls_through(table, key, span)))
+            if reach < cov_end:
+                span = (max(reach, cov_start), cov_end)
+                findings.append(RuleTableFinding(
+                    'edge', rule, key, span, rows=(rows[-1],),
+                    falls_through_to=_falls_through(table, key, span)))
+    return RuleTableReport(tables=len(tables), keys=n_keys, rows=n_rows,
+                           findings=tuple(findings))
 
 
 # --------------------------------------------------------------------------
