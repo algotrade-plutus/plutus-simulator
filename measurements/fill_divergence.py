@@ -29,21 +29,26 @@ the ``DataHubSource`` that serves the day's high/low. Runs in one batched load
 plus one :func:`compare_policies` per ticker, so the ~100k-question population is
 minutes, not the half-hour a per-day ``interval()`` would cost.
 
+The data root comes from ``--data-root`` or the ``PLUTUS_DATA_ROOT`` environment
+variable (no machine-specific default). The RIVF'26 camera-ready slice of the
+2022 DB data is built by ``measurements/e1_regenerate.py``.
+
 RUN
-    .venv/bin/python -m measurements.fill_divergence \
-        --data-root <parquet> --json figures/e1_fill_divergence.json
+    PLUTUS_DATA_ROOT=<daily parquet root> .venv/bin/python -m \
+        measurements.fill_divergence --json figures/e1_fill_divergence.json
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, time
 from decimal import Decimal
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 _REPO = Path(__file__).resolve().parent.parent
 if str(_REPO) not in sys.path:
@@ -60,7 +65,12 @@ from plutus.market.session.types import (DataField, FillOutcome,  # noqa: E402
                                          MarketInterval, OrderRecord, OrderState,
                                          Resolution, TimeInForce, Venue)
 
-DEFAULT_ROOT = str(Path.home() / "algotrade-research/dataset/hermes-parquet")
+DATA_ROOT_ENV = "PLUTUS_DATA_ROOT"
+
+
+def default_data_root() -> Optional[str]:
+    """The data root named by ``PLUTUS_DATA_ROOT``, or ``None``."""
+    return os.environ.get(DATA_ROOT_ENV) or None
 YEAR = 2022
 MIN_SESSIONS = 200
 CAP = Decimal("0.10")           # same participation cap as the S7 arms
@@ -101,6 +111,7 @@ class _IntentAgg:
     agreed: int = 0
     filled: Counter = field(default_factory=Counter)         # sig -> n FILLED
     indeterminate: Counter = field(default_factory=Counter)  # sig -> n INDETERMINATE
+    filled_quantity: Counter = field(default_factory=Counter)  # sig -> shares
 
 
 @dataclass(frozen=True)
@@ -147,6 +158,8 @@ class FillDivergenceResult:
                                          for s in self.signatures},
                     "indeterminate_by_policy": {s: a.indeterminate.get(s, 0)
                                                 for s in self.signatures},
+                    "filled_quantity_by_policy": {
+                        s: a.filled_quantity.get(s, 0) for s in self.signatures},
                 }
                 for intent, a in self.by_intent.items()
             },
@@ -273,10 +286,22 @@ def _questions(ticker, day, interval, spec) -> List[Tuple[str, FillQuestion]]:
 # The measurement
 # --------------------------------------------------------------------------
 
-def measure_fill_divergence(data_root: str = DEFAULT_ROOT, *, year: int = YEAR,
+def measure_fill_divergence(data_root: Optional[str] = None, *, year: int = YEAR,
                             min_sessions: int = MIN_SESSIONS,
-                            max_tickers: Optional[int] = None
+                            max_tickers: Optional[int] = None,
+                            on_row: Optional[Callable] = None
                             ) -> FillDivergenceResult:
+    """Run E1 over ``data_root`` (default: ``PLUTUS_DATA_ROOT``).
+
+    ``on_row``, if given, is called with every :class:`DivergenceRow` (one per
+    question; ``row.name`` is the intent, ``row.ticker``/``row.start`` the
+    ticker-day). ``measurements/e1_regenerate.py`` uses it to write the
+    per-decision outcome table without re-running the policies.
+    """
+    data_root = data_root or default_data_root()
+    if not data_root:
+        raise ValueError(f"no data root: pass data_root/--data-root or set "
+                         f"{DATA_ROOT_ENV}")
     src = DataHubSource.for_root(data_root)
     tickers = discover_universe(src, year=year, min_sessions=min_sessions,
                                 max_tickers=max_tickers)
@@ -312,7 +337,10 @@ def measure_fill_divergence(data_root: str = DEFAULT_ROOT, *, year: int = YEAR,
             a.n += 1
             if row.agreed:
                 a.agreed += 1
+            if on_row is not None:
+                on_row(row)
             for sig, dec in row.decisions.items():
+                a.filled_quantity[sig] += dec.quantity
                 if dec.outcome is FillOutcome.FILL:
                     a.filled[sig] += 1
                 elif dec.outcome is FillOutcome.INDETERMINATE:
@@ -343,12 +371,15 @@ class _Enc(json.JSONEncoder):
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--data-root", default=DEFAULT_ROOT)
+    p.add_argument("--data-root", default=default_data_root(),
+                   help=f"daily parquet root (default: ${DATA_ROOT_ENV})")
     p.add_argument("--max-tickers", type=int, default=None,
                    help="cap the universe (default: all qualifying tickers)")
     p.add_argument("--json", type=Path,
                    default=_REPO / "figures" / "e1_fill_divergence.json")
     args = p.parse_args()
+    if not args.data_root:
+        p.error(f"pass --data-root or set {DATA_ROOT_ENV}")
 
     r = measure_fill_divergence(args.data_root, max_tickers=args.max_tickers)
     print(f"population : {r.population}")

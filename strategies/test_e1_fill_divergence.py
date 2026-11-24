@@ -6,32 +6,38 @@ fast slice: the divergence is **non-uniform across order intents** (market order
 diverge ~always, deep passive limits ~never -- acceptance criterion #4 of
 ``EXPERIMENT-E1-FILL-DIVERGENCE.md``), and it reports **fills, never P&L**.
 
-Gates on the daily Parquet corpus and skips cleanly otherwise.
+Gates on a daily Parquet root named by ``PLUTUS_DATA_ROOT`` and skips cleanly
+otherwise. It is skipped by default because the 2022 population slice is not
+shipped in the repo (publication pending the owner's call, RIVF'26 F3); build it
+with ``measurements/e1_regenerate.py`` (needs DB access) and point
+``PLUTUS_DATA_ROOT`` at it.
 
 RUN
-    .venv/bin/python -m pytest strategies/test_e1_fill_divergence.py -v
+    PLUTUS_DATA_ROOT=<rivf26 data>/t2-e1 \
+        .venv/bin/python -m pytest strategies/test_e1_fill_divergence.py -v
     .venv/bin/python -m measurements.fill_divergence   # full population + figure
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
 
-from measurements.fill_divergence import (DEFAULT_ROOT, FillOutcome,
+from measurements.fill_divergence import (FillOutcome, default_data_root,
                                           measure_fill_divergence)
 
 
 def _corpus() -> str:
-    return os.environ.get("PLUTUS_DATA_ROOT", DEFAULT_ROOT)
+    return default_data_root() or ""
 
 
 def _ready() -> bool:
-    return (Path(_corpus()) / "quote_close.parquet").exists()
+    return bool(_corpus()) and (Path(_corpus()) / "quote_close.parquet").exists()
 
 
-@pytest.mark.skipif(not _ready(), reason="E1 needs the daily Parquet corpus")
+@pytest.mark.skipif(not _ready(), reason="E1 needs a daily Parquet root in "
+                    "PLUTUS_DATA_ROOT (the 2022 slice is not shipped; see "
+                    "measurements/e1_regenerate.py)")
 def test_e1_divergence_is_non_uniform_by_intent_and_reports_no_pnl():
     r = measure_fill_divergence(_corpus(), max_tickers=5)
 
