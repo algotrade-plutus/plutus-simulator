@@ -10,7 +10,7 @@ The slice itself is not published; anyone with access to the Algotrade database 
 | `by_ticker_intent.csv` | ticker × intent | 1,955 |
 | `totals.json` | the run | 1 |
 
-Both tables come from the same run as the headline and **sum to it exactly** (484,949 decisions, 332,520
+Both tables come from the same run as the headline and **sum to it exactly** (484,949 decisions, 332,549
 agreed = 68.57%). The script asserts that before writing.
 
 - `agreed`: the three policies are indistinguishable on the decision (same outcome, quantity and price). This is
