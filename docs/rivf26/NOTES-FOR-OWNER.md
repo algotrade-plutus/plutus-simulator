@@ -105,3 +105,14 @@ With the algorithm A (naive MM) held fixed and only the environment changed:
 Algotrade desk can share real fill or slippage statistics (R3.1). Even aggregates for an MM book on similar VN30F
 days would show which arm lands closest. Until then, the defensible claim is that the truth lies within F's band
 and naive can fall outside it in either direction.
+
+**Decision (owner, 2026-11-25): no real fill data (R3.1 closed as not available).** Credibility instead rests on:
+(a) **the queue band is a bound by construction:** optimistic = first in the queue, conservative = behind everything
+displayed, so every real queue position lies between them for the given data. Caveat: the conservative arm cannot
+place quotes beyond the observed depth (LIMITATIONS #3), which weakens that side of the band.
+(b) adverse selection measured from the tape (markouts);
+(c) no ghost fills (negative 1-min markouts);
+(d) exact accounting, complete rolls and dated margin.
+
+Paper claim: "naive can fall outside the faithful band in either direction; the band brackets every queue position
+the data allows."
