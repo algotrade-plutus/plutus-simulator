@@ -155,8 +155,8 @@ __all__ = [
     'ProbabilisticFillPolicy',
     'FillQuestion', 'DivergenceRow', 'DivergenceReport', 'compare_policies',
     'probabilistic_sweep',
-    'auction_fill_price', 'build_fill_policy', 'draw_key', 'fill_draw',
-    'floor_to_lot', 'parse_fill_policy_config', 'participation_cap',
+    'auction_fill_price', 'band_lock_decision', 'build_fill_policy', 'draw_key',
+    'fill_draw', 'floor_to_lot', 'parse_fill_policy_config', 'participation_cap',
     'policy_of', 'stamp_policy',
 ]
 
@@ -441,6 +441,9 @@ class BaseFillPolicy(ABC):
                     f'{want.value if want else "its own auction"}, and this '
                     f'interval is {phase.value}'
                 )
+            locked = band_lock_decision(order, interval)
+            if locked is not None:
+                return locked
             return self._auction(order, interval, rules,
                                  already_filled=already_filled,
                                  instrument=instrument)
@@ -448,6 +451,10 @@ class BaseFillPolicy(ABC):
         if phase not in MATCHING_PHASES:
             return FillDecision.no_fill(
                 f'no matching takes place in {phase.value}')
+
+        locked = band_lock_decision(order, interval)
+        if locked is not None:
+            return locked
 
         if phase is SessionPhase.CONTINUOUS:
             return self._continuous(order, interval, rules,
@@ -536,6 +543,170 @@ class BaseFillPolicy(ABC):
             return int(instrument.trading_unit)
         unit = get_trading_unit(rules.spec.code, interval.start.date())
         return None if unit is None else int(unit)
+
+
+# --------------------------------------------------------------------------
+# BAND_LOCK -- a fillability check, not an admission rule
+# --------------------------------------------------------------------------
+
+def _band_edge(side: Side, state) -> Optional[Decimal]:
+    """The band edge an order of ``side`` transacts against: ceiling for a
+    buy, floor for a sell. ``None`` when that edge is absent for this state."""
+    if side is Side.BUY:
+        return state.ceiling
+    if side is Side.SELL:
+        return state.floor
+    return None   # Side.CROSS is an integration bug; the caller validates it
+
+
+def _marketable_into(order: OrderRecord, side: Side, edge: Decimal) -> bool:
+    """Whether the order crosses the edge: a market order always, a limit only
+    at or beyond it (buy >= ceiling, sell <= floor). A limit strictly inside
+    the band is never a lock question -- it fills iff the session traded to it,
+    which is the ordinary price test."""
+    price = order.order.limit_price
+    if price is None:
+        return True
+    return price >= edge if side is Side.BUY else price <= edge
+
+
+def _lock_instant(side: Side, interval: MarketInterval
+                  ) -> Tuple[Optional[Decimal], DataField]:
+    """The price whose relation to the edge decides the lock, by phase.
+
+    An ATO order only sees the opening auction (the open), an ATC only the
+    closing auction (the close); a continuous order had the whole session, so
+    it is locked only if the session extreme toward it never left the edge --
+    the low for a buy, the high for a sell. Returns ``(None, field)`` when that
+    price is absent, and the caller degrades to INDETERMINATE naming ``field``.
+    """
+    phase = interval.session
+    if phase is SessionPhase.OPENING_AUCTION:
+        return interval.open, DataField.OPEN
+    if phase is SessionPhase.CLOSING_AUCTION:
+        return interval.close, DataField.CLOSE
+    if side is Side.BUY:
+        return interval.low, DataField.LOW
+    return interval.high, DataField.HIGH
+
+
+def _phase_word(interval: MarketInterval) -> str:
+    phase = interval.session
+    if phase is SessionPhase.OPENING_AUCTION:
+        return 'opening auction'
+    if phase is SessionPhase.CLOSING_AUCTION:
+        return 'closing auction'
+    return 'session'
+
+
+#: Sentinel: the book tier decided "defer to the ordinary path". Distinct from
+#: ``None`` (book tier not applicable), so band_lock_decision can tell "the book
+#: says pass through" from "no book -- try the OHLC tier".
+_PASSTHROUGH = object()
+
+
+def _band_lock_by_book(side: Side, edge: Decimal, book,
+                       volume: Optional[int]) -> object:
+    """The dense-book tier (rows B1-B3 / S1-S3), or ``None`` to fall through.
+
+    Prices only -- ``BookLevel.size`` is ``None`` on every corpus here. An ask
+    below the ceiling (bid above the floor) means the order can cross now, a
+    passthrough. Otherwise the offer side below the edge is empty: ``volume > 0``
+    means the edge was still matched at (the ASSUMED tier the policy floor
+    decides), while zero *or absent* volume is trắng bên bán -- a proven no-fill
+    (option B, 2026-09-11: the empty offer ladder is the direct evidence, just
+    as the OHLC collapse is at daily resolution). Returns ``None`` when the
+    relevant side of the book is empty, so the caller falls to the OHLC tier.
+
+    Return type is ``object`` rather than ``Optional[FillDecision]``: a third
+    value is possible, the module-level ``_PASSTHROUGH`` sentinel, meaning
+    "an order can cross, or was matched at the edge -- defer to the policy".
+    """
+    levels = book.asks if side is Side.BUY else book.bids
+    if not levels:
+        return None
+    crossable = (any(l.price < edge for l in levels) if side is Side.BUY
+                 else any(l.price > edge for l in levels))
+    if crossable:
+        return _PASSTHROUGH   # B1/S1: an order can cross -> the policy fills
+    if volume is not None and volume > 0:
+        return _PASSTHROUGH   # B2/S2: matched at the edge -> the policy floor
+    # B3/S3: locked ladder, nothing on offer below the edge, no trade recorded.
+    return FillDecision.no_fill(
+        f'BAND_LOCK: {side.value} into a {edge} lock; the resting '
+        f'{"ask" if side is Side.BUY else "bid"} ladder is entirely at or '
+        f'past the edge with no trade recorded (trắng bên '
+        f'{"bán" if side is Side.BUY else "mua"})')
+
+
+def band_lock_decision(order: OrderRecord,
+                       interval: MarketInterval) -> Optional[FillDecision]:
+    """BAND_LOCK as an evidence-graded fillability check -- not an admission rule.
+
+    A pure, **override-only** function of ``(order, interval)``. It engages only
+    when the order is marketable into the band edge on its side (a market order,
+    or a limit at or beyond the edge). It then reads the phase-appropriate
+    instant (``_lock_instant``) and the interval's volume, and returns:
+
+    * ``None`` -- defer to the ordinary fill path -- when the edge was traded
+      through (``instant`` past the edge, rows B4/S4), when the edge was merely
+      matched at with volume present (rows B6/S6, the ASSUMED tier, where the
+      active fill policy's floor decides -- soft fills, hard is INDETERMINATE,
+      probabilistic draws), or when the lock does not apply at all;
+    * ``NO_FILL`` -- a proven full lock: the instant sat on the edge and zero
+      OR absent volume traded (*trắng bên bán/mua*, rows B5/S5 -- the corpus's
+      ``quote_dailyvolume`` never records a literal 0, so an absent row here is
+      the no-trade fact itself, not ignorance about it; owner decision
+      2026-09-11);
+    * ``INDETERMINATE`` -- the order is marketable into the edge but neither the
+      book (Task 3) nor the bar can settle whether it filled: the instant
+      itself is absent (no OHLC at all to test against the edge).
+
+    It **never returns a FILL**: a fill is sized by the policy's ``_sized_fill``,
+    so both the traded-through fill and the assumed fill are passed through for
+    the policy to size and grade. This is why Increment 1's ``close==band``
+    proxy over-asserted ~10x -- it answered NO_FILL for every close-at-the-band
+    bar, including the majority that had traded below the cap earlier in the
+    session (design section, "Why this change").
+    """
+    side = order.order.side
+    edge = _band_edge(side, interval.state)
+    if edge is None or not _marketable_into(order, side, edge):
+        return None
+
+    book = interval.book if interval.book is not None else interval.state.book
+    if book is not None:
+        by_book = _band_lock_by_book(side, edge, book, interval.volume)
+        if by_book is not None:
+            return None if by_book is _PASSTHROUGH else by_book
+
+    instant, field = _lock_instant(side, interval)
+    if instant is None:
+        return FillDecision.indeterminate(
+            f'BAND_LOCK: this {side.value} order is marketable into the '
+            f'{"ceiling" if side is Side.BUY else "floor"} of {edge}, but the '
+            f'{_phase_word(interval)} carries no price to test against it, so '
+            f'whether it would have filled cannot be established',
+            [DataField.BOOK, field])
+
+    traded_through = instant < edge if side is Side.BUY else instant > edge
+    if traded_through:
+        return None   # rows B4/S4: the edge was crossed -> the policy fills
+
+    # The tested instant sits on the edge: the phase never left the band. Zero
+    # OR absent volume is trắng bên bán -- nothing traded, a proven no-fill.
+    # (Owner decision 2026-09-11: the OHLC collapse is the evidence, so an
+    # absent volume row here is not ignorance but the no-trade fact the corpus
+    # records by omission -- it never stores a literal 0.) Volume > 0 means the
+    # edge was matched at: the ASSUMED tier the policy floor decides.
+    if (interval.volume is None or interval.lacks(DataField.VOLUME)
+            or interval.volume == 0):
+        return FillDecision.no_fill(
+            f'BAND_LOCK: {side.value} into a {edge} lock at the '
+            f'{_phase_word(interval)}; the bar collapsed on the edge with no '
+            f'trade recorded (trắng bên {"bán" if side is Side.BUY else "mua"}), '
+            f'so it rests but cannot cross the lock')
+    return None   # volume > 0: matched at the edge -> ASSUMED -> the policy floor
 
 
 # --------------------------------------------------------------------------

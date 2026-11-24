@@ -578,13 +578,19 @@ def test_an_ato_never_fills_outside_its_own_auction(policy):
 def test_a_missing_cross_price_is_ignorance_not_a_no_fill():
     """An absent published open may mean no cross happened or may mean the data
     does not carry it. Nothing silently defaults (design section 9), so the two
-    are not collapsed."""
+    are not collapsed.
+
+    This ATO is marketable into the ceiling (market family, `band_lock_decision`
+    treats it as always marketable), so the band-lock ladder now intercepts it
+    before `_auction` ever runs, naming BOOK alongside OPEN -- Task 3's dense
+    book could in principle settle this even without the published open.
+    """
     decision = HardFillPolicy().evaluate(
         _order(order_type=OrderType.AT_THE_OPENING, limit=None),
         _interval(session=SessionPhase.OPENING_AUCTION, open_=None),
         HSX_EXCHANGE, instrument=HSX_LOT)
     assert decision.outcome is FillOutcome.INDETERMINATE
-    assert decision.missing == frozenset({DataField.OPEN})
+    assert decision.missing == frozenset({DataField.BOOK, DataField.OPEN})
 
 
 def test_hard_refuses_to_size_an_auction_fill_from_a_daily_bar():
@@ -715,10 +721,16 @@ def test_soft_still_will_not_fill_a_price_the_market_never_reached():
 
 def test_soft_fills_a_market_order_at_the_observed_price():
     """The backtester answer for the market family, and the counterpart to
-    hard's refusal: it executes, at whatever printed, with no depth test."""
+    hard's refusal: it executes, at whatever printed, with no depth test.
+
+    `low` is supplied alongside `close` because a market buy is always
+    marketable into the ceiling (`band_lock_decision`'s `_marketable_into`),
+    so the ladder needs the session low to confirm the ceiling was never the
+    only print (101.6) before deferring to the ordinary fill path.
+    """
     decision = SoftFillPolicy().evaluate(
         _order(order_type=OrderType.MARKET_IMMEDIATE_OR_CANCEL, limit=None),
-        _interval(close=Decimal('97.0')), HSX_EXCHANGE)
+        _interval(close=Decimal('97.0'), low=Decimal('97.0')), HSX_EXCHANGE)
     assert decision.outcome is FillOutcome.FILL
     assert decision.price == Decimal('97.0')
 

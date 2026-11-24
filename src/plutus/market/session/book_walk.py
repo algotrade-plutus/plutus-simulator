@@ -127,14 +127,20 @@ predicted. The ``NO_FILL`` shape is real and is reachable (an ask ladder that
 is coherent and simply starts above our limit); it is not what a real Vietnamese
 lock looks like in this data. Both are tested.
 
-The asymmetry this closes
+Where band lock actually lives
 ------------------------------------------------------------------------
-``exchanges/equity.py``'s ``BAND_LOCK`` rule refuses a marketable order **at
-entry** when ``state.locked_side`` matches its side. Nothing at *fill* time
-read that field, so the identical order, already resting, filled at the same
-instant. :meth:`BookWalkFillPolicy._continuous` reads it -- and reads it in one
-direction only: the lock may **refuse** a fill, it may never authorise one. See
-that method.
+``exchanges/equity.py`` used to refuse a marketable order **at entry** when a
+``state.locked_side`` field matched its side. Increment 1 removed that rung:
+band lock is now decided once, at fill time, for every policy, by
+``fills.band_lock_decision`` -- a pure, evidence-graded **fillability check**,
+not an admission gate. It does not read whatever the old admission field did;
+it walks the daily OHLC/volume/book ladder described in its own docstring,
+consulting ``interval.state`` only for the ceiling/floor edge the order is
+tested against. ``fills.BaseFillPolicy._dispatch`` calls it before
+``_continuous``/``_auction`` runs, for every policy including this one -- so
+by the time :func:`walk_book` is reached, the order has already cleared (or
+been resolved by) that daily-evidence gate; the book-level refusals below are
+this module's own, independent layer on top of it.
 
 Composition with the participation cap
 ------------------------------------------------------------------------
@@ -153,7 +159,7 @@ from typing import (Callable, ClassVar, FrozenSet, Iterable, List, Optional,
 from plutus.core.order import Side
 from plutus.market.adapters.depth import (MAX_DEPTH, DepthBook, DepthLevel,
                                           DepthSide, SideAvailability)
-from plutus.market.protocol import LockEvidence, Resolution
+from plutus.market.protocol import Resolution
 from plutus.market.session.fills import (BOOK_WALK_KIND, NO_MARKET_IMPACT,
                                          POLICY_SEPARATOR, FillPolicy,
                                          _CappedFillPolicy, fill_draw,
@@ -1571,10 +1577,6 @@ class BookWalkFillPolicy(_CappedFillPolicy):
                 [DataField.BOOK],
             )
 
-        locked = self._lock_refusal(order, interval)
-        if locked is not None:
-            return locked
-
         book = self.books.book_at(interval.ticker, interval.start,
                                   max_age=self.max_staleness)
         if self._is_marketable(order.order, book):
@@ -1759,57 +1761,6 @@ class BookWalkFillPolicy(_CappedFillPolicy):
         beyond = (price > deepest if resting_side is Side.SELL
                   else price < deepest)
         return None if beyond else 0
-
-    def _lock_refusal(self, order: OrderRecord,
-                      interval: MarketInterval) -> Optional[FillDecision]:
-        """The band lock read at **fill** time. The asymmetry item 3 names.
-
-        ``exchanges/equity.py``'s ``BAND_LOCK`` rule refuses an order at entry
-        when it is marketable through a lock on its own side. Nothing read
-        ``state.locked_side`` afterwards, so the identical order, already
-        resting, filled at the same instant under every shipped policy. This
-        closes it, using the venue's own predicate rather than a second one:
-        same side, same marketability test, same evidence ladder.
-
-        **One direction only.** A lock may refuse a fill; it may never
-        authorise one. ``locked_side`` that does *not* match this order says
-        nothing about it, and a book that shows liquidity while the state says
-        locked is refused rather than filled -- refusing a trade the market
-        allowed costs an opportunity, filling one it refused costs money.
-
-        Evidence decides which refusal:
-        ``LockEvidence.UNKNOWN`` (the lock could not be established from a book
-        or a bar proxy) is ``INDETERMINATE``; a lock established from either is
-        a definite ``NO_FILL``, exactly as admission treats it.
-        """
-        state = interval.state
-        if state.locked_side is None or order.order.side is not state.locked_side:
-            return None
-        price = order.order.limit_price
-        marketable = price is None or (
-            (order.order.side is Side.BUY and state.ceiling is not None
-             and price >= state.ceiling)
-            or (order.order.side is Side.SELL and state.floor is not None
-                and price <= state.floor))
-        if not marketable:
-            return None
-        if state.lock_evidence is LockEvidence.UNKNOWN:
-            return FillDecision.indeterminate(
-                f'the band is reported locked against the '
-                f'{order.order.side.value} side and this order is marketable '
-                f'through it, but the lock rests on no book and no bar proxy, '
-                f'so whether it would have filled cannot be established',
-                [DataField.BOOK],
-            )
-        bound = (state.ceiling if order.order.side is Side.BUY
-                 else state.floor)
-        return FillDecision.no_fill(
-            f'the band is locked at {bound} against the '
-            f'{order.order.side.value} side ({state.lock_evidence.value}) and '
-            f'this order is marketable through it; admission refuses the '
-            f'identical order at entry under BAND_LOCK, so filling it here '
-            f'would let a resting order do what a new one may not'
-        )
 
     # -- auction ---------------------------------------------------------
 
