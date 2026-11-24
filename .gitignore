@@ -22,3 +22,12 @@ docs/_static/
 docs/_templates/
 # DuckDB spill files from corpus queries
 .tmp/
+
+# RIVF'26 camera-ready: DB credentials and raw extracts must never be committed
+*.env
+.env*
+cred/
+**/cred/**
+*credential*
+*.pgpass
+rivf26-raw/
