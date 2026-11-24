@@ -90,3 +90,18 @@ Also:
    and some ticks before their source dates; two deliberate VSDC charge switches), all resolving to UNKNOWN.
    `_pick()` now raises on overlap.
 5. **Property tests:** 14 Hypothesis properties, 3,850 examples plus 26 boundary cases, none falsified.
+
+## 4. MarketMaker: the stronger framing (owner idea, 2026-11-25)
+
+With the algorithm A (naive MM) held fixed and only the environment changed:
+1. **Fill assumptions dominate the result.** Return ranges from −2.5% to −16.4% (im2022) and from −5.2% to −25.6%
+   (krx2025 pre-cutover) across N0–N3, F-opt and F-con. For a market maker the fill model *is* the P&L.
+2. **Naive's bias has no fixed sign.** It flatters takers and grids (SB, Pair, Grid) but penalises this MM through
+   adverse selection: its touch-fill rule fills A as the market runs through the quote. Markout at 5 min per
+   fill: naive −2.24 pts vs faithful −0.78 (first 6 im2022 sessions; the full-window check is running).
+3. **The faithful simulator gives a measured band with attribution**, not one misleading number.
+
+**To claim "closest to the true environment"**, compare with real fills: the handoff's open item, whether the
+Algotrade desk can share real fill or slippage statistics (R3.1). Even aggregates for an MM book on similar VN30F
+days would show which arm lands closest. Until then, the defensible claim is that the truth lies within F's band
+and naive can fall outside it in either direction.
