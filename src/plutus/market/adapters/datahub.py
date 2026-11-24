@@ -426,11 +426,18 @@ class DataHubSource:
         close = self._reader('close_price')
         if close is None:
             return None
-        rows = self._fetch(ticker, day, day + timedelta(days=1), close)
-        if not rows:
+        # The day's bar data is a fact about the whole day, so it is fetched
+        # once per (ticker, day); every call still builds its own interval with
+        # its own start/end. Daily fill evaluation was re-running these two
+        # queries once per order (95% of its time).
+        cache = self.__dict__.setdefault('_bar_cache', {})
+        key = (ticker, day)
+        if key not in cache:
+            rows = self._fetch(ticker, day, day + timedelta(days=1), close)
+            cache[key] = (rows[0], self._ohlc(ticker, day)) if rows else None
+        if cache[key] is None:
             return None
-        state, volume = rows[0]
-        open_, high, low = self._ohlc(ticker, day)
+        (state, volume), (open_, high, low) = cache[key]
 
         missing = set(self.WITHHELD)
         if volume is None:

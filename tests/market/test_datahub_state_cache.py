@@ -59,3 +59,49 @@ def test_a_day_with_no_bar_is_cached_as_none():
     assert src.state_at('FPT', date(2022, 11, 12)) is None
     assert src.state_at('FPT', date(2022, 11, 12)) is None
     assert len(calls) == 1
+
+
+# --------------------------------------------------------------------------
+# interval(): the day's bar data is fetched once per (ticker, day); each call
+# still builds its own MarketInterval with its own start/end.
+# --------------------------------------------------------------------------
+
+def _counting_both(src):
+    calls = {'fetch': 0, 'ohlc': 0}
+    f, o = src._fetch, src._ohlc
+
+    def fetch(*a, **k):
+        calls['fetch'] += 1
+        return f(*a, **k)
+
+    def ohlc(*a, **k):
+        calls['ohlc'] += 1
+        return o(*a, **k)
+    src._fetch, src._ohlc = fetch, ohlc
+    return calls
+
+
+def test_many_intervals_on_one_day_query_the_day_once():
+    src = DataHubSource.for_root(str(ROOT))
+    calls = _counting_both(src)
+    for minute in range(30):
+        src.interval('FPT', datetime(2022, 11, 9, 9, minute), datetime(2022, 11, 9, 15))
+    assert calls == {'fetch': 1, 'ohlc': 1}
+
+
+def test_each_interval_keeps_its_own_window_and_equals_the_uncached_one():
+    cached = DataHubSource.for_root(str(ROOT))
+    cached.interval('FPT', datetime(2022, 11, 9, 9, 0), datetime(2022, 11, 9, 15))
+    a = cached.interval('FPT', datetime(2022, 11, 9, 10, 0), datetime(2022, 11, 9, 14))
+    fresh = DataHubSource.for_root(str(ROOT)).interval(
+        'FPT', datetime(2022, 11, 9, 10, 0), datetime(2022, 11, 9, 14))
+    assert a == fresh
+    assert (a.start, a.end) == (datetime(2022, 11, 9, 10, 0), datetime(2022, 11, 9, 14))
+
+
+def test_an_absent_day_interval_is_none_and_cached():
+    src = DataHubSource.for_root(str(ROOT))
+    calls = _counting_both(src)
+    for _ in range(3):
+        assert src.interval('FPT', datetime(2022, 11, 12), datetime(2022, 11, 13)) is None
+    assert calls['fetch'] == 1
