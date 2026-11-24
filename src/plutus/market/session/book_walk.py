@@ -139,8 +139,13 @@ consulting ``interval.state`` only for the ceiling/floor edge the order is
 tested against. ``fills.BaseFillPolicy._dispatch`` calls it before
 ``_continuous``/``_auction`` runs, for every policy including this one -- so
 by the time :func:`walk_book` is reached, the order has already cleared (or
-been resolved by) that daily-evidence gate; the book-level refusals below are
-this module's own, independent layer on top of it.
+been resolved by) that gate; the book-level refusals below are this module's
+own, independent layer on top of it. This policy sets ``READS_ITS_OWN_BOOK``,
+so on a continuous tick interval that carries no book (``BookSessionSource``)
+the gate skips the daily bar -- whose close is the day's and whose high/low are
+withheld -- honours only an instantaneous lock on the state (``TICK_BOOK`` is a
+NO_FILL, an unevidenced one INDETERMINATE), and otherwise leaves an order
+marketable into the band edge to the walk.
 
 Composition with the participation cap
 ------------------------------------------------------------------------
@@ -1469,6 +1474,7 @@ class BookWalkFillPolicy(_CappedFillPolicy):
     """
 
     kind: ClassVar[str] = BOOK_WALK_KIND
+    READS_ITS_OWN_BOOK: ClassVar[bool] = True
 
     def __init__(
         self,

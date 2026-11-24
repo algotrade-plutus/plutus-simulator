@@ -141,8 +141,8 @@ from typing import (ClassVar, Dict, FrozenSet, Iterable, List, Mapping,
 
 from plutus.core.constant import get_trading_unit
 from plutus.market.exchanges.base import Exchange
-from plutus.market.protocol import (InstrumentSpec, OrderType, Resolution,
-                                    SessionPhase, Side)
+from plutus.market.protocol import (InstrumentSpec, LockEvidence, OrderType,
+                                    Resolution, SessionPhase, Side)
 from plutus.market.session.types import (TIME_IN_FORCE, DataField, FillDecision,
                                          FillEvidence, FillOutcome,
                                          FillPolicyConfig, MarketInterval,
@@ -329,6 +329,13 @@ class BaseFillPolicy(ABC):
     #: Config token; also ``SessionProvenance.fill_policy_kind``.
     kind: ClassVar[str] = ''
 
+    #: Whether this policy reads its own instantaneous book (``book_at``) in
+    #: the continuous session. Such a policy is handed the band-lock question
+    #: when the interval carries no book (``band_lock_decision``'s
+    #: ``reads_book``), instead of having it answered from a bar it does not
+    #: have. ``BookWalkFillPolicy`` sets it.
+    READS_ITS_OWN_BOOK: ClassVar[bool] = False
+
     # -- the template method --------------------------------------------
 
     def evaluate(
@@ -452,7 +459,8 @@ class BaseFillPolicy(ABC):
             return FillDecision.no_fill(
                 f'no matching takes place in {phase.value}')
 
-        locked = band_lock_decision(order, interval)
+        locked = band_lock_decision(order, interval,
+                                    reads_book=self.READS_ITS_OWN_BOOK)
         if locked is not None:
             return locked
 
@@ -639,8 +647,45 @@ def _band_lock_by_book(side: Side, edge: Decimal, book,
         f'{"bán" if side is Side.BUY else "mua"})')
 
 
+def _band_lock_by_state(side: Side, edge: Decimal,
+                        interval: MarketInterval) -> Optional[FillDecision]:
+    """The instantaneous tier, for a policy that reads its own book.
+
+    Reached only when the interval carries no book and the policy will read one
+    at this instant (``reads_book``, the book walk on a ``BookSessionSource``
+    tick interval). The bar tier does not apply there: high/low/volume are
+    withheld, and the close and any ``BAR_PROXY`` lock are the *day's*, which
+    say nothing about this instant. The book the policy reads does, so the
+    question is deferred to it -- its crossed/stale refusals still answer a
+    ghost lock INDETERMINATE (LIMITATIONS #2).
+
+    What the state can still say, one direction only (a lock may refuse a fill,
+    never authorise one): a lock against this side observed at the instant
+    (``TICK_BOOK``) is a NO_FILL; one claimed on no evidence (``UNKNOWN``) is
+    INDETERMINATE naming the book. Restores the fill-time refusal
+    ``BookWalkFillPolicy._lock_refusal`` made before ``348e010``.
+    """
+    state = interval.state
+    if state.locked_side is not side:
+        return None
+    if state.lock_evidence is LockEvidence.TICK_BOOK:
+        return FillDecision.no_fill(
+            f'BAND_LOCK: {side.value} into a {edge} lock observed in the book '
+            f'at this instant ({state.lock_evidence.value}), so it rests but '
+            f'cannot cross the lock')
+    if state.lock_evidence is LockEvidence.UNKNOWN:
+        return FillDecision.indeterminate(
+            f'BAND_LOCK: the band is reported locked against the {side.value} '
+            f'side and this order is marketable into the {edge} edge, but the '
+            f'lock rests on no book and no bar proxy, so whether it would have '
+            f'filled cannot be established',
+            [DataField.BOOK])
+    return None   # BAR_PROXY: a daily inference; the instant's book decides
+
+
 def band_lock_decision(order: OrderRecord,
-                       interval: MarketInterval) -> Optional[FillDecision]:
+                       interval: MarketInterval, *,
+                       reads_book: bool = False) -> Optional[FillDecision]:
     """BAND_LOCK as an evidence-graded fillability check -- not an admission rule.
 
     A pure, **override-only** function of ``(order, interval)``. It engages only
@@ -662,6 +707,14 @@ def band_lock_decision(order: OrderRecord,
       book (Task 3) nor the bar can settle whether it filled: the instant
       itself is absent (no OHLC at all to test against the edge).
 
+    ``reads_book=True`` (a policy that reads its own instantaneous book, i.e.
+    the book walk) changes one case: a **continuous** interval that carries no
+    book. The bar tier is skipped -- on a book session the close is the day's
+    and high/low are withheld, so it could only answer INDETERMINATE -- and the
+    state's instantaneous lock evidence is read instead
+    (``_band_lock_by_state``); otherwise the order passes through for the
+    walk to decide from the book. Daily sessions never set it.
+
     It **never returns a FILL**: a fill is sized by the policy's ``_sized_fill``,
     so both the traded-through fill and the assumed fill are passed through for
     the policy to size and grade. This is why Increment 1's ``close==band``
@@ -679,6 +732,8 @@ def band_lock_decision(order: OrderRecord,
         by_book = _band_lock_by_book(side, edge, book, interval.volume)
         if by_book is not None:
             return None if by_book is _PASSTHROUGH else by_book
+    elif reads_book and interval.session is SessionPhase.CONTINUOUS:
+        return _band_lock_by_state(side, edge, interval)
 
     instant, field = _lock_instant(side, interval)
     if instant is None and interval.session is SessionPhase.CONTINUOUS:

@@ -191,6 +191,22 @@ def _interval(*, ts=FPT_CLEAN, ticker='FPT', volume=1_000_000,
     )
 
 
+def _book_session_interval(*, close, locked_side=None, ts=FPT_CLEAN,
+                           ticker='FPT', **state_kw):
+    """The interval ``BookSessionSource.interval`` serves: the daily state
+    (DataHub's BAR_PROXY lock when the day closed on the edge), the day's close,
+    OHLC and volume withheld, and no book on the interval itself."""
+    state = _state(ts=ts, ticker=ticker, last=close, locked_side=locked_side,
+                   lock_evidence=(LockEvidence.BAR_PROXY if locked_side
+                                  else LockEvidence.UNKNOWN), **state_kw)
+    return MarketInterval(
+        ticker=ticker, start=ts, end=ts + timedelta(seconds=1),
+        resolution=Resolution.TICK, state=state, close=close,
+        missing=frozenset({DataField.OPEN, DataField.HIGH, DataField.LOW,
+                           DataField.VOLUME}),
+    )
+
+
 def _order(*, side=Side.BUY, quantity=6000, limit=Decimal('73.9'),
            ticker='FPT', order_id='O-1', order_type=OrderType.LIMIT,
            tif=TimeInForce.DAY, ts=FPT_CLEAN):
@@ -895,13 +911,61 @@ class TestTheBandLock:
         assert fillable == 14_775
         assert absent == 0
 
-    @pytest.mark.xfail(strict=True, reason=(
-        'Engine gap, not data: fills.band_lock_decision runs before the book '
-        'walk and reads daily OHLC (instant LOW/HIGH), which a tick interval '
-        'does not carry, so a limit at the edge returns INDETERMINATE missing '
-        '{book, low} instead of honouring state.locked_side / lock_evidence. '
-        'book_walk\'s own _lock_refusal was removed in 348e010 (2026-09-11). '
-        'Remove this mark when the shared band-lock path reads the book.'))
+    # -- a book session's real interval shape (LIMITATIONS #1) -----------
+    #
+    # ``BookSessionSource.interval`` carries the day's band and the day's close,
+    # withholds open/high/low/volume, and has no book of its own (the policy
+    # reads the ladder through ``book_at``). Its state's lock is DataHub's
+    # BAR_PROXY: the *day* closed on the edge. Before the fix every order
+    # marketable into the edge on such a day was INDETERMINATE {book, low|high}
+    # however open the book was at the instant.
+
+    @pytest.mark.parametrize('limit', [None, Decimal('78.1')],
+                             ids=['market', 'limit_at_ceiling'])
+    def test_a_book_session_buy_into_the_ceiling_is_decided_by_the_walk(
+            self, local, limit):
+        order = _order(
+            limit=limit, quantity=1000,
+            order_type=(OrderType.LIMIT if limit is not None
+                        else OrderType.MARKET_WITH_LEFTOVER_AS_LIMIT))
+        interval = _book_session_interval(close=Decimal('78.1'),
+                                          locked_side=Side.BUY)
+
+        decision = _decide(local, order=order, interval=interval)
+
+        assert decision.outcome is FillOutcome.FILL
+        assert decision.quantity == 1000
+        assert decision.price == Decimal('73.400000')
+
+    def test_a_book_session_sell_into_the_floor_is_decided_by_the_walk(
+            self, local):
+        order = _order(side=Side.SELL, limit=Decimal('67.9'), quantity=1000)
+        interval = _book_session_interval(close=Decimal('67.9'),
+                                          locked_side=Side.SELL)
+
+        decision = _decide(local, order=order, interval=interval)
+
+        assert decision.outcome is FillOutcome.FILL
+        assert decision.price == Decimal('73.300000')
+
+    def test_a_book_session_ghost_lock_stays_undecided_through_the_walk(
+            self, remote):
+        """The fix moves the decision to the book; it does not invent one. At a
+        real lock the ladder is a crossed ghost (LIMITATIONS #2), and the walk
+        refuses it: INDETERMINATE, now for the book's reason, not the bar's."""
+        order = _order(ticker='HPG', limit=None, quantity=1000,
+                       order_type=OrderType.MARKET_WITH_LEFTOVER_AS_LIMIT,
+                       ts=HPG_LOCKED)
+        interval = _book_session_interval(
+            ts=HPG_LOCKED, ticker='HPG', close=HPG_CEILING,
+            locked_side=Side.BUY, reference=Decimal('21.3'),
+            ceiling=HPG_CEILING, floor=HPG_FLOOR)
+
+        decision = _decide(remote, order=order, interval=interval)
+
+        assert decision.outcome is FillOutcome.INDETERMINATE
+        assert 'BAND_LOCK' not in decision.reason
+
     def test_a_locked_side_is_refused_at_fill_time(self, local):
         """The asymmetry item 3 names, closed.
 
@@ -941,13 +1005,6 @@ class TestTheBandLock:
         assert _decide(local, order=order,
                        interval=interval).outcome is FillOutcome.FILL
 
-    @pytest.mark.xfail(strict=True, reason=(
-        'Engine gap, not data: fills.band_lock_decision runs before the book '
-        'walk and reads daily OHLC (instant LOW/HIGH), which a tick interval '
-        'does not carry, so a limit at the edge returns INDETERMINATE missing '
-        '{book, low} instead of honouring state.locked_side / lock_evidence. '
-        'book_walk\'s own _lock_refusal was removed in 348e010 (2026-09-11). '
-        'Remove this mark when the shared band-lock path reads the book.'))
     def test_an_unproven_lock_is_indeterminate_not_a_refusal(self, local):
         """`LockEvidence.UNKNOWN` means the lock rests on no book and no bar
         proxy. Admission returns INDETERMINATE there and so does this."""
