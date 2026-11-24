@@ -1,0 +1,9 @@
+{
+  "period": {"start": "2022-11-09", "end": "2022-11-15"},
+  "resolution": "1d",
+  "exchange_rules": {"venues": ["HSX"]},
+  "accounts": {"securities": {"initial_cash": 200000000}},
+  "fill_policy": {"kind": "hard"},
+  "data": {"adapter": "plutus.market.adapters.datahub.DataHubSource",
+           "root": "scenarios/fixtures/daily"}
+}
