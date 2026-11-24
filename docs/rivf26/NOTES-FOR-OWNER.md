@@ -33,3 +33,40 @@ assumption.
 
 **Paper text to change:** any sentence saying the conservative arm "leaves a sixth of its flow undecided" (the
 F3 caption and the T4 queue-axis row).
+
+## 2. MarketMaker (T5): results and four decisions for you (2026-11-24)
+
+Repo `proto/ProtoMarketMaker`, `rivf26`, commits `6121ef3`, `b9f4b0b` (local). The rerun to verify is in progress.
+
+| Window | Fills naive → faithful (conservative) | Return naive → faithful |
+|---|---|---|
+| krx2025 (20 sessions either side of 2025-05-05, DB) | 693 → 116 (16.7%; 50.9% on the 20 pre-cutover sessions it quoted) | +29.6% → −6.0% (pre-cutover only: −5.2% → −6.0%) |
+| im2022 (20 sessions either side of 2022-12-15, archive book) | 129 → 70 (54.3%) | **−12.9% → +2.2%** (faithful earns more) |
+
+Mechanisms visible:
+- queue spread 27.5% / 28.6%;
+- dated-IM capacity 36 → 28 contracts (the paper says 37 → 28);
+- post-cutover refusal in 20 of 20 sessions.
+
+**Decisions for you:**
+
+1. **im2022 fails "faithful return ≤ naive".** The naive arm carries inventory overnight and loses there; the faithful
+   arm closes out every session, by design (the handoff already says Sharpe is not a criterion for MM because of
+   this). Nothing was tuned. Options: report as is, with that explanation; or compare like for like (both arms
+   flat overnight). The second needs a naive change.
+2. **The conservative queue still can't decide ~99.8% of MM's resting orders.** MM quotes about 31 ticks from the
+   last print, beyond the 3 observed book levels, so the queue ahead at its price is unobservable. This is
+   different from change 2, which fixed takers: on krx2025, conservative taker fills went 0 → 102. Options:
+   keep it as a stated finding (the optimistic arm and the queue spread carry the result); or add an explicit,
+   declared engine assumption for orders beyond the observed depth. That is an engine change.
+3. **The engine admits derivatives orders after the KRX cutover**, even though its margin model is unresolved
+   there. Only the strategy's own guard refuses (S6 style). The paper's "refuses to invent a margin rule" is
+   true of the strategy, not of the engine's admission. Options: word the paper that way; or make admission
+   return INDETERMINATE when the margin model is unresolved (engine change).
+4. **Headline f/n for krx2025:** 16.7% over all 40 sessions (it includes the 20 refused sessions) or 50.9% like
+   for like on the 20 it quoted. I'd quote both.
+
+Also:
+- MM's slices are 15.1 MB and 8.2 MB (L2 depth 1–3 with sizes plus tape, 40 sessions). Both are over the
+  size flag and need your sign-off before any push.
+- ceil/floor are missing for VN30F2212 on 2022-12-02, 12-05 and 12-06, in both the DB and the archive.
