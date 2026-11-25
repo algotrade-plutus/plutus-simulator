@@ -336,3 +336,33 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
   `rivf26/data/t2-e1/e1_decisions.parquet` `evidence` column (soft × `market_buy` on days pinned at the ceiling)
   would change on a rerun.
 - **Full unit suite: 2,180 passed, 0 xfailed, 453 skipped** (was 2,169 passed, 2 xfailed).
+
+## 4j. Post-KRX derivatives margin: QĐ 26's two layers (2026-11-25, LIMITATIONS #4)
+
+Owner decision 2026-11-25; engine commit `e976a1b`. Sources: `docs/reference/krx-margin-research.md` (S-5, S-7,
+S-8, S-11, S-12, S-17; C-1..C-3; M-1..M-4).
+
+- **Rule.** `RuleName.MARGIN_MODEL` from 2025-05-05 is now `'krx_two_layer'` (HIGH; QĐ 26 Điều 5, 8, 13, Phụ lục 2)
+  instead of an `_unsourced` row whose note ("QD 26 -- never read; the COMS formula could not be obtained") the
+  research contradicts. The pre-KRX `'pre_margin'` row is unchanged.
+- **Broker layer, intraday** (`deposit.py`). IM on VSDC's published ratio (dated `vsd_initial_margin`, 0.17) plus
+  the broker's `margin_buffer`, on the futures price; the broker ladder is unchanged broker configuration. **No VM
+  term post-KRX** unless the firm's own intraday model names one (`IM_PLUS_VM[_PLUS_DM]`, e.g. VNDIRECT). This is
+  the owner's default for research C-2; no other explicit configuration exists.
+- **CCP layer, after the close** (`overnight.vsdc_ccp_requirement`). `scenario_margin`'s full 21-scenario grid on
+  the published ratio and the **underlying's** close, `MM = P × MF` with `MF = tick × M / 2` (5,000đ, S-11), Sm = 0
+  on one-directional books, S-12's closed form `|net| × rate × S × M` asserted against the grid. Firm parameter
+  mirrors (SSI) are no longer consulted after the cutover. **A calendar spread at the close is UNKNOWN**
+  (`margin.overnight.uncomputed.basis_margin.calendar_spread`): SMrate, `n`, the haircut list and the parameter
+  table are unpublished and not guessed. Margin assets are **cash only** (the deposit balance), as before.
+- **Điều 13.** `scenario_margin.MarginViolationMonitor` (already built) is fed the post-close determination and the
+  09:30 / 14:00 checkpoints of later trading days; `ExchangeSession.ccp_margin_state()` / `ccp_margin_events()`
+  expose NOTIFIED (top-up due before 09:30 the next trading day), SUSPENDED, CURED/RESTORED, CLOSED_OUT. Reported,
+  **not enforced**: a suspension does not block opening orders and no substitute-member close-out is executed.
+- `rule.margin_model.unsourced` no longer fires after the cutover. J19 and S6 now assert the sourced post-KRX model
+  (`'krx_two_layer'`) instead of `UnresolvedRule`; **S6's guard therefore no longer refuses post-KRX** (§4d's "S6
+  refuses post-KRX" and "J19 post-KRX `UnresolvedRule`" are superseded).
+- **Pre-cutover unchanged.** A trace of every `advance_to` (events, margin view, overnight row, ignorance report)
+  across the scenarios and strategies suites is byte-identical to `rivf26` (1,409 advances, all before the cutover).
+  The checker is unchanged: 264 PASS, 0 FAIL, 20 PENDING.
+- **Counts.** Unit suite 2,206 passed, 453 skipped (was 2,187); scenarios 39 passed; strategies 18 passed, 2 skipped.

@@ -1,5 +1,10 @@
 # Post-KRX derivatives margin (*ký quỹ*) — implementable specification
 
+**Status: BUILT for index futures (2026-11-25, `e976a1b`; owner decision).** The rulebook's
+post-cutover `MARGIN_MODEL` is `'krx_two_layer'`; VSDC's post-close `MR` is
+`overnight.vsdc_ccp_requirement` (Rm on the published ratio, MM with MF = 5,000đ, Sm = 0 on
+one-directional books; a calendar spread is UNKNOWN because SMrate is unpublished; cash-only
+assets; Dieu 13 binary monitor). Government-bond `Dm` stays deferred. *Previously:*
 **Status: NOT BUILT.** This document specifies the VSDC derivatives clearing-margin model
 in force from the KRX go-live (2025-05-05), from the primary text of **Phụ lục 2** of the
 Quy chế issued with **QĐ 26/QĐ-HĐTV ngày 16/4/2025**.

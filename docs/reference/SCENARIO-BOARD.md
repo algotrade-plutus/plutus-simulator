@@ -56,7 +56,7 @@ surface surface-gaps the privileged tests hid (J1 already did — see below).
 | 14 | J5 | Margin-financed equity called → force-sold (bán giải chấp) | Yes | **T1 ✅ T2 ✅** | HPG margin: loan 92M → 5 calls → 21 forced sales, all executed |
 | 15 | J26 | Day-trader vs overnight holder: the two margin layers | Yes | **T1 ✅ T2 ✅** | swing IM 12.285M vs day IM 0 (VN30F2212, pre-KRX) |
 | 16 | J18 | VSD initial-margin change (2022-12-15): 13% → 17% overnight | Yes | **T1 ✅ T2 ✅** | IM 13.78M→18.02M, ratio 0.13→0.17, +30.8% (VN30F2301) |
-| 17 | J19 | KRX cutover (2025-05-05): a different margin MODEL each side | Partial | **T1 ✅ T2 ✅** | dated model: pre_margin resolves, post-KRX raises UnresolvedRule (unsourced) |
+| 17 | J19 | KRX cutover (2025-05-05): a different margin MODEL each side | Partial | **T1 ✅ T2 ✅** | dated model: pre_margin resolves; post-KRX resolves to krx_two_layer (QĐ 26, sourced 2026-11-25 `e976a1b`; raised UnresolvedRule before) |
 | 18 | J6 | Roll a futures position across expiry | Yes | **T1 ✅ T2 ✅** | VN30F2212 expiry_settled → 0; VN30F2301 roll opens |
 | **Corporate actions & cross-market** |
 | 19 | J8 | Hold across an ex-date (price adjustment) | Partial | **T1 ✅ T2 ✅** | caller-driven CA engine: 1000→1300, ref conserved, gross cash div |
@@ -121,8 +121,9 @@ closing auction returns the published close, not a stale `last` (D71 fixed, `74e
 by **J37**. The auction *phase-carrying data path* for the default daily session (J7/J14) remains a
 checklist SHOULD, not a MUST — the auction fill itself is built and demonstrated (S4 crosses 8 ATO
 / 5 ATC through the session on `AuctionAwareDataHubSource`). **Still declared:** post-KRX
-scenario-margin `SMrate`/`MF` values (J19 shows the model is dated and the post-KRX side honestly
-raises `UnresolvedRule`).
+scenario-margin `SMrate` (a calendar spread at a post-KRX close is UNKNOWN). J19 shows the model is
+dated: post-KRX resolves to QĐ 26's two-layer model (sourced 2026-11-25, `e976a1b`; it raised
+`UnresolvedRule` before).
 
 ## Data sourcing (planned — never a blocker)
 

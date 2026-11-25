@@ -36,7 +36,7 @@ Neither may override band / tick / lot / order-type (decided before it runs).
 | S3 | Basket vs future + ex-date | two segregated pools; held HPG paid gross through the session | **`apply_corporate_action`** | J4 J8 J23 |
 | S4 | Auction MoC rebalancer | 8 ATO@open, 5 ATC@close, 0 continuous fills, via the session | **`AuctionAwareDataHubSource`** | J7 J14 |
 | S5 | Advance-turnover scalper | throttled 4 days by T+2 without the advance; the advance costs a 545,624đ fee | existing lib | J15 J16 J24 J25 |
-| S6 | KRX regime-straddle | trades live pre-KRX; **refuses post-KRX** (model unsourced → `UnresolvedRule`) | existing lib | J18 J19 J27 |
+| S6 | KRX regime-straddle | trades live pre-KRX; post-KRX the guard finds the sourced `krx_two_layer` model (**refused post-KRX with `UnresolvedRule` until 2026-11-25**, `e976a1b`) | existing lib | J18 J19 J27 |
 | S7 | Fill-sensitivity harness | S1's history is **−76% or 0% purely by fill policy** | existing lib | J10 J20 J13 J21 J22 |
 | S8 | Intraday market-maker | two-sided **maker** fills off the tape; inventory skew fires; no intraday round-trip (T+2) | **tape-driven maker fill** | J28 J30 J32 |
 | S9 | Queue-sensitivity study | the queue assumption alone moves the maker fill **~18.9%** | on the maker build | J29 J33 |
@@ -79,8 +79,9 @@ intraday extension is exercised by S8/S9.
 - **S6 — KRX regime-straddle.** S1's futures core reasoning across the KRX cutover.
   The corpus ends 2022-12-30, so it trades **live pre-KRX** (a real VN30F2210 long,
   IM 14,333,800) and asserts the post-KRX side at the rulebook level. Its guard
-  queries `margin_model()`: pre-KRX resolves → it trades; post-KRX **raises
-  `UnresolvedRule`** → it refuses to size a position it cannot margin. Guards against
+  queries `margin_model()`: pre-KRX resolves → it trades; post-KRX resolves to QĐ 26's
+  `krx_two_layer` (sourced 2026-11-25, `e976a1b`; until then it **raised `UnresolvedRule`**
+  and the strategy refused to size a position it could not margin). Guards against
   *silent continuation* of 2022's mechanism into a 2025 position.
 - **S7 — Fill-sensitivity harness (the methodological strategy).** Runs S1 unchanged
   under the three bar-resolution fill policies. **`soft` → −76%; `hard` and

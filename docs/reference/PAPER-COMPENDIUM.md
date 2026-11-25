@@ -298,7 +298,8 @@ worse than no scenario page."
   turnover cap.
 - *Dated-rule demos (the distinctive claim):* **J17** round-lot 2021-01-04 (cleanest)
   · **J18** VSD IM 13→17% = **+30.8%** with zero price move · **J19** KRX cutover, a
-  *different margin model* each side (post side honestly raises `UnresolvedRule`).
+  *different margin model* each side (post side: QĐ 26's two layers, sourced 2026-11-25
+  `e976a1b`; until then it raised `UnresolvedRule`).
 - *Uncertainty band (no Vietnamese rule underneath):* **J20** one strategy under
   soft/hard/probabilistic — the spread is the error bar · **J21** three queue
   policies · **J22** participation-cap sweep.

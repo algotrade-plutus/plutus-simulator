@@ -30,7 +30,7 @@ fix the simulator, never the strategy.**
 | **S3** | VN30 basket vs future (index-arb) | carried across a constituent ex-date; two pools at once | J4 J8 J23 · J9 J17 J22 next | ✅ | ✅ | **BUILT** `apply_corporate_action` |
 | **S4** | Auction market-on-close rebalancer | ATO@open, ATC@close, through the session; 0 continuous fills | J7 J14 · J12 next | ✅ | ✅ | **BUILT** `AuctionAwareDataHubSource` |
 | **S5** | High-turnover advance scalper | throttled by T+2 without the advance; the advance costs a fee | J15 J16 J24 · J1 impl · J25 next | ✅ | ✅ | passed on the existing library |
-| **S6** | Regime-straddle across KRX cutover | trades live pre-KRX; refuses post-KRX (model unsourced) | J18 J19 · J27 in scen. | ✅ | ✅ | pre-KRX live; post-KRX at rulebook level |
+| **S6** | Regime-straddle across KRX cutover | trades live pre-KRX; post-KRX the guard finds the sourced krx_two_layer model (refused post-KRX until 2026-11-25, `e976a1b`) | J18 J19 · J27 in scen. | ✅ | ✅ | pre-KRX live; post-KRX at rulebook level |
 | **S7** | Fidelity-sensitivity harness | S1's history is −76% or 0% purely by fill policy | J10 J20 · J13 J21 J22 in scen. | ✅ | ✅ | passed on the existing library |
 | **S8** | Intraday inventory market-maker | two-sided **maker** fills off the tape at its own prices; inventory skew fires; T+2 blocks the intraday round-trip | J28 J30 J32 | ✅ | ✅ | **BUILT** tape-driven maker fill |
 | **S9** | Queue-sensitivity study | same maker, three queue assumptions, quote held identical → **~18.9% maker-fill swing** is the queue's alone | J29 J33 | ✅ | ✅ | on the maker-fill build |
@@ -125,8 +125,9 @@ the J28–J37 intraday extension is exercised by S8/S9.
   regime-aware VN30F strategy: the corpus ends 2022-12-30, so it trades **live pre-KRX** (a real
   VN30F2210 long, IM 14,333,800 under `pre_margin`) and asserts the post-KRX side at the rulebook
   level (no fabricated prices). Its guard queries `margin_model()`: **pre-KRX it resolves → the
-  strategy trades; post-KRX it RAISES `UnresolvedRule` → the strategy refuses to size a position it
-  cannot margin.** Editions flip `pre_krx`→`post_krx`. No library change (the dated rulebook already
+  strategy trades; post-KRX it resolves to `krx_two_layer` (QĐ 26, sourced 2026-11-25,
+  `e976a1b`).** Until then post-KRX RAISED `UnresolvedRule` and the strategy refused to size a
+  position it could not margin. Editions flip `pre_krx`→`post_krx`. No library change (the dated rulebook already
   models this); `J27` (amend flip) and the LO/MP→LO/MTL type flip are covered in the scenario suite
   (the enum shows `MTL` both sides — MP and MTL are one member — so the type-flip isn't strategy-
   assertable here).
@@ -142,7 +143,7 @@ the J28–J37 intraday extension is exercised by S8/S9.
 | S3 basket vs future + ex-date | two pools; held HPG paid 4.5M gross through the session | **`apply_corporate_action`** |
 | S4 auction-only rebalancer | 8 ATO@open, 5 ATC@close, 0 continuous fills, via the session | **`AuctionAwareDataHubSource`** |
 | S5 advance-turnover scalper | throttled 4 days by T+2 without the advance; advance fee 545k | existing lib |
-| S6 KRX regime-straddle | trades live pre-KRX; refuses post-KRX (model unsourced) | existing lib |
+| S6 KRX regime-straddle | trades live pre-KRX; post-KRX guard finds the sourced krx_two_layer model (`e976a1b`; refused before) | existing lib |
 | S7 fill sensitivity | S1's history is −76% or 0% purely by fill policy | existing lib |
 | S8 intraday market-maker | two-sided **maker** fills off the tape; inventory skew fires; no intraday round-trip (T+2) | **tape-driven maker fill** |
 | S9 queue-sensitivity | the queue assumption alone moves the maker fill **~18.9%** | on the maker build |

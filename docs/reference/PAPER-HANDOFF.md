@@ -45,8 +45,9 @@ asymmetry**:
 Supporting pillars, all verified in code:
 - **Effective-dated rule editions** — `Rulebook.at(ts)` resolves every rule per
   simulated instant and *refuses* out-of-window editions (`RuleStatus.UNKNOWN`,
-  raises `UnresolvedRule`; the post-KRX margin model *raises* on a pre-cutover
-  date). The KRX cutover is `2025-05-05`. (Table **T3**.)
+  raises `UnresolvedRule`). The margin model resolves to a different mechanism on
+  each side of the cutover (post-KRX: QĐ 26's two layers, sourced 2026-11-25 `e976a1b`;
+  until then it raised). The KRX cutover is `2025-05-05`. (Table **T3**.)
 - **Fill policy × queue assumption** — two independent pluggable Protocol axes
   (`FillPolicy`: soft/hard/probabilistic; `QueuePolicy`: optimistic/conservative/
   probabilistic), each carrying `.signature`/`.assumptions`.

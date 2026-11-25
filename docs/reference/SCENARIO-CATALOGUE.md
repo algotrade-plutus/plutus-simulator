@@ -2457,7 +2457,8 @@ exists** for the 10→13→17% initial-margin series.
     understates our own research.
   - *(The post-KRX row being `_unsourced` is functionally correct — `_overnight_model` relies
     on it raising `UnresolvedRule`. **Fix the prose and the confidence grade, not the
-    resolution behaviour.**)*
+    resolution behaviour.**)* **Superseded 2026-11-25 (`e976a1b`):** the owner adopted QĐ 26's
+    two-layer model; the row is now the sourced `'krx_two_layer'` and the stale note is gone.
 - `ledgers.py:628`, `:726`, **`:1221`** cite **"rulebook 8.4"**, a section that does not exist —
   **§8 runs 8.1 / 8.2 / 8.3 and stops** (D28; `FEATURES.md`'s copy of this row names `:1209` and
   is equally stale). The three tags do not all point at the same content, and the replacement

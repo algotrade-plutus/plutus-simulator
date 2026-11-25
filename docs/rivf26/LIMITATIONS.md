@@ -5,8 +5,8 @@ Everything here is known, reproducible and left as is on purpose. In each case t
 limitations: the conservative queue's taker sweeps (`e528633`); the derivatives VM baseline on adds and flips
 (`8295502`); brokers relaxing VSDC derivatives terms (`52c6d5c`); band-edge orders on book (tick) sessions, now
 decided from the book walk (`a729b7e`); `soft` labelling every market-order fill `TRADED_THROUGH`, now graded like
-a limit at the band edge (`694ae11`). Their numbers (1 and 5) are kept as stubs so references to the others stay
-valid.
+a limit at the band edge (`694ae11`); the post-KRX derivatives margin model, now QĐ 26's two layers (`e976a1b`).
+Their numbers (1, 4 and 5) are kept as stubs so references to the others stay valid.
 
 ## Engine
 
@@ -19,10 +19,9 @@ valid.
    order priced further out (MarketMaker quotes about 31 ticks away) has no observable queue ahead, so the
    conservative and probabilistic queues leave it INDETERMINATE (`book_size`). The optimistic arm and the queue
    spread carry the result.
-4. **After the KRX cutover (2025-05-05) the engine admits derivatives orders** although its margin model is
-   unresolved there (`margin_model()` raises `UnresolvedRule`). Margin is then computed on the pre-KRX shape and
-   each such mark is counted (`margin_model.unsourced`). Only a strategy-side guard refuses to trade (S6, MM). A
-   strategy without the guard is simulated on an unsourced margin rule, and the run says so in its counters.
+4. *(Fixed in `e976a1b`: after the KRX cutover the engine margins derivatives on QĐ 26's two layers, a sourced
+   rule: broker IM on VSDC's published ratio intraday, VSDC's post-close scenario-grid MR with the binary Điều 13
+   test. A calendar spread held at a post-KRX close is UNKNOWN and counted, because SMrate is unpublished.)*
 5. *(Fixed in `694ae11`: `soft` grades a market-order fill like a limit at the band edge.)*
 6. **The book walk has no auction arm by default**: orders resting into the ATC come back INDETERMINATE unless an
    auction policy is composed in.
