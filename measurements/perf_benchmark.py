@@ -211,11 +211,21 @@ def main(argv=None) -> int:
     ap.add_argument("--json", type=Path)
     ap.add_argument("--md", type=Path)
     a = ap.parse_args(argv)
-    r = {"machine": machine(),
-         "rulebook": bench_rulebook(2_000 if a.quick else 200_000, 5 if a.quick else 50),
-         "daily": bench_daily(200 if a.quick else 5_000),
-         "tick": bench_tick(),
-         "e1": bench_e1(None if a.quick else a.e1_root)}
+    t0 = time.perf_counter()
+
+    def stage(name, fn):
+        print(f"[{datetime.now():%H:%M:%S}] start {name} (elapsed {time.perf_counter() - t0:.0f}s)",
+              file=sys.stderr, flush=True)
+        out = fn()
+        print(f"[{datetime.now():%H:%M:%S}] done  {name} (elapsed {time.perf_counter() - t0:.0f}s)",
+              file=sys.stderr, flush=True)
+        return out
+
+    r = {"machine": machine()}
+    r["rulebook"] = stage("rulebook", lambda: bench_rulebook(2_000 if a.quick else 200_000, 5 if a.quick else 50))
+    r["daily"] = stage("daily", lambda: bench_daily(200 if a.quick else 5_000))
+    r["tick"] = stage("tick", bench_tick)
+    r["e1"] = stage("e1", lambda: bench_e1(None if a.quick else a.e1_root))
     r["machine"]["load_average_at_end"] = os.getloadavg()
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=str))
