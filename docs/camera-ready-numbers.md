@@ -160,13 +160,8 @@ needs correcting, or the owner decides.
    `17b58a6`"; both `result/pair_anchor/w*.json` record `566fda4`, which the README now states.
 4. **MM contract capacity at the IM step: 36 → 28, from the run** (`result/mm_anchor/im2022.json`
    `faithful.capacity`, 2022-12-14 → 2022-12-15). The plutus-simulator docs written for the camera-ready already
-   say 36 → 28 (`NOTES-FOR-OWNER.md` §2, this map). Left for the owner, not edited:
-   - the submission text and handoff §5 T5 ("37 → 28");
-   - `docs/reference/tables/experiments_registry.md` line 232 ("affords **37 contracts** at the 13% VSD-IM rate and
-     **28** once it steps to 17%"), the record of the old, lost run. Kept as recorded, now annotated with the
-     rerun's 36 → 28;
-   - ProtoMarketMaker `README.md` (another agent's repo): a static 36 → **27** at 1,059 points next to the run's
-     36 → 28; the two differ only in the price used.
+   say 36 → 28 (`NOTES-FOR-OWNER.md` §2, this map, `experiments_registry.md`, ProtoMarketMaker `README.md`).
+   Only the submission text and handoff §5 T5 still say "37 → 28"; the paper takes 36 → 28.
 5. **MM return for im2022 depends on which faithful arm.** `NOTES-FOR-OWNER.md` §2 and the MM README anchor
    table: faithful +2.19% vs naive −12.93% (flat each session, `result/mm_anchor/im2022.json`). The ladder
    (`result/mm_ladder/im2022.md`, algorithm A with overnight carry): F-con −11.47%, F-opt −2.52%. Both are
@@ -213,7 +208,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### E1: fill-policy divergence over the 2022 HSX population
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
 - **Command:** `PYTHONPATH=src:. python -m measurements.e1_regenerate run --data-dir <rivf26-data>/t2-e1`, then `python measurements/e1_publish.py --data-root <rivf26-data>/t2-e1 --out docs/reference/tables/t2/e1_published`
 - **Data slice:** `rivf26/data/t2-e1/` (391 HSX tickers, 2022; not shipped, statistics only; sha256 in the map's slice table)
 
@@ -267,7 +262,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### F2: the indeterminate rate, bar vs tick
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices (see `docs/reference/tables/t2/indeterminate.md`); the figure and its JSON are re-rendered with `measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`
 - **Data slice:** `rivf26/data/t2-indeterminate/{daily,book}` (FPT, HPG, HTV, 2022-10-20..11-30; not shipped)
 
@@ -296,7 +291,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### F3: fill-policy axis (S1) and queue axis (S9)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_f3_cross_policy.py strategies/test_s9_queue_sensitivity.py` (writes `figures/f3_cross_policy_divergence.json`)
 - **Data slice:** `strategies/fixtures/parquet/` (DATA-MANIFEST, checked below) and `strategies/fixtures/extract/` (no sha256 manifest; `PROVENANCE.md` only)
 
@@ -317,7 +312,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Derivatives margin: regime split, the IM step, margin-call incidence
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/t2_futures_margin.py <rivf26-data>/t2-futures-margin`
 - **Data slice:** `rivf26/data/t2-futures-margin/` (VN30F front month, 2021-06-01..2022-12-30; sha256 in `docs/reference/tables/t2/futures_margin.md`)
 
@@ -339,7 +334,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Equity admission, band agreement, tick-grid conformity
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
 - **Command:** `measurements/equity_admission.py`, `band_conformance.py`, `grid_conformity.py` (exact invocations in `docs/reference/tables/t2/hsx_daily.md`)
 - **Data slice:** `rivf26/data/t2-hsx-daily/` and `t2-hsx-daily-grid-history/` (sha256 in `docs/reference/tables/t2/hsx_daily.md`)
 
@@ -364,7 +359,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### T8: rule versions, broker fields, maintenance effort, validator, properties, benchmark
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
 - **Command:** `PYTHONPATH=src python measurements/t8_counts.py`; `python measurements/maintenance_effort.py --markdown`; `PYTHONPATH=src:. python measurements/perf_benchmark.py`
 - **Data slice:** none (engine source and git history)
 
@@ -389,10 +384,10 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 | `t8.maint.lot.engine` |  | HOSE lot 10 → 100: engine lines | — → **4** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| HOSE round lot 10 -> 100/ cell 4 | PASS |
 | `t8.maint.krx.data` |  | KRX cutover: rule-data lines | — → **79** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| KRX trading-system cutover/ cell 2 | PASS |
 | `t8.maint.krx.engine` |  | KRX cutover: engine lines | — → **20** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| KRX trading-system cutover/ cell 4 | PASS |
-| `t8.validator.edges` |  | uncovered rule edges, all resolving to UNKNOWN | — → **12** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `rules.open_edges` | PASS: `len(OPEN_EDGES)` in `tests/market/session/test_rule_tables.py`, which pins the set. |
-| `t8.properties` | `\nProperties` | Hypothesis properties | — → **14** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `properties.properties` | PASS |
-| `t8.property_examples` | `\nPropertyExamples` | Hypothesis examples (sum of `max_examples`) | — → **3,850** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `properties.max_examples_total` | PASS |
-| `t8.property_boundary` |  | explicit `@example` boundary cases on those properties | — → **26** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `properties.boundary_examples` | PASS |
+| `t8.validator.edges` |  | uncovered rule edges, all resolving to UNKNOWN | — → **12** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `rules.open_edges` | PASS: `len(OPEN_EDGES)` in `tests/market/session/test_rule_tables.py`, which pins the set. |
+| `t8.properties` | `\nProperties` | Hypothesis properties | — → **14** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `properties.properties` | PASS |
+| `t8.property_examples` | `\nPropertyExamples` | Hypothesis examples (sum of `max_examples`) | — → **3,850** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `properties.max_examples_total` | PASS |
+| `t8.property_boundary` |  | explicit `@example` boundary cases on those properties | — → **26** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `properties.boundary_examples` | PASS |
 | `t8.bench.at_per_sec` | `\nAtPerSec` | `Rulebook.at(ts)` resolutions per second (warm) | — → **3,912,146** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `rulebook.at_per_second` | PASS |
 | `t8.bench.orders_per_sec` | `\nOrdersPerSec` | daily fill evaluations per second through `ExchangeSession` | — → **13,223** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `daily.fill_evaluations_per_second` | PASS |
 | `t8.bench.e1_wall` | `\EoneWall` | E1 wall time, full 2022 population (s) | — → **7.14** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `e1.wall_s` | PASS |
@@ -401,36 +396,36 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Test-suite counts (F4)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest tests`; `pytest scenarios`; `pytest strategies` (each on its own)
 - **Data slice:** shipped fixtures
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `tests.unit.passed` | `\nUnitTests` | unit tests passed | 1,646 → **2,206** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.unit.passed` | PASS: Each suite run on its own shipped fixtures by `measurements/camera_ready_pins.py --tests`. Rerun it at freeze if any test is added. |
-| `tests.unit.failed` |  | unit tests failed | — → **0** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.unit.failed` | PASS |
-| `tests.unit.xfailed` |  | unit tests xfailed (strict) | — → **0** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.unit.xfailed` | PASS |
-| `tests.unit.skipped` |  | unit tests skipped (corpus-gated) | — → **453** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.unit.skipped` | PASS |
-| `tests.scenarios` | `\nScenarioTests` | scenario tests passed (0 skipped) | 38 → **39** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.scenarios.passed` | PASS |
-| `tests.strategies.passed` | `\nStrategyTests` | strategy tests passed | 11 → **18** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.strategies.passed` | PASS |
-| `tests.strategies.skipped` |  | strategy tests skipped (E1, F2 need corpus slices) | — → **2** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.strategies.skipped` | PASS |
+| `tests.unit.passed` | `\nUnitTests` | unit tests passed | 1,646 → **2,206** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `tests.unit.passed` | PASS: Each suite run on its own shipped fixtures by `measurements/camera_ready_pins.py --tests`. Rerun it at freeze if any test is added. |
+| `tests.unit.failed` |  | unit tests failed | — → **0** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `tests.unit.failed` | PASS |
+| `tests.unit.xfailed` |  | unit tests xfailed (strict) | — → **0** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `tests.unit.xfailed` | PASS |
+| `tests.unit.skipped` |  | unit tests skipped (corpus-gated) | — → **453** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `tests.unit.skipped` | PASS |
+| `tests.scenarios` | `\nScenarioTests` | scenario tests passed (0 skipped) | 38 → **39** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `tests.scenarios.passed` | PASS |
+| `tests.strategies.passed` | `\nStrategyTests` | strategy tests passed | 11 → **18** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `tests.strategies.passed` | PASS |
+| `tests.strategies.skipped` |  | strategy tests skipped (E1, F2 need corpus slices) | — → **2** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `tests.strategies.skipped` | PASS |
 
 ### Scenario and strategy findings quoted in the text
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_s2_*.py scenarios`
 - **Data slice:** shipped fixtures
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `s2.loss` |  | S2 leveraged long: loss (100M start) | — → **−77%** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2.return_pct` | PASS |
-| `s2.end_equity` |  | S2 end equity (M đ) | — → **23.3** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2.end_equity` | PASS |
-| `s2.margin_calls` |  | S2 margin calls | — → **10** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2.margin_calls` | PASS |
-| `s2.forced_tranches` | `\nStopSales` | S2 forced-sale tranches | three sales → **7** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2.forced_sale_orders` | PASS |
-| `s2.queue_ahead` |  | S2 2022-11-07: floor queue ahead at 10:00 | — → **8,657,000** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2_queue.queue_ahead` | PASS |
-| `s2.volume_after` |  | S2 2022-11-07: volume traded at the floor after 10:00 | — → **775,000** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2_queue.volume_after` | PASS |
-| `s2.queue_verdict` |  | S2 2022-11-07: lock-queue verdict | — → **blocked** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2_queue.verdict` | PASS |
-| `j18.deposit_step` |  | J18: deposit change at the 13% → 17% IM step | — → **+30.8%** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `j18.deposit_step_pct` | PASS |
+| `s2.loss` |  | S2 leveraged long: loss (100M start) | — → **−77%** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `s2.return_pct` | PASS |
+| `s2.end_equity` |  | S2 end equity (M đ) | — → **23.3** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `s2.end_equity` | PASS |
+| `s2.margin_calls` |  | S2 margin calls | — → **10** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `s2.margin_calls` | PASS |
+| `s2.forced_tranches` | `\nStopSales` | S2 forced-sale tranches | three sales → **7** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `s2.forced_sale_orders` | PASS |
+| `s2.queue_ahead` |  | S2 2022-11-07: floor queue ahead at 10:00 | — → **8,657,000** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `s2_queue.queue_ahead` | PASS |
+| `s2.volume_after` |  | S2 2022-11-07: volume traded at the floor after 10:00 | — → **775,000** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `s2_queue.volume_after` | PASS |
+| `s2.queue_verdict` |  | S2 2022-11-07: lock-queue verdict | — → **blocked** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `s2_queue.verdict` | PASS |
+| `j18.deposit_step` |  | J18: deposit change at the 13% → 17% IM step | — → **+30.8%** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `j18.deposit_step_pct` | PASS |
 
 ### Table II, ProtoSmartBeta (null anchor)
 
@@ -647,7 +642,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Data-slice integrity (sha256 of every committed slice file vs its manifest)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
 - **Command:** this checker
 - **Data slice:** each manifest named in the row
 
