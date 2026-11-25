@@ -288,6 +288,7 @@ FUT = "docs/reference/tables/t2/futures_margin.md"
 HSX = "docs/reference/tables/t2/hsx_daily"
 T8C = "docs/reference/tables/t8_counts.md"
 T8M = "docs/reference/tables/t8_maintenance_effort.md"
+BENCH = "docs/reference/tables/t8_perf_benchmark.json"
 
 GROUPS: dict[str, Group] = {
     "e1": Group("E1: fill-policy divergence over the 2022 HSX population", SIM,
@@ -598,23 +599,24 @@ def _registry() -> list[Entry]:
                 "`tests/properties/` at freeze.", macro=r"\nProperties"),
         pending("t8.property_examples", "t8", "Hypothesis examples (plus 26 boundary cases)", "—", "3,850",
                 "Prose only (`NOTES-FOR-OWNER.md` §3.5). No committed result file.", macro=r"\nPropertyExamples"),
-        pending("t8.bench.at_per_sec", "t8", "`Rulebook.at(ts)` resolutions per second (warm)", "—", "TBD",
-                "T8.3 benchmark pending (CPU benchmark not yet run on a quiet machine; no committed result).",
-                macro=r"\nAtPerSec"),
-        pending("t8.bench.orders_per_sec", "t8", "orders per second through `ExchangeSession`", "—", "TBD",
-                "T8.3 benchmark pending. Commit `af55e29` reports daily fill evaluation ~15,800 orders/s in its "
-                "message only (not a result file).", macro=r"\nOrdersPerSec"),
-        pending("t8.bench.e1_wall", "t8", "E1 wall time and peak RSS", "—", "TBD", "T8.3 benchmark pending.",
-                macro=r"\EoneWall"),
+        num("t8.bench.at_per_sec", "t8", "`Rulebook.at(ts)` resolutions per second (warm)", "—", "3,912,146",
+            J(SIM, BENCH, "rulebook", "at_per_second"), tol=0.5, macro=r"\nAtPerSec"),
+        num("t8.bench.orders_per_sec", "t8", "daily fill evaluations per second through `ExchangeSession`", "—",
+            "13,223", J(SIM, BENCH, "daily", "fill_evaluations_per_second"), tol=0.5, macro=r"\nOrdersPerSec"),
+        num("t8.bench.e1_wall", "t8", "E1 wall time, full 2022 population (s)", "—", "7.14",
+            J(SIM, BENCH, "e1", "wall_s"), tol=0.005, macro=r"\EoneWall"),
+        num("t8.bench.e1_rss", "t8", "E1 peak RSS (MB)", "—", "285.8", J(SIM, BENCH, "e1", "peak_rss_mb"), tol=0.05),
+        Entry("t8.bench.commit", "t8", "benchmark ran on plutus-simulator", "—", "373f9a7", expected="373f9a7",
+              get=J(SIM, BENCH, "machine", "plutus_simulator_commit")),
     ]
 
     # ---- Test counts ------------------------------------------------------------------------------------------
-    freeze = ("To refresh at freeze: an engine fix in flight turns the 2 xfails into passes, and this checker's own "
-              "test file adds tests. Recorded value from the coordinating session at `af55e29`; "
-              "`pytest --collect-only` at `7fbe16b` gives 2,624 = 2,169 + 2 + 453.")
+    freeze = ("To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `67f18fa`/`dcaecb9`: the 2 strict "
+              "xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` "
+              "(`11ba6cd`, 7 tests) and any later commit.")
     R += [
-        pending("tests.unit.passed", "tests", "unit tests passed", "1,646", "2,169", freeze, macro=r"\nUnitTests"),
-        pending("tests.unit.xfailed", "tests", "unit tests xfailed (strict)", "—", "2", freeze),
+        pending("tests.unit.passed", "tests", "unit tests passed", "1,646", "2,180", freeze, macro=r"\nUnitTests"),
+        pending("tests.unit.xfailed", "tests", "unit tests xfailed (strict)", "—", "0", freeze),
         pending("tests.unit.skipped", "tests", "unit tests skipped (corpus-gated)", "—", "453", freeze),
         pending("tests.scenarios", "tests", "scenario tests passed (0 skipped)", "38", "39",
                 "To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d.", macro=r"\nScenarioTests"),
@@ -735,26 +737,37 @@ def _registry() -> list[Entry]:
             mk("krx2025", "naive_pre_cutover_only", "fills")),
         pct("mm.krx2025.hpr_naive_pre", "mm", "krx2025, pre-cutover: HPR naive", "—", "−5.22%",
             mk("krx2025", "naive_pre_cutover_only", "hpr"), decimals=2),
-        num("mm.krx2025.fills_faithful", "mm", "krx2025: faithful fills, conservative", "402", "116",
-            mk("krx2025", "faithful", "fills"), macro=r"\mmFillsF"),
-        num("mm.krx2025.fills_opt", "mm", "krx2025: faithful fills, optimistic", "—", "160",
-            mk("krx2025", "faithful_by_queue", "optimistic", "fills"), macro=r"\mmFillsOpt"),
-        pct("mm.krx2025.hpr_faithful", "mm", "krx2025: HPR faithful, conservative", "31.62%", "−6.03%",
-            mk("krx2025", "faithful", "hpr"), decimals=2),
-        pct("mm.krx2025.fn", "mm", "krx2025: f/n, all 40 sessions", "44% (402/910)", "16.7%",
-            mk("krx2025", "fills_ratio_f_over_n"), decimals=1, macro=r"\mmFillRange"),
-        pct("mm.krx2025.fn_pre", "mm", "krx2025: f/n, 20 pre-cutover sessions (like for like)", "—", "50.9%",
-            CALC(lambda f, n: f / n, mk("krx2025", "faithful", "fills"),
+        num("mm.krx2025.fills_faithful", "mm", "krx2025, 40 sessions: faithful fills, conservative",
+            "402 (submission); 116 (before the rerun)", "366", mk("krx2025", "faithful", "fills"), macro=r"\mmFillsF"),
+        num("mm.krx2025.fills_opt", "mm", "krx2025, 40 sessions: faithful fills, optimistic", "160 (before the rerun)",
+            "444", mk("krx2025", "faithful_by_queue", "optimistic", "fills"), macro=r"\mmFillsOpt"),
+        pct("mm.krx2025.hpr_faithful", "mm", "krx2025, 40 sessions: HPR faithful, conservative",
+            "31.62% (submission); −6.03% (before the rerun)", "−0.73%", mk("krx2025", "faithful", "hpr"), decimals=2),
+        pct("mm.krx2025.fn", "mm", "krx2025: f/n, all 40 sessions", "44% (submission); 16.7% (before the rerun)",
+            "52.8%", mk("krx2025", "fills_ratio_f_over_n"), decimals=1, macro=r"\mmFillRange"),
+        num("mm.krx2025.fills_faithful_pre", "mm", "krx2025, 20 pre-cutover sessions: faithful fills, conservative",
+            "116", "116", mk("krx2025", "faithful", "krx", "pre", "fills")),
+        num("mm.krx2025.fills_faithful_post", "mm", "krx2025, 20 post-cutover sessions: faithful fills, conservative",
+            "0 (refused, before the rerun)", "250", mk("krx2025", "faithful", "krx", "post", "fills")),
+        pct("mm.krx2025.fn_pre", "mm", "krx2025: f/n, 20 pre-cutover sessions (like for like)", "50.9%", "50.9%",
+            CALC(lambda f, n: f / n, mk("krx2025", "faithful", "krx", "pre", "fills"),
                  mk("krx2025", "naive_pre_cutover_only", "fills")), decimals=1, macro=r"\mmFillRange"),
-        pct("mm.krx2025.queue_spread", "mm", "krx2025: queue spread (opt − cons) / opt", "—", "27.5%",
-            mk("krx2025", "tier1", "queue_fill_spread", "conservative_vs_optimistic_pct"), decimals=1, scale=1.0,
-            macro=r"\pctMMQueueSwing"),
-        pct("mm.krx2025.undecided_pre", "mm", "krx2025: conservative undecided orders, pre-cutover", "99.94%",
-            "99.76%", mk("krx2025", "faithful", "krx", "pre", "indeterminate_order_rate"), decimals=2,
-            macro=r"\pctMMUndecPre",
-            note="Old value counted fill-evaluation events; the new one counts orders. Post-cutover has no orders."),
-        num("mm.krx2025.refused_post", "mm", "krx2025: post-cutover sessions refused (of 20)", "—", "20",
-            mk("krx2025", "tier1", "post_cutover_refused_sessions")),
+        pct("mm.krx2025.queue_spread", "mm", "krx2025: queue spread (opt − cons) / opt", "27.5% (before the rerun)",
+            "17.6%", mk("krx2025", "tier1", "queue_fill_spread", "conservative_vs_optimistic_pct"), decimals=1,
+            scale=1.0, macro=r"\pctMMQueueSwing"),
+        pct("mm.krx2025.undecided_pre", "mm", "krx2025: conservative undecided orders, pre-cutover",
+            "99.94% (submission, events)", "99.76%", mk("krx2025", "faithful", "krx", "pre", "indeterminate_order_rate"),
+            decimals=2, macro=r"\pctMMUndecPre",
+            note="Counts orders; the submission's 99.94% / 99.92% counted fill-evaluation events."),
+        pct("mm.krx2025.undecided_post", "mm", "krx2025: conservative undecided orders, post-cutover",
+            "99.92% (submission, events); none (refused, before the rerun)", "99.21%",
+            mk("krx2025", "faithful", "krx", "post", "indeterminate_order_rate"), decimals=2,
+            macro=r"\pctMMUndecPost"),
+        num("mm.krx2025.refused_post", "mm", "krx2025: post-cutover sessions refused (of 20)", "20 (before the rerun)",
+            "0", mk("krx2025", "tier1", "post_cutover_refused_sessions")),
+        Entry("mm.krx2025.engine_commit", "mm", "krx2025 anchor ran on plutus-simulator", "fc94743", "373f9a7",
+              expected="373f9a7", get=CALC(lambda c: c[:7], mk("krx2025", "plutus_simulator_commit"),
+                                           desc="`plutus_simulator_commit` (first 7 characters)")),
         num("mm.im2022.fills_naive", "mm", "im2022: naive fills", "—", "129", mk("im2022", "naive", "fills")),
         pct("mm.im2022.hpr_naive", "mm", "im2022: HPR naive", "—", "−12.93%", mk("im2022", "naive", "hpr"), decimals=2),
         num("mm.im2022.fills_faithful", "mm", "im2022: faithful fills, conservative", "—", "70",
@@ -770,8 +783,7 @@ def _registry() -> list[Entry]:
         pct("mm.im2022.undecided_pre", "mm", "im2022: conservative undecided orders, before 2022-12-15", "—", "99.87%",
             mk("im2022", "faithful", "im_step", "pre", "indeterminate_order_rate"), decimals=2),
         pct("mm.im2022.undecided_post", "mm", "im2022: conservative undecided orders, from 2022-12-15", "—", "99.99%",
-            mk("im2022", "faithful", "im_step", "post", "indeterminate_order_rate"), decimals=2,
-            macro=r"\pctMMUndecPost"),
+            mk("im2022", "faithful", "im_step", "post", "indeterminate_order_rate"), decimals=2),
         num("mm.deposit", "mm", "MM deposit (đ)", "—", "500,000,000", mk("im2022", "faithful", "deposit_dong"),
             macro=r"\mmDeposit"),
         num("mm.contracts_pre", "mm", "dated-IM capacity on 2022-12-14 (13%)", "37", "36",
@@ -781,50 +793,115 @@ def _registry() -> list[Entry]:
     ]
 
     # ---- ProtoMarketMaker ladder ------------------------------------------------------------------------------
-    ladder = {"im2022": {"N0": ("−12.93%", "129"), "N1": ("−15.90%", "129"), "N2": ("−15.90%", "129"),
-                         "N3": ("−16.42%", "129"), "F-opt": ("−2.52%", "198"), "F-con": ("−11.47%", "116")},
-              "krx2025": {"N0": ("−5.22%", "228"), "N1": ("−14.09%", "228"), "N2": ("−14.09%", "228"),
-                          "N3": ("−15.02%", "228"), "F-opt": ("−7.58%", "261"), "F-con": ("−25.55%", "153")}}
-    for w, rungs in ladder.items():
-        md = f"result/mm_ladder/{w}.md"
+    PM = "ProtoMarketMaker"
+
+    def _json_agrees(rs, text):
+        n = 0
+        for x in rs:
+            v = x["hpr"] * 100
+            sign = "-" if v < 0 else r"\+?"
+            pat = rf"\| {re.escape(x['rung'])} \|.*\| {sign}{abs(v):.2f}% \|"
+            n += any(re.match(pat, l) for l in text.splitlines())
+        return n
+
+    # im2022: the markdown's first table (whole window), cross-checked against the JSON.
+    md = "result/mm_ladder/im2022.md"
+    for rung, (hpr, fills_) in {"N0": ("−12.93%", "129"), "N1": ("−15.90%", "129"), "N2": ("−15.90%", "129"),
+                                "N3": ("−16.42%", "129"), "F-opt": ("−2.52%", "198"),
+                                "F-con": ("−11.47%", "116")}.items():
+        row = rf"^\| {re.escape(rung)} \|"
+        R.append(pct(f"ladder.im2022.{rung.lower()}.hpr", "ladder", f"im2022: {rung} HPR", "—", hpr,
+                     MDCELL(PM, md, row, 5), decimals=2, scale=1.0))
+        R.append(num(f"ladder.im2022.{rung.lower()}.fills", "ladder", f"im2022: {rung} fills", "—", fills_,
+                     MDCELL(PM, md, row, 2)))
+
+    # krx2025: whole window (40 sessions), and the pre-/post-cutover views, all from the JSON.
+    KJ = "result/mm_ladder/krx2025.json"
+    krx = {
+        "": ("all 40 sessions", [], {"N0": ("+29.57%", "693"), "N1": ("−41.99%", "693"), "N2": ("−41.99%", "693"),
+                                     "N3": ("−44.77%", "693"), "F-opt": ("−12.02%", "575"),
+                                     "F-con": ("−42.96%", "358")}),
+        "pre.": ("20 pre-cutover sessions", ["views", "pre_cutover"],
+                 {"N0": ("−5.22%", "228"), "N1": ("−14.09%", "228"), "N2": ("−14.09%", "228"),
+                  "N3": ("−15.02%", "228"), "F-opt": ("−7.58%", "261"), "F-con": ("−25.55%", "153")}),
+        "post.": ("20 post-cutover sessions", ["views", "post_cutover"],
+                  {"N0": ("+36.70%", "465"), "N1": ("−32.47%", "465"), "N2": ("−32.47%", "465"),
+                   "N3": ("−35.01%", "465"), "F-opt": ("−4.81%", "314"), "F-con": ("−23.39%", "205")}),
+    }
+    pre_old = {"": "pre-cutover values (this id held the pre-cutover table before the rerun)", "pre.": "—",
+               "post.": "— (refused before the rerun)"}
+    for vid, (label, path, rungs) in krx.items():
         for rung, (hpr, fills_) in rungs.items():
-            row = rf"^\| {re.escape(rung)} \|"
-            R.append(pct(f"ladder.{w}.{rung.lower()}.hpr", "ladder", f"{w}: {rung} HPR", "—", hpr,
-                         MDCELL("ProtoMarketMaker", md, row, 5), decimals=2, scale=1.0))
-            R.append(num(f"ladder.{w}.{rung.lower()}.fills", "ladder", f"{w}: {rung} fills", "—", fills_,
-                         MDCELL("ProtoMarketMaker", md, row, 2)))
-        R.append(num(f"ladder.{w}.json_agrees", "ladder", f"{w}: ladder JSON HPRs equal the markdown (6 rungs)", "—",
-                     "6", CALC(lambda rs, t: sum(
-                         1 for x in rs if any(re.match(rf"\| {re.escape(x['rung'])} \|.*\| {x['hpr'] * 100:.2f}% \|", l)
-                                              for l in t.splitlines())),
-                         J("ProtoMarketMaker", f"result/mm_ladder/{w}.json", "rungs"),
-                         Extractor("ProtoMarketMaker", md, "", lambda c, md=md: c.text("ProtoMarketMaker", md)),
-                         desc=f"`result/mm_ladder/{w}.json` `rungs[].hpr` vs `{md}`")))
+            R.append(pct(f"ladder.krx2025.{vid}{rung.lower()}.hpr", "ladder", f"krx2025, {label}: {rung} HPR",
+                          pre_old[vid] if vid == "post." else "—", hpr,
+                          J(PM, KJ, *path, "rungs", ("rung", rung), "hpr"), decimals=2))
+            R.append(num(f"ladder.krx2025.{vid}{rung.lower()}.fills", "ladder", f"krx2025, {label}: {rung} fills",
+                         "—", fills_, J(PM, KJ, *path, "rungs", ("rung", rung), "fills")))
+    fn_stated = {("im2022", "", "F-opt"): "153.5%", ("im2022", "", "F-con"): "89.9%",
+                 ("krx2025", "", "F-opt"): "83.0%", ("krx2025", "", "F-con"): "51.7%",
+                 ("krx2025", "pre.", "F-opt"): "114.5%", ("krx2025", "pre.", "F-con"): "67.1%",
+                 ("krx2025", "post.", "F-opt"): "67.5%", ("krx2025", "post.", "F-con"): "44.1%"}
+    for (w, vid, arm_), stated in fn_stated.items():
+        if w == "im2022":
+            f_, n_ = MDCELL(PM, md, rf"^\| {arm_} \|", 2), MDCELL(PM, md, r"^\| N0 \|", 2)
+        else:
+            path = krx[vid][1]
+            f_ = J(PM, KJ, *path, "rungs", ("rung", arm_), "fills")
+            n_ = J(PM, KJ, *path, "rungs", ("rung", "N0"), "fills")
+        over = float(stated.rstrip("%")) > 100
+        R.append(pct(f"ladder.{w}.{vid}{arm_.lower()}.fn", "ladder",
+                     f"{w}{', ' + krx[vid][0] if w == 'krx2025' else ''}: {arm_} fills / N0 fills", "—", stated,
+                     CALC(lambda f, n: f / n, f_, n_), decimals=1,
+                     note="Above 100%: §6 criterion 1 (faithful fills < naive) fails for this arm." if over else ""))
+    for w in ("im2022", "krx2025"):
+        R.append(num(f"ladder.{w}.json_agrees", "ladder", f"{w}: ladder JSON HPRs equal the markdown's first table",
+                     "—", "6", CALC(_json_agrees, J(PM, f"result/mm_ladder/{w}.json", "rungs"),
+                                    Extractor(PM, f"result/mm_ladder/{w}.md", "",
+                                              lambda c, w=w: c.text(PM, f"result/mm_ladder/{w}.md")),
+                                    desc=f"`result/mm_ladder/{w}.json` `rungs[].hpr` vs `result/mm_ladder/{w}.md`")))
         for arm_ in ("F-opt", "F-con"):
-            stated = {("im2022", "F-opt"): "153.5%", ("im2022", "F-con"): "89.9%",
-                      ("krx2025", "F-opt"): "114.5%", ("krx2025", "F-con"): "67.1%"}[(w, arm_)]
-            R.append(pct(f"ladder.{w}.{arm_.lower()}.fn", "ladder", f"{w}: {arm_} fills / N0 fills", "—", stated,
-                         CALC(lambda f, n: f / n, MDCELL("ProtoMarketMaker", md, rf"^\| {arm_} \|", 2),
-                              MDCELL("ProtoMarketMaker", md, r"^\| N0 \|", 2)), decimals=1,
-                         note="Above 100%: §6 criterion 1 (faithful fills < naive) fails for this arm."
-                         if arm_ == "F-opt" else ""))
             R.append(num(f"ladder.{w}.{arm_.lower()}.source_sha", "ladder",
                          f"{w}: {arm_} faithful-A result file matches the sha256 the ladder records", "—", "1",
-                         SOURCE_SHA("ProtoMarketMaker", f"result/mm_ladder/{w}.json",
+                         SOURCE_SHA(PM, f"result/mm_ladder/{w}.json",
                                     ("faithful_sources", arm_, "sha256"), ("faithful_sources", arm_, "path"))))
     R += [
         pct("ladder.im2022.f-con.undecided", "ladder", "im2022: F-con undecided orders", "—", "99.88%",
-            MDCELL("ProtoMarketMaker", "result/mm_ladder/im2022.md", r"^\| F-con \|", 7), decimals=2, scale=1.0),
-        pct("ladder.krx2025.f-con.undecided", "ladder", "krx2025: F-con undecided orders", "—", "99.63%",
-            MDCELL("ProtoMarketMaker", "result/mm_ladder/krx2025.md", r"^\| F-con \|", 7), decimals=2, scale=1.0),
-        pending("ladder.markout.naive", "ladder", "5-min markout per fill, naive (pts)", "—", "−2.24",
-                "Pending (full-window run in progress). Current value is from the first 6 im2022 sessions "
-                "(`NOTES-FOR-OWNER.md` §4.2); no committed result file."),
-        pending("ladder.markout.faithful", "ladder", "5-min markout per fill, faithful (pts)", "—", "−0.78",
-                "Pending (full-window run in progress). First 6 im2022 sessions only; no committed result file."),
-        pending("ladder.markout.ghost", "ladder", "1-min markouts (no ghost fills)", "—", "TBD",
-                "Pending (full-window run in progress)."),
+            MDCELL(PM, md, r"^\| F-con \|", 7), decimals=2, scale=1.0),
+        pct("ladder.krx2025.f-con.undecided", "ladder", "krx2025, all 40 sessions: F-con undecided orders",
+            "99.63% (pre-cutover, before the rerun)", "99.54%",
+            J(PM, KJ, "rungs", ("rung", "F-con"), "undecided_order_rate"), decimals=2),
+        pct("ladder.krx2025.pre.f-con.undecided", "ladder", "krx2025, pre-cutover: F-con undecided orders", "99.63%",
+            "99.63%", J(PM, KJ, "views", "pre_cutover", "rungs", ("rung", "F-con"), "undecided_order_rate"),
+            decimals=2),
+        num("ladder.krx2025.f-con.margin_calls", "ladder", "krx2025, all 40 sessions: F-con margin calls", "—", "31",
+            J(PM, KJ, "rungs", ("rung", "F-con"), "margin_calls")),
+        num("ladder.krx2025.f-con.forced_executed", "ladder", "krx2025: F-con forced liquidations executed", "—", "3",
+            J(PM, KJ, "rungs", ("rung", "F-con"), "forced_liquidations_executed")),
     ]
+    for arm_, nights in (("F-opt", "20"), ("F-con", "19")):
+        a_ = arm_.lower()
+        R += [
+            num(f"ladder.krx2025.{a_}.ccp_nights", "ladder", f"krx2025: {arm_} post-KRX CCP nights with a position",
+                "—", nights, J(PM, KJ, "rungs", ("rung", arm_), "ccp_nights")),
+            num(f"ladder.krx2025.{a_}.ccp_indeterminate", "ladder", f"krx2025: {arm_} CCP nights indeterminate", "—",
+                "0", J(PM, KJ, "rungs", ("rung", arm_), "ccp_indeterminate_nights")),
+            num(f"ladder.krx2025.{a_}.ccp_calendar_unknown", "ladder",
+                f"krx2025: {arm_} calendar-spread charge UNKNOWN", "—", "0",
+                J(PM, KJ, "rungs", ("rung", arm_), "ccp_calendar_spread_unknown")),
+        ]
+    mo = lambda w, arm_, h: J(PM, f"result/mm_markout/{w}_markout.json", "arms", arm_, "markout_mean_points", h)
+    for w, label, vals in (("im2022", "im2022, all 40 sessions", ("−0.71", "+0.41", "−0.57")),
+                           ("krx2025", "krx2025, all 40 sessions", ("−2.22", "−0.68", "−0.31"))):
+        for arm_, v in zip(("N3", "F-opt", "F-con"), vals):
+            R.append(num(f"ladder.markout.{w}.{arm_.lower()}.5m", "ladder",
+                         f"{label}: mean 5-min markout per fill, {arm_} (index pts; + good for the maker)",
+                         "−2.24 naive / −0.78 faithful (first 6 im2022 sessions, prose)" if w == "im2022" and
+                         arm_ == "N3" else "—", v, mo(w, arm_, "5m"), tol=0.005))
+    for w, v in (("im2022", "+0.21"), ("krx2025", "+0.06")):
+        R.append(num(f"ladder.markout.{w}.f-opt.1m", "ladder",
+                     f"{w}: mean 1-min markout per fill, F-opt (record for the WITHDRAWN 'no ghost fills' claim)",
+                     "—", v, mo(w, "F-opt", "1m"), tol=0.005,
+                     note="Withdrawn claim: kept as the record only; the paper does not state 'no ghost fills'."))
 
     # ---- Slice integrity ----------------------------------------------------------------------------------------
     for m in ("scenarios/fixtures/daily/DATA-MANIFEST.md", "scenarios/fixtures/book/DATA-MANIFEST.md",

@@ -38,7 +38,7 @@ Committed bytes = the exact sum of the file sizes git tracks in the folder (data
 | ProtoSmartBeta | names the strategy ranks (71 / 79) | 2022, 2023 (12 rebalances each) | per-rebalance filter | DB | `proto/ProtoSmartBeta/data/` | 967,897 B |
 | ProtoPair | equal-lot VN30 basket + VN30F1M | 2022-08-01..2023-08-04; 2023-08-07..2024-02-02 | VN30 membership + roll map | DB | `proto/ProtoPair/data/` | 359,593 B |
 | ProtoGrid | SSI, TCH, POW | 2022-10-03..11-30; 2021-11-01..12-31 | spec names | DB (tick) | `proto/ProtoGrid/data/` | 2,932,667 B |
-| ProtoMarketMaker | VN30F1M/F2M (dated contracts) | ±20 sessions around 2025-05-05 and 2022-12-15 | spec | DB (2025) + archive (2022 book) | `proto/ProtoMarketMaker/data/` | **25,078,256 B** (krx2025 16,351,904; im2022 8,726,352): over the flag, owner sign-off |
+| ProtoMarketMaker | VN30F1M/F2M (dated contracts) | ±20 sessions around 2025-05-05 and 2022-12-15 | spec | DB (2025) + archive (2022 book) | `proto/ProtoMarketMaker/data/` | **25,078,745 B** (krx2025 16,352,393; im2022 8,726,352): over the flag, owner sign-off |
 
 ## Preprocessing
 

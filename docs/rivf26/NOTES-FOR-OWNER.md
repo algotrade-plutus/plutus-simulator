@@ -67,7 +67,7 @@ Mechanisms visible:
    for like on the 20 it quoted. I'd quote both.
 
 Also:
-- MM's committed slices are 16,351,904 B (krx2025) and 8,726,352 B (im2022), 25,078,256 B in all (L2 depth 1–3 with sizes plus tape, 40 sessions). Both are over the
+- MM's committed slices are 16,352,393 B (krx2025) and 8,726,352 B (im2022), 25,078,745 B in all (L2 depth 1–3 with sizes plus tape, 40 sessions). Both are over the
   size flag and need your sign-off before any push.
 - ceil/floor are missing for VN30F2212 on 2022-12-02, 12-05 and 12-06, in both the DB and the archive.
 
