@@ -1,0 +1,148 @@
+{
+ "machine": {
+  "cpu": "Apple M6",
+  "physical_cores": "12",
+  "logical_cores": 12,
+  "memory_gb": 24.0,
+  "os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "python": "3.15.2",
+  "duckdb": "2.0.1",
+  "pyarrow": "26.0.1",
+  "pandas": "3.1.1",
+  "plutus_simulator_commit": "b06d36c",
+  "plutus_simulator_dirty": false,
+  "load_average_at_start": [
+   1.71826171875,
+   1.63623046875,
+   1.68408203125
+  ],
+  "load_average_at_end": [
+   1.767578125,
+   1.64794921875,
+   1.68701171875
+  ]
+ },
+ "rulebook": {
+  "cold_build_and_first_at_ms": 0.18,
+  "at_calls": 200000,
+  "at_per_second": 3898866.7,
+  "resolve_per_rule": {
+   "trading_unit": {
+    "keys": 5,
+    "calls": 250,
+    "median_us": 2.33,
+    "max_us": 20.21,
+    "raised_unresolved": 0
+   },
+   "daily_trading_limit": {
+    "keys": 8,
+    "calls": 400,
+    "median_us": 2.33,
+    "max_us": 4.67,
+    "raised_unresolved": 0
+   },
+   "widened_trading_limit": {
+    "keys": 7,
+    "calls": 350,
+    "median_us": 2.37,
+    "max_us": 10.08,
+    "raised_unresolved": 0
+   },
+   "tick_size": {
+    "keys": 12,
+    "calls": 600,
+    "median_us": 3.71,
+    "max_us": 15.38,
+    "raised_unresolved": 0
+   },
+   "session_schedule": {
+    "keys": 4,
+    "calls": 200,
+    "median_us": 1.63,
+    "max_us": 2.54,
+    "raised_unresolved": 0
+   },
+   "legal_order_types": {
+    "keys": 29,
+    "calls": 1450,
+    "median_us": 2.29,
+    "max_us": 5.33,
+    "raised_unresolved": 0
+   },
+   "settlement": {
+    "keys": 5,
+    "calls": 250,
+    "median_us": 1.63,
+    "max_us": 2.17,
+    "raised_unresolved": 0
+   },
+   "initial_margin_rate": {
+    "keys": 2,
+    "calls": 100,
+    "median_us": 1.62,
+    "max_us": 15.21,
+    "raised_unresolved": 0
+   },
+   "margin_model": {
+    "keys": 1,
+    "calls": 50,
+    "median_us": 1.33,
+    "max_us": 3.37,
+    "raised_unresolved": 0
+   },
+   "position_limit": {
+    "keys": 6,
+    "calls": 300,
+    "median_us": 2.17,
+    "max_us": 4.33,
+    "raised_unresolved": 0
+   },
+   "max_order_size": {
+    "keys": 4,
+    "calls": 200,
+    "median_us": 1.54,
+    "max_us": 3.71,
+    "raised_unresolved": 0
+   },
+   "charge": {
+    "keys": 10,
+    "calls": 500,
+    "median_us": 1.54,
+    "max_us": 5.13,
+    "raised_unresolved": 0
+   }
+  },
+  "first_ruleset_edition": "RulebookEdition.PRE_KRX"
+ },
+ "daily": {
+  "orders": 5000,
+  "accepted": 5000,
+  "submit_per_second": 5562.4,
+  "fill_evaluations_per_second": 13086.4,
+  "events": 5822
+ },
+ "tick": {
+  "optimistic": {
+   "marks": 881,
+   "orders": 1762,
+   "fills": 850,
+   "wall_s": 0.55,
+   "orders_per_second": 3188.8,
+   "advances_per_second": 1594.4
+  },
+  "conservative": {
+   "marks": 881,
+   "orders": 1762,
+   "fills": 98,
+   "wall_s": 0.37,
+   "orders_per_second": 4724.7,
+   "advances_per_second": 2362.4
+  }
+ },
+ "e1": {
+  "wall_s": 7.27,
+  "decisions": 484949,
+  "decisions_per_second": 66667.6,
+  "peak_rss_mb": 285.2
+ }
+}

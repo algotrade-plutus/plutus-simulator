@@ -1,34 +1,49 @@
 # T8.3 performance benchmark
 
-Machine: Apple M6, 12 physical / 12 logical cores, 24.0 GB; macOS-27.0.1-arm64-arm-64bit-Mach-O; Python 3.15.2, DuckDB 2.0.1, pyarrow 26.0.1. plutus-simulator `8d46c56` (src dirty: False); load average at start (1.23, 2.17, 3.55).
+## Machine
 
-| Measure | Value |
-|---|---:|
-| Rulebook build + first `at()` (cold) | 0.18 ms |
-| `Rulebook.at(ts)` (warm) | 3,912,146.3 / s |
-| Daily: `submit` (admission) | 5,545.2 orders / s |
-| Daily: fill evaluation (`advance_to`) | 13,223.0 orders / s |
-| Tick maker, optimistic queue (881 requotes, 1762 orders) | 3,211.0 orders / s (0.55 s) |
-| Tick maker, conservative queue (881 requotes, 1762 orders) | 4,818.5 orders / s (0.37 s) |
-| E1, 484,949 decisions × 3 policies | 7.14 s, peak RSS 285.8 MB |
+| | |
+|---|---|
+| CPU | Apple M6 (12 physical / 12 logical cores) |
+| Memory | 24.0 GB |
+| OS | macOS-27.0.1-arm64-arm-64bit-Mach-O |
+| Power | AC Power |
+| Python | 3.15.2 (DuckDB 2.0.1, pyarrow 26.0.1, pandas 3.1.1) |
+| plutus-simulator | `b06d36c` (src dirty: False) |
+| Run date | 2026-11-25 |
 
-Per-rule `RuleSet.resolve` latency (median / max, µs):
+## Results
 
-| Rule | Keys | Calls | Median | Max | Raised (unresolved) |
+**10 runs, each a separate process.** Values are the median across runs; min–max and the coefficient of variation (CV) show the spread. 1-min load average at the start of each run: 1.69–4.61.
+
+| Measure | Median | Min – max | CV |
+|---|---:|---:|---:|
+| Rulebook build + first `at()` (cold) | 0.18 ms | 0.18 – 0.55 | 49.71% |
+| `Rulebook.at(ts)` (warm) | 3,911,183 / s | 3,857,222 – 4,000,087 | 1.06% |
+| Daily: `submit` (admission) | 5,574 orders / s | 5,494 – 5,642 | 0.83% |
+| Daily: fill evaluation (`advance_to`) | 13,086 orders / s | 12,830 – 13,210 | 0.87% |
+| Tick maker, optimistic queue | 3,220 orders / s | 3,048 – 3,231 | 1.64% |
+| Tick maker, conservative queue | 4,824 orders / s | 4,570 – 4,840 | 2.07% |
+| E1 wall time (484,949 decisions × 3 policies) | 7.18 s | 7.06 – 7.27 | 0.96% |
+| E1 peak RSS | 285.6 MB | 285.0 – 287.5 | 0.28% |
+
+Per-rule `RuleSet.resolve` latency (µs; median of the per-run medians, worst max over all runs):
+
+| Rule | Keys | Calls per run | Median | Max | Raised (unresolved) |
 |---|---:|---:|---:|---:|---:|
-| charge | 10 | 500 | 1.62 | 3.58 | 0 |
-| daily_trading_limit | 8 | 400 | 2.25 | 4.04 | 0 |
-| initial_margin_rate | 2 | 100 | 1.58 | 2.08 | 0 |
-| legal_order_types | 29 | 1450 | 2.25 | 20.83 | 0 |
-| margin_model | 1 | 50 | 1.29 | 2.79 | 0 |
-| max_order_size | 4 | 200 | 1.58 | 7.0 | 0 |
-| position_limit | 6 | 300 | 2.25 | 3.08 | 0 |
-| session_schedule | 4 | 200 | 1.62 | 2.46 | 0 |
-| settlement | 5 | 250 | 1.6 | 3.04 | 0 |
-| tick_size | 12 | 600 | 3.62 | 6.08 | 0 |
-| trading_unit | 5 | 250 | 2.25 | 20.42 | 0 |
-| widened_trading_limit | 7 | 350 | 2.29 | 7.96 | 0 |
+| charge | 10.0 | 500.0 | 1.62 | 8.63 | 0.0 |
+| daily_trading_limit | 8.0 | 400.0 | 2.27 | 19.33 | 0.0 |
+| initial_margin_rate | 2.0 | 100.0 | 1.58 | 15.21 | 0.0 |
+| legal_order_types | 29.0 | 1450.0 | 2.25 | 138.88 | 0.0 |
+| margin_model | 1.0 | 50.0 | 1.29 | 3.37 | 0.0 |
+| max_order_size | 4.0 | 200.0 | 1.58 | 17.42 | 0.0 |
+| position_limit | 6.0 | 300.0 | 2.25 | 5.87 | 0.0 |
+| session_schedule | 4.0 | 200.0 | 1.63 | 3.08 | 0.0 |
+| settlement | 5.0 | 250.0 | 1.62 | 24.5 | 0.0 |
+| tick_size | 12.0 | 600.0 | 3.645 | 69.54 | 0.0 |
+| trading_unit | 5.0 | 250.0 | 2.31 | 33.75 | 0.0 |
+| widened_trading_limit | 7.0 | 350.0 | 2.31 | 14.5 | 0.0 |
 
-Regenerate: `PYTHONPATH=src:. python measurements/perf_benchmark.py --e1-root <t2-e1 slice> --json docs/reference/tables/t8_perf_benchmark.json --md docs/reference/tables/t8_perf_benchmark.md`
-(per-stage progress goes to stderr). The E1 stage reran the full population and reproduced its headline
-(484,949 decisions over 97,269 ticker-days; agreement 68.6%; undecided soft 2.7%, hard 33.3%, probabilistic 21.0%).
+Workloads: rulebook 200,000 `at()` calls and 50 `resolve` calls per key; daily 5,000 FPT orders on the shipped daily fixture; tick an S8/S9-style maker requoting every 15 s on the shipped FPT 2022-11-09 book and tape (1762.0 orders); E1 the full 2022 population (484,949.0 decisions).
+
+Regenerate: `PYTHONPATH=src:. python measurements/perf_benchmark_repeat.py --runs 10 --e1-root <t2-e1 slice> --log <log file>` on an otherwise idle machine. Each run's own output is in `docs/reference/tables/t8_perf_runs/`.

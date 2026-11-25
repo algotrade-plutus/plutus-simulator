@@ -19,6 +19,7 @@ subset of them and points to the repos for the rest.
 | MarketMaker, full preliminary report | `proto/ProtoMarketMaker/result/REPORT.md` |
 | MarketMaker figure and tables | `proto/ProtoMarketMaker/result/paper_kit/` (`mm_ladder.pdf/.png`, `mm_ladder.tex`, `mm_markout.tex`) |
 | F2 figure | `figures/f2_indeterminate_rate.png` (tick 7.1% / 58.7% vs bar 32.6%) |
+| Performance (reviewer R1) | `docs/reference/tables/t8_perf_benchmark.md`: median of 10 runs, each a separate process, with min–max, CV and the machine spec (Apple M6, 12 cores, 24 GB, AC power). Spread is 0.3–2%, so the medians can be quoted as is |
 
 ## Decision 1: which MarketMaker arm goes in Table II
 

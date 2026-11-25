@@ -208,7 +208,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### E1: fill-policy divergence over the 2022 HSX population
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `b06d36c` when generated)
 - **Command:** `PYTHONPATH=src:. python -m measurements.e1_regenerate run --data-dir <rivf26-data>/t2-e1`, then `python measurements/e1_publish.py --data-root <rivf26-data>/t2-e1 --out docs/reference/tables/t2/e1_published`
 - **Data slice:** `rivf26/data/t2-e1/` (391 HSX tickers, 2022; not shipped, statistics only; sha256 in the map's slice table)
 
@@ -262,7 +262,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### F2: the indeterminate rate, bar vs tick
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `b06d36c` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices (see `docs/reference/tables/t2/indeterminate.md`); the figure and its JSON are re-rendered with `measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`
 - **Data slice:** `rivf26/data/t2-indeterminate/{daily,book}` (FPT, HPG, HTV, 2022-10-20..11-30; not shipped)
 
@@ -291,7 +291,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### F3: fill-policy axis (S1) and queue axis (S9)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `b06d36c` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_f3_cross_policy.py strategies/test_s9_queue_sensitivity.py` (writes `figures/f3_cross_policy_divergence.json`)
 - **Data slice:** `strategies/fixtures/parquet/` (DATA-MANIFEST, checked below) and `strategies/fixtures/extract/` (no sha256 manifest; `PROVENANCE.md` only)
 
@@ -312,7 +312,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Derivatives margin: regime split, the IM step, margin-call incidence
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `b06d36c` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/t2_futures_margin.py <rivf26-data>/t2-futures-margin`
 - **Data slice:** `rivf26/data/t2-futures-margin/` (VN30F front month, 2021-06-01..2022-12-30; sha256 in `docs/reference/tables/t2/futures_margin.md`)
 
@@ -334,7 +334,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Equity admission, band agreement, tick-grid conformity
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `b06d36c` when generated)
 - **Command:** `measurements/equity_admission.py`, `band_conformance.py`, `grid_conformity.py` (exact invocations in `docs/reference/tables/t2/hsx_daily.md`)
 - **Data slice:** `rivf26/data/t2-hsx-daily/` and `t2-hsx-daily-grid-history/` (sha256 in `docs/reference/tables/t2/hsx_daily.md`)
 
@@ -359,8 +359,8 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### T8: rule versions, broker fields, maintenance effort, validator, properties, benchmark
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
-- **Command:** `PYTHONPATH=src python measurements/t8_counts.py`; `python measurements/maintenance_effort.py --markdown`; `PYTHONPATH=src:. python measurements/perf_benchmark.py`
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `b06d36c` when generated)
+- **Command:** `PYTHONPATH=src python measurements/t8_counts.py`; `python measurements/maintenance_effort.py --markdown`; `PYTHONPATH=src:. python measurements/perf_benchmark_repeat.py --runs 10` (median of 10 runs)
 - **Data slice:** none (engine source and git history)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
@@ -388,15 +388,15 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 | `t8.properties` | `\nProperties` | Hypothesis properties | — → **14** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `properties.properties` | PASS |
 | `t8.property_examples` | `\nPropertyExamples` | Hypothesis examples (sum of `max_examples`) | — → **3,850** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `properties.max_examples_total` | PASS |
 | `t8.property_boundary` |  | explicit `@example` boundary cases on those properties | — → **26** | `docs/reference/tables/camera_ready_pins.json` @ `4a8bcff` :: `properties.boundary_examples` | PASS |
-| `t8.bench.at_per_sec` | `\nAtPerSec` | `Rulebook.at(ts)` resolutions per second (warm) | — → **3,912,146** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `rulebook.at_per_second` | PASS |
-| `t8.bench.orders_per_sec` | `\nOrdersPerSec` | daily fill evaluations per second through `ExchangeSession` | — → **13,223** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `daily.fill_evaluations_per_second` | PASS |
-| `t8.bench.e1_wall` | `\EoneWall` | E1 wall time, full 2022 population (s) | — → **7.14** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `e1.wall_s` | PASS |
-| `t8.bench.e1_rss` |  | E1 peak RSS (MB) | — → **285.8** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `e1.peak_rss_mb` | PASS |
-| `t8.bench.commit` |  | benchmark ran on plutus-simulator | — → **8d46c56** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `machine.plutus_simulator_commit` | PASS |
+| `t8.bench.at_per_sec` | `\nAtPerSec` | `Rulebook.at(ts)` resolutions per second (warm), median of 10 runs | — → **3,911,183** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `rulebook.at_per_second` | PASS |
+| `t8.bench.orders_per_sec` | `\nOrdersPerSec` | daily fill evaluations per second through `ExchangeSession`, median of 10 runs | — → **13,086** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `daily.fill_evaluations_per_second` | PASS |
+| `t8.bench.e1_wall` | `\EoneWall` | E1 wall time, full 2022 population (s), median of 10 runs | — → **7.18** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `e1.wall_s` | PASS |
+| `t8.bench.e1_rss` |  | E1 peak RSS (MB), median of 10 runs | — → **285.6** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `e1.peak_rss_mb` | PASS |
+| `t8.bench.commit` |  | benchmark ran on plutus-simulator | — → **b06d36c** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `machine.plutus_simulator_commit` | PASS |
 
 ### Test-suite counts (F4)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `b06d36c` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest tests`; `pytest scenarios`; `pytest strategies` (each on its own)
 - **Data slice:** shipped fixtures
 
@@ -412,7 +412,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Scenario and strategy findings quoted in the text
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `b06d36c` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_s2_*.py scenarios`
 - **Data slice:** shipped fixtures
 
@@ -515,7 +515,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Table II, ProtoMarketMaker: anchor (faithful arm flat each session)
 
-- **Repo:** `ProtoMarketMaker` (branch `rivf26`, HEAD `c92e2b7` when generated)
+- **Repo:** `ProtoMarketMaker` (branch `rivf26`, HEAD `3919718` when generated)
 - **Command:** `.venv/bin/python -m proto_market_maker.experiments.mm_anchor <window>`
 - **Data slice:** `data/{band,l2,market}/<window>/` (`data/<window>-MANIFEST.md`, checked under `slice.*`)
 
@@ -552,7 +552,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### ProtoMarketMaker attribution ladder (algorithm A fixed)
 
-- **Repo:** `ProtoMarketMaker` (branch `rivf26`, HEAD `c92e2b7` when generated)
+- **Repo:** `ProtoMarketMaker` (branch `rivf26`, HEAD `3919718` when generated)
 - **Command:** `.venv/bin/python -m proto_market_maker.experiments.mm_faithful_a <window> --queue <q>`, then `.venv/bin/python -m proto_market_maker.experiments.mm_ladder <window>`
 - **Data slice:** as the MM anchor
 
@@ -642,7 +642,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Data-slice integrity (sha256 of every committed slice file vs its manifest)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `4a8bcff` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `b06d36c` when generated)
 - **Command:** this checker
 - **Data slice:** each manifest named in the row
 
