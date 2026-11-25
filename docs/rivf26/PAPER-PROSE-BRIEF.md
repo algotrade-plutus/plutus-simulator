@@ -21,6 +21,39 @@ subset of them and points to the repos for the rest.
 | F2 figure | `figures/f2_indeterminate_rate.png` (tick 7.1% / 58.7% vs bar 32.6%) |
 | Performance (reviewer R1) | `docs/reference/tables/t8_perf_benchmark.md`: median of 10 runs, each a separate process, with min–max, CV and the machine spec (Apple M6, 12 cores, 24 GB, AC power). Spread is 0.3–2%, so the medians can be quoted as is |
 
+## Where things are
+
+All paths in this brief are relative to the plutus-simulator repo, except `proto/...`, which is relative to its
+parent folder (`<plutus>`), next to which also sit:
+
+| What | Where (under `<plutus>`) |
+|---|---|
+| plutus-simulator (engine, this brief, the map) | `plutus-simulator/`, branch `rivf26` (on GitHub) |
+| Strategy repos | `proto/ProtoSmartBeta`, `proto/ProtoMarketMaker` (branch `rivf26`); `proto/ProtoGrid`, `proto/ProtoPair` (branch `main`) |
+| The paper | `plutus-simulator-paper-rivf'26/paper/`: `main.tex`, `numbers.tex` (every result number as a macro), `REVIEW-TRIAGE.md`, `CHANGES-camera-ready.md`. Not a git repo |
+| The original handoff (task list, macro table) | `plutus-simulator/docs/HANDOFF-2026-11-24-camera-ready.md`, local only, never committed |
+
+## Filling `numbers.tex`
+
+`numbers.tex` holds 76 macros; 63 are still `\numpend{...}` with the submitted value. For 43 of them the map
+(`docs/camera-ready-numbers.md`, section "The map") names the macro in its second column next to the new value:
+copy the bold value. The other 20 have no map row; their values:
+
+| Macro | Value | Source |
+|---|---|---|
+| `\nAcceptance` / `\nAcceptanceWord` / `\AcceptanceRange` | 37 / Thirty-seven / J1–J37 (unchanged) | `scenarios/test_j1…test_j37`; the suite runs 39 tests because some J files hold two |
+| `\nStrategies` / `\nStrategiesCap` / `\StrategyRange` | nine / Nine / S1–S9 (unchanged) | `strategies/test_s1…test_s9` |
+| `\nBookDays` | **90** (was 66) | map `f2.days` |
+| `\BookWindow` | Oct–Nov 2022 (unchanged: 2022-10-20..2022-11-30) | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` `population` |
+| `\nMarginBook` | 381 (unchanged) | map `margin.entries` |
+| `\sbWin` `\gridWin` `\mmWin` `\pairWin` | window labels: w2022 / w2023; w2022_10 / w2021_11; krx2025 / im2022; w1 / w2 | map "Table II at a glance" |
+| `\pairFlipWin` | both windows flip (conditional block in the handoff: say so) | map, ProtoPair rows |
+| `\mmFillRange` `\mmHPRRange` (map rows exist) | depend on Decision 1 (anchor or ladder) | map MM sections |
+| `\cameraTag` | the git tag set at freeze (not created yet) | owner |
+| `\sbHPR` `\mmHPR` `\pairHPR` `\gridFillsN` `\pairFillsN` | not used in `main.tex` any more (superseded by the `*Range` macros); leave or delete | — |
+
+Set `\showpendingfalse` for the camera-ready build, once every `\numpend` value is replaced.
+
 ## Decision 1: which MarketMaker arm goes in Table II
 
 Two designs exist, and both are faithful:
