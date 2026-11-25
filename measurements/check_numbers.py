@@ -290,6 +290,7 @@ HSX = "docs/reference/tables/t2/hsx_daily"
 T8C = "docs/reference/tables/t8_counts.md"
 T8M = "docs/reference/tables/t8_maintenance_effort.md"
 BENCH = "docs/reference/tables/t8_perf_benchmark.json"
+PINS = "docs/reference/tables/camera_ready_pins.json"   # measurements/camera_ready_pins.py
 
 GROUPS: dict[str, Group] = {
     "e1": Group("E1: fill-policy divergence over the 2022 HSX population", SIM,
@@ -596,14 +597,15 @@ def _registry() -> list[Entry]:
             MDCELL(SIM, T8M, r"^\| KRX trading-system cutover", 2)),
         num("t8.maint.krx.engine", "t8", "KRX cutover: engine lines", "—", "20",
             MDCELL(SIM, T8M, r"^\| KRX trading-system cutover", 4)),
-        pending("t8.validator.edges", "t8", "uncovered rule edges, all resolving to UNKNOWN", "—", "12",
-                "Prose only (`docs/rivf26/NOTES-FOR-OWNER.md` §3.4, `LIMITATIONS.md` #8); pinned in "
-                "`tests/market/session/test_rule_tables.py::OPEN_EDGES` but no committed result file."),
-        pending("t8.properties", "t8", "Hypothesis properties", "—", "14",
-                "Prose only (`NOTES-FOR-OWNER.md` §3.5). No committed result file; count from "
-                "`tests/properties/` at freeze.", macro=r"\nProperties"),
-        pending("t8.property_examples", "t8", "Hypothesis examples (plus 26 boundary cases)", "—", "3,850",
-                "Prose only (`NOTES-FOR-OWNER.md` §3.5). No committed result file.", macro=r"\nPropertyExamples"),
+        num("t8.validator.edges", "t8", "uncovered rule edges, all resolving to UNKNOWN", "—", "12",
+            J(SIM, PINS, "rules", "open_edges"),
+            note="`len(OPEN_EDGES)` in `tests/market/session/test_rule_tables.py`, which pins the set."),
+        num("t8.properties", "t8", "Hypothesis properties", "—", "14",
+            J(SIM, PINS, "properties", "properties"), macro=r"\nProperties"),
+        num("t8.property_examples", "t8", "Hypothesis examples (sum of `max_examples`)", "—", "3,850",
+            J(SIM, PINS, "properties", "max_examples_total"), macro=r"\nPropertyExamples"),
+        num("t8.property_boundary", "t8", "explicit `@example` boundary cases on those properties", "—", "26",
+            J(SIM, PINS, "properties", "boundary_examples")),
         num("t8.bench.at_per_sec", "t8", "`Rulebook.at(ts)` resolutions per second (warm)", "—", "3,912,146",
             J(SIM, BENCH, "rulebook", "at_per_second"), tol=0.5, macro=r"\nAtPerSec"),
         num("t8.bench.orders_per_sec", "t8", "daily fill evaluations per second through `ExchangeSession`", "—",
@@ -616,33 +618,41 @@ def _registry() -> list[Entry]:
     ]
 
     # ---- Test counts ------------------------------------------------------------------------------------------
-    freeze = ("To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `ba0d9f4`/`6e6c104`: the 2 strict "
-              "xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` "
-              "(`3b44fd9`, 7 tests) and any later commit.")
+    freeze = ("Each suite run on its own shipped fixtures by `measurements/camera_ready_pins.py --tests`. Rerun it "
+              "at freeze if any test is added.")
     R += [
-        pending("tests.unit.passed", "tests", "unit tests passed", "1,646", "2,180", freeze, macro=r"\nUnitTests"),
-        pending("tests.unit.xfailed", "tests", "unit tests xfailed (strict)", "—", "0", freeze),
-        pending("tests.unit.skipped", "tests", "unit tests skipped (corpus-gated)", "—", "453", freeze),
-        pending("tests.scenarios", "tests", "scenario tests passed (0 skipped)", "38", "39",
-                "To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d.", macro=r"\nScenarioTests"),
-        pending("tests.strategies.passed", "tests", "strategy tests passed", "11", "18",
-                "To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d.", macro=r"\nStrategyTests"),
-        pending("tests.strategies.skipped", "tests", "strategy tests skipped (E1, F2 need corpus slices)", "—", "2",
-                "To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d."),
+        num("tests.unit.passed", "tests", "unit tests passed", "1,646", "2,206", J(SIM, PINS, "tests", "unit", "passed"),
+            note=freeze, macro=r"\nUnitTests"),
+        num("tests.unit.failed", "tests", "unit tests failed", "—", "0", J(SIM, PINS, "tests", "unit", "failed")),
+        num("tests.unit.xfailed", "tests", "unit tests xfailed (strict)", "—", "0",
+            J(SIM, PINS, "tests", "unit", "xfailed")),
+        num("tests.unit.skipped", "tests", "unit tests skipped (corpus-gated)", "—", "453",
+            J(SIM, PINS, "tests", "unit", "skipped")),
+        num("tests.scenarios", "tests", "scenario tests passed (0 skipped)", "38", "39",
+            J(SIM, PINS, "tests", "scenarios", "passed"), macro=r"\nScenarioTests"),
+        num("tests.strategies.passed", "tests", "strategy tests passed", "11", "18",
+            J(SIM, PINS, "tests", "strategies", "passed"), macro=r"\nStrategyTests"),
+        num("tests.strategies.skipped", "tests", "strategy tests skipped (E1, F2 need corpus slices)", "—", "2",
+            J(SIM, PINS, "tests", "strategies", "skipped")),
     ]
 
-    # ---- Findings quoted in the text, no committed result file -----------------------------------------------
-    nofile = "No committed result file: the value is in prose (`docs/rivf26/T0-audit.md` %s) and the test only " \
-             "pins it qualitatively. Needs a result file (or an exact pin) before freeze."
+    # ---- Findings once quoted only in prose, now pinned by measurements/camera_ready_pins.py ---------------------
     R += [
-        pending("s2.loss", "findings", "S2 leveraged long: loss", "—", "−77% (100M → 23.3M)", nofile % "§4b, §4d"),
-        pending("s2.margin_calls", "findings", "S2 margin calls", "—", "10", nofile % "§4b, §4d"),
-        pending("s2.forced_tranches", "findings", "S2 forced-sale tranches", "three sales", "7",
-                nofile % "§4b", macro=r"\nStopSales"),
-        pending("s2.queue_ahead", "findings", "S2 2022-11-07: floor queue ahead at 10:00 vs volume after", "—",
-                "8,657,000 vs 775,000", nofile % "§4b (lock-queue table)"),
-        pending("j18.deposit_step", "findings", "J18: deposit change at the 13% → 17% IM step", "—", "+30.8%",
-                nofile % "§4d"),
+        pct("s2.loss", "findings", "S2 leveraged long: loss (100M start)", "—", "−77%",
+            J(SIM, PINS, "s2", "return_pct"), decimals=0, scale=1.0),
+        num("s2.end_equity", "findings", "S2 end equity (M đ)", "—", "23.3", J(SIM, PINS, "s2", "end_equity"),
+            tol=0.05, scale=1e-6),
+        num("s2.margin_calls", "findings", "S2 margin calls", "—", "10", J(SIM, PINS, "s2", "margin_calls")),
+        num("s2.forced_tranches", "findings", "S2 forced-sale tranches", "three sales", "7",
+            J(SIM, PINS, "s2", "forced_sale_orders"), macro=r"\nStopSales"),
+        num("s2.queue_ahead", "findings", "S2 2022-11-07: floor queue ahead at 10:00", "—", "8,657,000",
+            J(SIM, PINS, "s2_queue", "queue_ahead")),
+        num("s2.volume_after", "findings", "S2 2022-11-07: volume traded at the floor after 10:00", "—", "775,000",
+            J(SIM, PINS, "s2_queue", "volume_after")),
+        Entry("s2.queue_verdict", "findings", "S2 2022-11-07: lock-queue verdict", "—", "blocked",
+              expected="blocked", get=J(SIM, PINS, "s2_queue", "verdict")),
+        pct("j18.deposit_step", "findings", "J18: deposit change at the 13% → 17% IM step", "—", "+30.8%",
+            J(SIM, PINS, "j18", "deposit_step_pct"), decimals=1, scale=1.0),
     ]
 
     # ---- ProtoSmartBeta ---------------------------------------------------------------------------------------

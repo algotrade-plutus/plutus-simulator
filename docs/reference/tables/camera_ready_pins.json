@@ -1,0 +1,78 @@
+{
+ "plutus_simulator_commit": "c2bb172",
+ "s2": {
+  "start_equity": 100000000.0,
+  "end_equity": 23318344.0,
+  "return_pct": -76.68,
+  "margin_calls": 10,
+  "forced_sale_orders": 7,
+  "forced_sale_instructed_events": 15,
+  "forced_sale_completed_events": 7,
+  "note": "forced_sale_orders counts tranches; each tranche logs FORCED_SALE_INSTRUCTED twice (unrounded at the 15:00 notice, lot-rounded at the next open)."
+ },
+ "s2_queue": {
+  "day": "2022-11-07",
+  "verdict": "blocked",
+  "queue_ahead": 8657000,
+  "volume_after": 775000,
+  "cancel_share_needed": 0.9105,
+  "floor_close_days": 14,
+  "blocked_days": [
+   "2022-11-07",
+   "2022-11-08",
+   "2022-11-14"
+  ]
+ },
+ "j18": {
+  "reserved_before": 13780000.0,
+  "reserved_after": 18020000.0,
+  "ratio_before": 0.13,
+  "ratio_after": 0.17,
+  "deposit_step_pct": 30.77
+ },
+ "rules": {
+  "open_edges": 12
+ },
+ "properties": {
+  "properties": 14,
+  "max_examples_total": 3850,
+  "boundary_examples": 26,
+  "per_file": {
+   "test_admission_properties.py": {
+    "properties": 6,
+    "max_examples": 1650,
+    "boundary_examples": 19
+   },
+   "test_margin_ladder_properties.py": {
+    "properties": 6,
+    "max_examples": 1700,
+    "boundary_examples": 3
+   },
+   "test_settlement_properties.py": {
+    "properties": 2,
+    "max_examples": 500,
+    "boundary_examples": 4
+   }
+  }
+ },
+ "tests": {
+  "unit": {
+   "passed": 2206,
+   "failed": 0,
+   "skipped": 453,
+   "xfailed": 0
+  },
+  "scenarios": {
+   "passed": 39,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0
+  },
+  "strategies": {
+   "passed": 18,
+   "failed": 0,
+   "skipped": 2,
+   "xfailed": 0
+  }
+ }
+}

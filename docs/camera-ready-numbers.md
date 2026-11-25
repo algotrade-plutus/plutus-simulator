@@ -16,9 +16,10 @@ PYTHONPATH=src:. python measurements/check_numbers.py --write-doc  # regenerate 
 
 `tests/test_check_numbers.py` runs it against the repo and expects no FAIL.
 
-**Status when generated:** 332 entries: 318 PASS, 0 FAIL, 14 PENDING. The PENDING entries are the test
-counts (to refresh at freeze) and numbers that so far exist only in prose with no committed result file (S2,
-J18, the property-test and validator counts).
+**Status when generated:** 339 entries: 339 PASS, 0 FAIL, 0 PENDING. The test counts and the numbers that once
+existed only in prose (S2, J18, the property-test and validator counts) are now read from
+`docs/reference/tables/camera_ready_pins.json`, written by `measurements/camera_ready_pins.py --tests` (rerun it at
+freeze if a test is added).
 
 ## Conventions
 
@@ -162,7 +163,8 @@ needs correcting, or the owner decides.
    say 36 → 28 (`NOTES-FOR-OWNER.md` §2, this map). Left for the owner, not edited:
    - the submission text and handoff §5 T5 ("37 → 28");
    - `docs/reference/tables/experiments_registry.md` line 232 ("affords **37 contracts** at the 13% VSD-IM rate and
-     **28** once it steps to 17%"), the record of the old, lost run;
+     **28** once it steps to 17%"), the record of the old, lost run. Kept as recorded, now annotated with the
+     rerun's 36 → 28;
    - ProtoMarketMaker `README.md` (another agent's repo): a static 36 → **27** at 1,059 points next to the run's
      36 → 28; the two differ only in the price used.
 5. **MM return for im2022 depends on which faithful arm.** `NOTES-FOR-OWNER.md` §2 and the MM README anchor
@@ -202,8 +204,8 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
   32.6%. Result: `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`; the figure is re-rendered from it.
   The reversal (tick below bar) is stronger.
 - `strategies/fixtures/extract/` has no sha256 manifest, so the S9 queue numbers have no slice hash.
-- Numbers that exist only in prose are PENDING with a note (S2, J18, validator edges, property counts); they
-  need a committed result file or an exact test pin before they can be checked.
+- Numbers that once existed only in prose (S2, J18, validator edges, property counts) and the test counts are
+  pinned in `docs/reference/tables/camera_ready_pins.json` (`measurements/camera_ready_pins.py`).
 
 ## The map
 
@@ -211,7 +213,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### E1: fill-policy divergence over the 2022 HSX population
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
 - **Command:** `PYTHONPATH=src:. python -m measurements.e1_regenerate run --data-dir <rivf26-data>/t2-e1`, then `python measurements/e1_publish.py --data-root <rivf26-data>/t2-e1 --out docs/reference/tables/t2/e1_published`
 - **Data slice:** `rivf26/data/t2-e1/` (391 HSX tickers, 2022; not shipped, statistics only; sha256 in the map's slice table)
 
@@ -265,36 +267,36 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### F2: the indeterminate rate, bar vs tick
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices (see `docs/reference/tables/t2/indeterminate.md`); the figure and its JSON are re-rendered with `measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`
 - **Data slice:** `rivf26/data/t2-indeterminate/{daily,book}` (FPT, HPG, HTV, 2022-10-20..11-30; not shipped)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `f2.days` |  | instrument-days (FPT, HPG, HTV) | 66 → **90** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `instrument_days` | PASS |
-| `f2.bar` |  | undecided, `hard` at the daily bar | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].rate` | PASS |
-| `f2.bar.ci_lo` |  | bar, Wilson 95% low | 32.3 → **29.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].ci_low` | PASS |
-| `f2.bar.ci_hi` |  | bar, Wilson 95% high | 39.4 → **35.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].ci_high` | PASS |
-| `f2.bar.n` |  | bar, fill evaluations | 698 → **950** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].evaluations` | PASS |
-| `f2.tick_opt` |  | undecided, `book_walk` tick, optimistic queue | 85.6% → **7.1%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
-| `f2.tick_opt.ci_lo` |  | tick optimistic, Wilson 95% low | 83.5 → **5.9%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (optimistic)].ci_low` | PASS |
-| `f2.tick_opt.ci_hi` |  | tick optimistic, Wilson 95% high | 87.4 → **8.5%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (optimistic)].ci_high` | PASS |
-| `f2.tick_opt.n` |  | tick optimistic, fill evaluations | 1,212 → **1,443** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (optimistic)].evaluations` | PASS |
-| `f2.tick_con` |  | undecided, `book_walk` tick, conservative queue | 99.7% → **58.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
-| `f2.tick_con.n` |  | tick conservative, fill evaluations | 1,545 → **1,611** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (conservative)].evaluations` | PASS |
+| `f2.days` |  | instrument-days (FPT, HPG, HTV) | 66 → **90** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `instrument_days` | PASS |
+| `f2.bar` |  | undecided, `hard` at the daily bar | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=BAR / hard].rate` | PASS |
+| `f2.bar.ci_lo` |  | bar, Wilson 95% low | 32.3 → **29.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=BAR / hard].ci_low` | PASS |
+| `f2.bar.ci_hi` |  | bar, Wilson 95% high | 39.4 → **35.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=BAR / hard].ci_high` | PASS |
+| `f2.bar.n` |  | bar, fill evaluations | 698 → **950** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=BAR / hard].evaluations` | PASS |
+| `f2.tick_opt` |  | undecided, `book_walk` tick, optimistic queue | 85.6% → **7.1%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
+| `f2.tick_opt.ci_lo` |  | tick optimistic, Wilson 95% low | 83.5 → **5.9%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=TICK / book-walk (optimistic)].ci_low` | PASS |
+| `f2.tick_opt.ci_hi` |  | tick optimistic, Wilson 95% high | 87.4 → **8.5%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=TICK / book-walk (optimistic)].ci_high` | PASS |
+| `f2.tick_opt.n` |  | tick optimistic, fill evaluations | 1,212 → **1,443** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=TICK / book-walk (optimistic)].evaluations` | PASS |
+| `f2.tick_con` |  | undecided, `book_walk` tick, conservative queue | 99.7% → **58.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
+| `f2.tick_con.n` |  | tick conservative, fill evaluations | 1,545 → **1,611** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=TICK / book-walk (conservative)].evaluations` | PASS |
 | `f2.tick_opt.before_band_fix` |  | tick optimistic before the band-edge fix (`ba0d9f4`) | — → **10.1%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `ee42cb7` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
 | `f2.tick_con.before_band_fix` |  | tick conservative before the band-edge fix (`ba0d9f4`) | — → **60.2%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `ee42cb7` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
 | `f2.tick_con.before_change2` |  | tick conservative before change 2 (`254aa1d`) | 99.7% → **78.2%** | `docs/reference/tables/t2/indeterminate_before_change2.json` @ `ee42cb7` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
-| `f2.bar.resolution_limit` |  | bar: share whose cause is the resolution limit | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].resolution_limit_share` | PASS |
-| `f2.figure.days` |  | figure data (`figures/f2_indeterminate_rate.json`) carries the same days | 66 → **90** | `figures/f2_indeterminate_rate.json` @ `8cf958a` :: `instrument_days` | PASS |
-| `f2.figure.bar` |  | figure data: bar | 35.8% → **32.6%** | `figures/f2_indeterminate_rate.json` @ `8cf958a` :: `arms.[label=BAR / hard].rate` | PASS |
-| `f2.figure.tick_opt` |  | figure data: tick optimistic | 85.6% → **7.1%** | `figures/f2_indeterminate_rate.json` @ `8cf958a` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
-| `f2.figure.tick_con` |  | figure data: tick conservative | 99.7% → **58.7%** | `figures/f2_indeterminate_rate.json` @ `8cf958a` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
-| `f2.tick.resolution_limit` |  | tick (both queues): resolution-limit share | **0** (unchanged) | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: computed from `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` `arms.[label=TICK / book-walk (optimistic)].resolution_limit_share`; `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` `arms.[label=TICK / book-walk (conservative)].resolution_limit_share` | PASS |
+| `f2.bar.resolution_limit` |  | bar: share whose cause is the resolution limit | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: `arms.[label=BAR / hard].resolution_limit_share` | PASS |
+| `f2.figure.days` |  | figure data (`figures/f2_indeterminate_rate.json`) carries the same days | 66 → **90** | `figures/f2_indeterminate_rate.json` @ `6a33977` :: `instrument_days` | PASS |
+| `f2.figure.bar` |  | figure data: bar | 35.8% → **32.6%** | `figures/f2_indeterminate_rate.json` @ `6a33977` :: `arms.[label=BAR / hard].rate` | PASS |
+| `f2.figure.tick_opt` |  | figure data: tick optimistic | 85.6% → **7.1%** | `figures/f2_indeterminate_rate.json` @ `6a33977` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
+| `f2.figure.tick_con` |  | figure data: tick conservative | 99.7% → **58.7%** | `figures/f2_indeterminate_rate.json` @ `6a33977` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
+| `f2.tick.resolution_limit` |  | tick (both queues): resolution-limit share | **0** (unchanged) | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `6a33977` :: computed from `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` `arms.[label=TICK / book-walk (optimistic)].resolution_limit_share`; `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` `arms.[label=TICK / book-walk (conservative)].resolution_limit_share` | PASS |
 
 ### F3: fill-policy axis (S1) and queue axis (S9)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_f3_cross_policy.py strategies/test_s9_queue_sensitivity.py` (writes `figures/f3_cross_policy_divergence.json`)
 - **Data slice:** `strategies/fixtures/parquet/` (DATA-MANIFEST, checked below) and `strategies/fixtures/extract/` (no sha256 manifest; `PROVENANCE.md` only)
 
@@ -315,7 +317,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Derivatives margin: regime split, the IM step, margin-call incidence
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/t2_futures_margin.py <rivf26-data>/t2-futures-margin`
 - **Data slice:** `rivf26/data/t2-futures-margin/` (VN30F front month, 2021-06-01..2022-12-30; sha256 in `docs/reference/tables/t2/futures_margin.md`)
 
@@ -337,7 +339,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Equity admission, band agreement, tick-grid conformity
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
 - **Command:** `measurements/equity_admission.py`, `band_conformance.py`, `grid_conformity.py` (exact invocations in `docs/reference/tables/t2/hsx_daily.md`)
 - **Data slice:** `rivf26/data/t2-hsx-daily/` and `t2-hsx-daily-grid-history/` (sha256 in `docs/reference/tables/t2/hsx_daily.md`)
 
@@ -362,285 +364,290 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### T8: rule versions, broker fields, maintenance effort, validator, properties, benchmark
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
 - **Command:** `PYTHONPATH=src python measurements/t8_counts.py`; `python measurements/maintenance_effort.py --markdown`; `PYTHONPATH=src:. python measurements/perf_benchmark.py`
 - **Data slice:** none (engine source and git history)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `t8.rule_versions` | `\nRuleRows` | enforced rule versions (runtime rulebook rows) | 97 → **114** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 2 | PASS |
-| `t8.rule_keys` |  | rule keys | — → **93** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 1 | PASS |
-| `t8.rule_families` | `\nRuleTables` | rule families (tables) | **12** (unchanged) | `docs/reference/tables/t8_counts.md` @ `883760b` :: regex /\*\*Total \((\d+) families\)\*\*/ | PASS |
-| `t8.rule_high` |  | rule versions graded HIGH | — → **87** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 4 | PASS |
-| `t8.rule_not_high` | `\nEnforcedBelowHigh` | rule versions graded MEDIUM, LOW or UNVERIFIED | a handful → **27** | `docs/reference/tables/t8_counts.md` @ `883760b` :: computed from `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 5; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 6; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 7 | PASS |
-| `t8.rule_unknown` |  | rows that record an absence (UNKNOWN) | **11** (unchanged) | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 10 | PASS |
-| `t8.broker_fields` |  | broker fields | **244** (unchanged) | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 1 | PASS |
-| `t8.broker_published` |  | broker fields published by the firm | — → **110** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 2 | PASS |
-| `t8.broker_supplied` | `\nBrokerSupplied` | broker fields supplied by us (as shipped) | — → **0** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 3 | PASS |
-| `t8.broker_inferred` |  | broker fields inferred | — → **21** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 4 | PASS |
-| `t8.broker_unpublished` |  | broker fields recorded as not published | — → **113** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 5 | PASS |
-| `t8.encoded_total` |  | rules + broker fields encoded in the engine | 341 → **358** | `docs/reference/tables/t8_counts.md` @ `883760b` :: computed from `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 2; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 1 | PASS |
-| `t8.maint.im.data` | `\nMaintDataLines` | IM 13% → 17%: rule-data lines | — → **15** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| VSD initial margin 13% -> 17%/ cell 2 | PASS |
-| `t8.maint.im.engine` | `\nMaintCodeLines` | IM 13% → 17%: change-specific engine lines | — → **0** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| VSD initial margin 13% -> 17%/ cell 4 | PASS |
-| `t8.maint.im.dup` |  | IM 13% → 17%: undated duplicate scalars | — → **3** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| VSD initial margin 13% -> 17%/ cell 3 | PASS |
-| `t8.maint.lot.data` |  | HOSE lot 10 → 100: rule-data lines | — → **13** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| HOSE round lot 10 -> 100/ cell 2 | PASS |
-| `t8.maint.lot.engine` |  | HOSE lot 10 → 100: engine lines | — → **4** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| HOSE round lot 10 -> 100/ cell 4 | PASS |
-| `t8.maint.krx.data` |  | KRX cutover: rule-data lines | — → **79** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| KRX trading-system cutover/ cell 2 | PASS |
-| `t8.maint.krx.engine` |  | KRX cutover: engine lines | — → **20** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| KRX trading-system cutover/ cell 4 | PASS |
-| `t8.validator.edges` |  | uncovered rule edges, all resolving to UNKNOWN | — → **12** | — | PENDING: Prose only (`docs/rivf26/NOTES-FOR-OWNER.md` §3.4, `LIMITATIONS.md` #8); pinned in `tests/market/session/test_rule_tables.py::OPEN_EDGES` but no committed result file. |
-| `t8.properties` | `\nProperties` | Hypothesis properties | — → **14** | — | PENDING: Prose only (`NOTES-FOR-OWNER.md` §3.5). No committed result file; count from `tests/properties/` at freeze. |
-| `t8.property_examples` | `\nPropertyExamples` | Hypothesis examples (plus 26 boundary cases) | — → **3,850** | — | PENDING: Prose only (`NOTES-FOR-OWNER.md` §3.5). No committed result file. |
-| `t8.bench.at_per_sec` | `\nAtPerSec` | `Rulebook.at(ts)` resolutions per second (warm) | — → **3,912,146** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `rulebook.at_per_second` | PASS |
-| `t8.bench.orders_per_sec` | `\nOrdersPerSec` | daily fill evaluations per second through `ExchangeSession` | — → **13,223** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `daily.fill_evaluations_per_second` | PASS |
-| `t8.bench.e1_wall` | `\EoneWall` | E1 wall time, full 2022 population (s) | — → **7.14** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `e1.wall_s` | PASS |
-| `t8.bench.e1_rss` |  | E1 peak RSS (MB) | — → **285.8** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `e1.peak_rss_mb` | PASS |
-| `t8.bench.commit` |  | benchmark ran on plutus-simulator | — → **8d46c56** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `machine.plutus_simulator_commit` | PASS |
+| `t8.rule_versions` | `\nRuleRows` | enforced rule versions (runtime rulebook rows) | 97 → **114** | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 2 | PASS |
+| `t8.rule_keys` |  | rule keys | — → **93** | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 1 | PASS |
+| `t8.rule_families` | `\nRuleTables` | rule families (tables) | **12** (unchanged) | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: regex /\*\*Total \((\d+) families\)\*\*/ | PASS |
+| `t8.rule_high` |  | rule versions graded HIGH | — → **87** | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 4 | PASS |
+| `t8.rule_not_high` | `\nEnforcedBelowHigh` | rule versions graded MEDIUM, LOW or UNVERIFIED | a handful → **27** | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: computed from `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 5; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 6; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 7 | PASS |
+| `t8.rule_unknown` |  | rows that record an absence (UNKNOWN) | **11** (unchanged) | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 10 | PASS |
+| `t8.broker_fields` |  | broker fields | **244** (unchanged) | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 1 | PASS |
+| `t8.broker_published` |  | broker fields published by the firm | — → **110** | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 2 | PASS |
+| `t8.broker_supplied` | `\nBrokerSupplied` | broker fields supplied by us (as shipped) | — → **0** | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 3 | PASS |
+| `t8.broker_inferred` |  | broker fields inferred | — → **21** | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 4 | PASS |
+| `t8.broker_unpublished` |  | broker fields recorded as not published | — → **113** | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 5 | PASS |
+| `t8.encoded_total` |  | rules + broker fields encoded in the engine | 341 → **358** | `docs/reference/tables/t8_counts.md` @ `c2bb172` :: computed from `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 2; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 1 | PASS |
+| `t8.maint.im.data` | `\nMaintDataLines` | IM 13% → 17%: rule-data lines | — → **15** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| VSD initial margin 13% -> 17%/ cell 2 | PASS |
+| `t8.maint.im.engine` | `\nMaintCodeLines` | IM 13% → 17%: change-specific engine lines | — → **0** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| VSD initial margin 13% -> 17%/ cell 4 | PASS |
+| `t8.maint.im.dup` |  | IM 13% → 17%: undated duplicate scalars | — → **3** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| VSD initial margin 13% -> 17%/ cell 3 | PASS |
+| `t8.maint.lot.data` |  | HOSE lot 10 → 100: rule-data lines | — → **13** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| HOSE round lot 10 -> 100/ cell 2 | PASS |
+| `t8.maint.lot.engine` |  | HOSE lot 10 → 100: engine lines | — → **4** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| HOSE round lot 10 -> 100/ cell 4 | PASS |
+| `t8.maint.krx.data` |  | KRX cutover: rule-data lines | — → **79** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| KRX trading-system cutover/ cell 2 | PASS |
+| `t8.maint.krx.engine` |  | KRX cutover: engine lines | — → **20** | `docs/reference/tables/t8_maintenance_effort.md` @ `c2bb172` :: row /^\| KRX trading-system cutover/ cell 4 | PASS |
+| `t8.validator.edges` |  | uncovered rule edges, all resolving to UNKNOWN | — → **12** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `rules.open_edges` | PASS: `len(OPEN_EDGES)` in `tests/market/session/test_rule_tables.py`, which pins the set. |
+| `t8.properties` | `\nProperties` | Hypothesis properties | — → **14** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `properties.properties` | PASS |
+| `t8.property_examples` | `\nPropertyExamples` | Hypothesis examples (sum of `max_examples`) | — → **3,850** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `properties.max_examples_total` | PASS |
+| `t8.property_boundary` |  | explicit `@example` boundary cases on those properties | — → **26** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `properties.boundary_examples` | PASS |
+| `t8.bench.at_per_sec` | `\nAtPerSec` | `Rulebook.at(ts)` resolutions per second (warm) | — → **3,912,146** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `rulebook.at_per_second` | PASS |
+| `t8.bench.orders_per_sec` | `\nOrdersPerSec` | daily fill evaluations per second through `ExchangeSession` | — → **13,223** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `daily.fill_evaluations_per_second` | PASS |
+| `t8.bench.e1_wall` | `\EoneWall` | E1 wall time, full 2022 population (s) | — → **7.14** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `e1.wall_s` | PASS |
+| `t8.bench.e1_rss` |  | E1 peak RSS (MB) | — → **285.8** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `e1.peak_rss_mb` | PASS |
+| `t8.bench.commit` |  | benchmark ran on plutus-simulator | — → **8d46c56** | `docs/reference/tables/t8_perf_benchmark.json` @ `c2bb172` :: `machine.plutus_simulator_commit` | PASS |
 
 ### Test-suite counts (F4)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest tests`; `pytest scenarios`; `pytest strategies` (each on its own)
 - **Data slice:** shipped fixtures
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `tests.unit.passed` | `\nUnitTests` | unit tests passed | 1,646 → **2,180** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `ba0d9f4`/`6e6c104`: the 2 strict xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` (`3b44fd9`, 7 tests) and any later commit. |
-| `tests.unit.xfailed` |  | unit tests xfailed (strict) | — → **0** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `ba0d9f4`/`6e6c104`: the 2 strict xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` (`3b44fd9`, 7 tests) and any later commit. |
-| `tests.unit.skipped` |  | unit tests skipped (corpus-gated) | — → **453** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `ba0d9f4`/`6e6c104`: the 2 strict xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` (`3b44fd9`, 7 tests) and any later commit. |
-| `tests.scenarios` | `\nScenarioTests` | scenario tests passed (0 skipped) | 38 → **39** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d. |
-| `tests.strategies.passed` | `\nStrategyTests` | strategy tests passed | 11 → **18** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d. |
-| `tests.strategies.skipped` |  | strategy tests skipped (E1, F2 need corpus slices) | — → **2** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d. |
+| `tests.unit.passed` | `\nUnitTests` | unit tests passed | 1,646 → **2,206** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.unit.passed` | PASS: Each suite run on its own shipped fixtures by `measurements/camera_ready_pins.py --tests`. Rerun it at freeze if any test is added. |
+| `tests.unit.failed` |  | unit tests failed | — → **0** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.unit.failed` | PASS |
+| `tests.unit.xfailed` |  | unit tests xfailed (strict) | — → **0** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.unit.xfailed` | PASS |
+| `tests.unit.skipped` |  | unit tests skipped (corpus-gated) | — → **453** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.unit.skipped` | PASS |
+| `tests.scenarios` | `\nScenarioTests` | scenario tests passed (0 skipped) | 38 → **39** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.scenarios.passed` | PASS |
+| `tests.strategies.passed` | `\nStrategyTests` | strategy tests passed | 11 → **18** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.strategies.passed` | PASS |
+| `tests.strategies.skipped` |  | strategy tests skipped (E1, F2 need corpus slices) | — → **2** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `tests.strategies.skipped` | PASS |
 
 ### Scenario and strategy findings quoted in the text
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_s2_*.py scenarios`
 - **Data slice:** shipped fixtures
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `s2.loss` |  | S2 leveraged long: loss | — → **−77% (100M → 23.3M)** | — | PENDING: No committed result file: the value is in prose (`docs/rivf26/T0-audit.md` §4b, §4d) and the test only pins it qualitatively. Needs a result file (or an exact pin) before freeze. |
-| `s2.margin_calls` |  | S2 margin calls | — → **10** | — | PENDING: No committed result file: the value is in prose (`docs/rivf26/T0-audit.md` §4b, §4d) and the test only pins it qualitatively. Needs a result file (or an exact pin) before freeze. |
-| `s2.forced_tranches` | `\nStopSales` | S2 forced-sale tranches | three sales → **7** | — | PENDING: No committed result file: the value is in prose (`docs/rivf26/T0-audit.md` §4b) and the test only pins it qualitatively. Needs a result file (or an exact pin) before freeze. |
-| `s2.queue_ahead` |  | S2 2022-11-07: floor queue ahead at 10:00 vs volume after | — → **8,657,000 vs 775,000** | — | PENDING: No committed result file: the value is in prose (`docs/rivf26/T0-audit.md` §4b (lock-queue table)) and the test only pins it qualitatively. Needs a result file (or an exact pin) before freeze. |
-| `j18.deposit_step` |  | J18: deposit change at the 13% → 17% IM step | — → **+30.8%** | — | PENDING: No committed result file: the value is in prose (`docs/rivf26/T0-audit.md` §4d) and the test only pins it qualitatively. Needs a result file (or an exact pin) before freeze. |
+| `s2.loss` |  | S2 leveraged long: loss (100M start) | — → **−77%** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2.return_pct` | PASS |
+| `s2.end_equity` |  | S2 end equity (M đ) | — → **23.3** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2.end_equity` | PASS |
+| `s2.margin_calls` |  | S2 margin calls | — → **10** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2.margin_calls` | PASS |
+| `s2.forced_tranches` | `\nStopSales` | S2 forced-sale tranches | three sales → **7** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2.forced_sale_orders` | PASS |
+| `s2.queue_ahead` |  | S2 2022-11-07: floor queue ahead at 10:00 | — → **8,657,000** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2_queue.queue_ahead` | PASS |
+| `s2.volume_after` |  | S2 2022-11-07: volume traded at the floor after 10:00 | — → **775,000** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2_queue.volume_after` | PASS |
+| `s2.queue_verdict` |  | S2 2022-11-07: lock-queue verdict | — → **blocked** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `s2_queue.verdict` | PASS |
+| `j18.deposit_step` |  | J18: deposit change at the 13% → 17% IM step | — → **+30.8%** | `docs/reference/tables/camera_ready_pins.json` @ `uncommitted` :: `j18.deposit_step_pct` | PASS |
 
 ### Table II, ProtoSmartBeta (null anchor)
 
-- **Repo:** `ProtoSmartBeta` (branch `rivf26`, HEAD `02bc8ca` when generated)
+- **Repo:** `ProtoSmartBeta` (branch `rivf26`, HEAD `bdc741e` when generated)
 - **Command:** `.venv/bin/python -m proto_smart_beta.experiments.null_anchor`
 - **Data slice:** `data/market/<w>/`, `data/signal/<w>/` (DATA-MANIFESTs, checked under `slice.*`)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `sb.w2022.fills_naive` |  | w2022: naive fills | — → **457** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `02bc8ca` :: `naive.fills` | PASS |
-| `sb.w2022.fills_faithful` |  | w2022: faithful fills | 2,257 (old OOS run) → **457** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `02bc8ca` :: `faithful.fills` | PASS |
-| `sb.w2022.fn` | `\sbFillRange` | w2022: f/n fills | — → **100.0%** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `02bc8ca` :: `comparison.fill_ratio_f_over_n` | PASS |
-| `sb.w2022.hpr_naive` | `\sbHPRRange` | w2022: HPR naive | −3.17% → **−26.21%** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `02bc8ca` :: `naive.hpr` | PASS |
-| `sb.w2022.hpr_faithful` | `\sbHPRRange` | w2022: HPR faithful | −8.39% → **−27.08%** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `02bc8ca` :: `faithful.hpr` | PASS |
-| `sb.w2022.band_lock_no_fills` |  | w2022: band-lock no-fills (of 10 candidates) | **0** (unchanged) | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `02bc8ca` :: `tier1.band_lock_no_fills` | PASS |
-| `sb.w2023.fills_naive` |  | w2023: naive fills | — → **727** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `02bc8ca` :: `naive.fills` | PASS |
-| `sb.w2023.fills_faithful` |  | w2023: faithful fills | 2,257 (old OOS run) → **724** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `02bc8ca` :: `faithful.fills` | PASS |
-| `sb.w2023.fn` | `\sbFillRange` | w2023: f/n fills | — → **99.6%** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `02bc8ca` :: `comparison.fill_ratio_f_over_n` | PASS |
-| `sb.w2023.hpr_naive` | `\sbHPRRange` | w2023: HPR naive | −3.17% → **+19.66%** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `02bc8ca` :: `naive.hpr` | PASS |
-| `sb.w2023.hpr_faithful` | `\sbHPRRange` | w2023: HPR faithful | −8.39% → **+17.68%** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `02bc8ca` :: `faithful.hpr` | PASS |
-| `sb.w2023.band_lock_no_fills` |  | w2023: band-lock no-fills (of 10 candidates) | **0** (unchanged) | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `02bc8ca` :: `tier1.band_lock_no_fills` | PASS |
+| `sb.w2022.fills_naive` |  | w2022: naive fills | — → **457** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `bdc741e` :: `naive.fills` | PASS |
+| `sb.w2022.fills_faithful` |  | w2022: faithful fills | 2,257 (old OOS run) → **457** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `bdc741e` :: `faithful.fills` | PASS |
+| `sb.w2022.fn` | `\sbFillRange` | w2022: f/n fills | — → **100.0%** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `bdc741e` :: `comparison.fill_ratio_f_over_n` | PASS |
+| `sb.w2022.hpr_naive` | `\sbHPRRange` | w2022: HPR naive | −3.17% → **−26.21%** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `bdc741e` :: `naive.hpr` | PASS |
+| `sb.w2022.hpr_faithful` | `\sbHPRRange` | w2022: HPR faithful | −8.39% → **−27.08%** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `bdc741e` :: `faithful.hpr` | PASS |
+| `sb.w2022.band_lock_no_fills` |  | w2022: band-lock no-fills (of 10 candidates) | **0** (unchanged) | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `bdc741e` :: `tier1.band_lock_no_fills` | PASS |
+| `sb.w2023.fills_naive` |  | w2023: naive fills | — → **727** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `bdc741e` :: `naive.fills` | PASS |
+| `sb.w2023.fills_faithful` |  | w2023: faithful fills | 2,257 (old OOS run) → **724** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `bdc741e` :: `faithful.fills` | PASS |
+| `sb.w2023.fn` | `\sbFillRange` | w2023: f/n fills | — → **99.6%** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `bdc741e` :: `comparison.fill_ratio_f_over_n` | PASS |
+| `sb.w2023.hpr_naive` | `\sbHPRRange` | w2023: HPR naive | −3.17% → **+19.66%** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `bdc741e` :: `naive.hpr` | PASS |
+| `sb.w2023.hpr_faithful` | `\sbHPRRange` | w2023: HPR faithful | −8.39% → **+17.68%** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `bdc741e` :: `faithful.hpr` | PASS |
+| `sb.w2023.band_lock_no_fills` |  | w2023: band-lock no-fills (of 10 candidates) | **0** (unchanged) | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `bdc741e` :: `tier1.band_lock_no_fills` | PASS |
 
 ### Table II, ProtoGrid
 
-- **Repo:** `ProtoGrid` (branch `rivf26`, HEAD `199a61f` when generated)
+- **Repo:** `ProtoGrid` (branch `rivf26`, HEAD `becb3a2` when generated)
 - **Command:** `.venv/bin/pg-anchor`
 - **Data slice:** `data/{band,tick}/<w>/` (DATA-MANIFEST in `data/manifest/<w>/`, checked under `slice.*`)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `grid.w2022_10.fills_naive` |  | w2022_10: naive fills | 1,457 → **136** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: `naive.fills` | PASS |
-| `grid.w2022_10.fills_faithful` |  | w2022_10: faithful fills | 151 → **62** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: `faithful.fills` | PASS |
-| `grid.w2022_10.fn` | `\gridFillRange` | w2022_10: f/n fills | ≈10% → **45.6%** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: `gap.fill_ratio_f_over_n` | PASS |
-| `grid.w2022_10.hpr_naive` | `\gridHPRRange` | w2022_10: HPR naive | −19.0% → **−2.40%** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: `naive.hpr` | PASS |
-| `grid.w2022_10.hpr_faithful` | `\gridHPRRange` | w2022_10: HPR faithful | −34.2% → **−2.65%** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: `faithful.hpr` | PASS |
-| `grid.w2022_10.band_limit` |  | w2022_10: BAND_LIMIT refusals | — → **828** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: `tier1.band_limit_refusals` | PASS |
-| `grid.w2022_10.tick_grid` |  | w2022_10: TICK_GRID refusals | 2,409 → **0** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: `tier1.tick_grid_refusals` | PASS |
-| `grid.w2022_10.unsettled` |  | w2022_10: UNSETTLED_HOLDING refusals (T+2) | — → **58** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: `tier1.unsettled_holding_refusals` | PASS |
-| `grid.w2022_10.t2_locked` |  | w2022_10: T+2-locked re-buys (INSUFFICIENT_CASH) | 248 → **28** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: `tier1.t2_locked_rebuys` | PASS |
-| `grid.w2021_11.fills_naive` |  | w2021_11: naive fills | 1,457 → **124** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `199a61f` :: `naive.fills` | PASS |
-| `grid.w2021_11.fills_faithful` |  | w2021_11: faithful fills | 151 → **57** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `199a61f` :: `faithful.fills` | PASS |
-| `grid.w2021_11.fn` | `\gridFillRange` | w2021_11: f/n fills | ≈10% → **46.0%** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `199a61f` :: `gap.fill_ratio_f_over_n` | PASS |
-| `grid.w2021_11.hpr_naive` | `\gridHPRRange` | w2021_11: HPR naive | −19.0% → **+1.47%** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `199a61f` :: `naive.hpr` | PASS |
-| `grid.w2021_11.hpr_faithful` | `\gridHPRRange` | w2021_11: HPR faithful | −34.2% → **+1.18%** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `199a61f` :: `faithful.hpr` | PASS |
-| `grid.w2021_11.band_limit` |  | w2021_11: BAND_LIMIT refusals | — → **784** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `199a61f` :: `tier1.band_limit_refusals` | PASS |
-| `grid.w2021_11.tick_grid` |  | w2021_11: TICK_GRID refusals | 2,409 → **0** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `199a61f` :: `tier1.tick_grid_refusals` | PASS |
-| `grid.w2021_11.unsettled` |  | w2021_11: UNSETTLED_HOLDING refusals (T+2) | — → **68** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `199a61f` :: `tier1.unsettled_holding_refusals` | PASS |
-| `grid.w2021_11.t2_locked` |  | w2021_11: T+2-locked re-buys (INSUFFICIENT_CASH) | 248 → **3** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `199a61f` :: `tier1.t2_locked_rebuys` | PASS |
-| `grid.min_fn` | `\gridFill` | Grid f/n, minimum over windows (abstract) | ≈10% → **45.6%** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `199a61f` :: computed from `result/grid_anchor/w2022_10.json` `gap.fill_ratio_f_over_n`; `result/grid_anchor/w2021_11.json` `gap.fill_ratio_f_over_n` | PASS |
+| `grid.w2022_10.fills_naive` |  | w2022_10: naive fills | 1,457 → **136** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: `naive.fills` | PASS |
+| `grid.w2022_10.fills_faithful` |  | w2022_10: faithful fills | 151 → **62** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: `faithful.fills` | PASS |
+| `grid.w2022_10.fn` | `\gridFillRange` | w2022_10: f/n fills | ≈10% → **45.6%** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: `gap.fill_ratio_f_over_n` | PASS |
+| `grid.w2022_10.hpr_naive` | `\gridHPRRange` | w2022_10: HPR naive | −19.0% → **−2.40%** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: `naive.hpr` | PASS |
+| `grid.w2022_10.hpr_faithful` | `\gridHPRRange` | w2022_10: HPR faithful | −34.2% → **−2.65%** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: `faithful.hpr` | PASS |
+| `grid.w2022_10.band_limit` |  | w2022_10: BAND_LIMIT refusals | — → **828** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: `tier1.band_limit_refusals` | PASS |
+| `grid.w2022_10.tick_grid` |  | w2022_10: TICK_GRID refusals | 2,409 → **0** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: `tier1.tick_grid_refusals` | PASS |
+| `grid.w2022_10.unsettled` |  | w2022_10: UNSETTLED_HOLDING refusals (T+2) | — → **58** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: `tier1.unsettled_holding_refusals` | PASS |
+| `grid.w2022_10.t2_locked` |  | w2022_10: T+2-locked re-buys (INSUFFICIENT_CASH) | 248 → **28** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: `tier1.t2_locked_rebuys` | PASS |
+| `grid.w2021_11.fills_naive` |  | w2021_11: naive fills | 1,457 → **124** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `becb3a2` :: `naive.fills` | PASS |
+| `grid.w2021_11.fills_faithful` |  | w2021_11: faithful fills | 151 → **57** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `becb3a2` :: `faithful.fills` | PASS |
+| `grid.w2021_11.fn` | `\gridFillRange` | w2021_11: f/n fills | ≈10% → **46.0%** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `becb3a2` :: `gap.fill_ratio_f_over_n` | PASS |
+| `grid.w2021_11.hpr_naive` | `\gridHPRRange` | w2021_11: HPR naive | −19.0% → **+1.47%** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `becb3a2` :: `naive.hpr` | PASS |
+| `grid.w2021_11.hpr_faithful` | `\gridHPRRange` | w2021_11: HPR faithful | −34.2% → **+1.18%** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `becb3a2` :: `faithful.hpr` | PASS |
+| `grid.w2021_11.band_limit` |  | w2021_11: BAND_LIMIT refusals | — → **784** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `becb3a2` :: `tier1.band_limit_refusals` | PASS |
+| `grid.w2021_11.tick_grid` |  | w2021_11: TICK_GRID refusals | 2,409 → **0** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `becb3a2` :: `tier1.tick_grid_refusals` | PASS |
+| `grid.w2021_11.unsettled` |  | w2021_11: UNSETTLED_HOLDING refusals (T+2) | — → **68** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `becb3a2` :: `tier1.unsettled_holding_refusals` | PASS |
+| `grid.w2021_11.t2_locked` |  | w2021_11: T+2-locked re-buys (INSUFFICIENT_CASH) | 248 → **3** | ProtoGrid: `result/grid_anchor/w2021_11.json` @ `becb3a2` :: `tier1.t2_locked_rebuys` | PASS |
+| `grid.min_fn` | `\gridFill` | Grid f/n, minimum over windows (abstract) | ≈10% → **45.6%** | ProtoGrid: `result/grid_anchor/w2022_10.json` @ `becb3a2` :: computed from `result/grid_anchor/w2022_10.json` `gap.fill_ratio_f_over_n`; `result/grid_anchor/w2021_11.json` `gap.fill_ratio_f_over_n` | PASS |
 
 ### Table II, ProtoPair
 
-- **Repo:** `ProtoPair` (branch `rivf26`, HEAD `77aa71f` when generated)
+- **Repo:** `ProtoPair` (branch `rivf26`, HEAD `505ca0e` when generated)
 - **Command:** `.venv/bin/pp-anchor`; `.venv/bin/pp-credibility`
 - **Data slice:** `data/market/<w>/` (DATA-MANIFEST, checked under `slice.*`)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `pair.w1.fills_naive` |  | w1: naive fills | 2,298 → **1,209** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `naive.fills` | PASS |
-| `pair.w1.fills_faithful` |  | w1: faithful fills | 1,236 → **651** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `faithful.fills` | PASS |
-| `pair.w1.fn` | `\pairFillRange` | w1: f/n fills | **53.8%** (unchanged) | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `gap.fills_f_over_n` | PASS |
-| `pair.w1.hpr_naive` | `\pairHPRn` | w1: HPR naive | +3.5% → **+1.03%** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `gap.hpr_naive_pct` | PASS |
-| `pair.w1.hpr_faithful` | `\pairHPRf` | w1: HPR faithful | −3.2% → **−2.15%** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `gap.hpr_faithful_pct` | PASS |
-| `pair.w1.exits_blocked` | `\pairStuck` | w1: exits blocked by T+2 | 16 → **8** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `tier1.settlement_asymmetry.exits_blocked_by_t2` | PASS |
-| `pair.w1.exits_wanted` |  | w1: exits wanted | 22 → **10** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `tier1.settlement_asymmetry.exits_wanted` | PASS |
-| `pair.w1.name_days` | `\pairNameDays` | w1: name-days held open | 758 → **420** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `tier1.settlement_asymmetry.name_days_held_open` | PASS |
-| `pair.w1.forgone` | `\pairSkipped` | w1: opposite-side trades forgone | 17 → **9** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `tier1.opposite_side.forgone` | PASS |
-| `pair.w1.signalled` |  | w1: opposite-side trades signalled | 17 → **9** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `tier1.opposite_side.mirror_trades_signalled` | PASS |
-| `pair.w1.soft_undecided_events` | `\pctPairUndecSoft` | w1: fill-time undecided events, `soft` | 2.2% → **0** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `variants.headline.fill_time_indeterminate_events` | PASS |
-| `pair.w1.hard_fills` |  | w1: `hard` variant fills | 0 → **583** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `variants.hard.fills` | PASS |
-| `pair.w1.hard_undecided_events` | `\pctPairUndecHard` | w1: fill-time undecided events, `hard` | 96.8% → **71** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `variants.hard.fill_time_indeterminate_events` | PASS: An event count; the old value was a rate. The result has no denominator for a `hard` rate. |
-| `pair.w2.fills_naive` |  | w2: naive fills | 2,298 → **775** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `naive.fills` | PASS |
-| `pair.w2.fills_faithful` |  | w2: faithful fills | 1,236 → **403** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `faithful.fills` | PASS |
-| `pair.w2.fn` | `\pairFillRange` | w2: f/n fills | 53.8% → **52.0%** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `gap.fills_f_over_n` | PASS |
-| `pair.w2.hpr_naive` | `\pairHPRRange` | w2: HPR naive | +3.5% → **+0.28%** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `gap.hpr_naive_pct` | PASS |
-| `pair.w2.hpr_faithful` | `\pairHPRRange` | w2: HPR faithful | −3.2% → **−0.31%** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `gap.hpr_faithful_pct` | PASS |
-| `pair.w2.exits_blocked` | `\pairStuck` | w2: exits blocked by T+2 | 16 → **4** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `tier1.settlement_asymmetry.exits_blocked_by_t2` | PASS |
-| `pair.w2.exits_wanted` |  | w2: exits wanted | 22 → **6** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `tier1.settlement_asymmetry.exits_wanted` | PASS |
-| `pair.w2.name_days` | `\pairNameDays` | w2: name-days held open | 758 → **180** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `tier1.settlement_asymmetry.name_days_held_open` | PASS |
-| `pair.w2.forgone` | `\pairSkipped` | w2: opposite-side trades forgone | 17 → **6** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `tier1.opposite_side.forgone` | PASS |
-| `pair.w2.signalled` |  | w2: opposite-side trades signalled | 17 → **6** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `tier1.opposite_side.mirror_trades_signalled` | PASS |
-| `pair.w2.soft_undecided_events` | `\pctPairUndecSoft` | w2: fill-time undecided events, `soft` | 2.2% → **0** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `variants.headline.fill_time_indeterminate_events` | PASS |
-| `pair.w2.hard_fills` |  | w2: `hard` variant fills | 0 → **377** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `variants.hard.fills` | PASS |
-| `pair.w2.hard_undecided_events` | `\pctPairUndecHard` | w2: fill-time undecided events, `hard` | 96.8% → **27** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `variants.hard.fill_time_indeterminate_events` | PASS: An event count; the old value was a rate. The result has no denominator for a `hard` rate. |
+| `pair.w1.fills_naive` |  | w1: naive fills | 2,298 → **1,209** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `naive.fills` | PASS |
+| `pair.w1.fills_faithful` |  | w1: faithful fills | 1,236 → **651** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `faithful.fills` | PASS |
+| `pair.w1.fn` | `\pairFillRange` | w1: f/n fills | **53.8%** (unchanged) | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `gap.fills_f_over_n` | PASS |
+| `pair.w1.hpr_naive` | `\pairHPRn` | w1: HPR naive | +3.5% → **+1.03%** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `gap.hpr_naive_pct` | PASS |
+| `pair.w1.hpr_faithful` | `\pairHPRf` | w1: HPR faithful | −3.2% → **−2.15%** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `gap.hpr_faithful_pct` | PASS |
+| `pair.w1.exits_blocked` | `\pairStuck` | w1: exits blocked by T+2 | 16 → **8** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `tier1.settlement_asymmetry.exits_blocked_by_t2` | PASS |
+| `pair.w1.exits_wanted` |  | w1: exits wanted | 22 → **10** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `tier1.settlement_asymmetry.exits_wanted` | PASS |
+| `pair.w1.name_days` | `\pairNameDays` | w1: name-days held open | 758 → **420** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `tier1.settlement_asymmetry.name_days_held_open` | PASS |
+| `pair.w1.forgone` | `\pairSkipped` | w1: opposite-side trades forgone | 17 → **9** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `tier1.opposite_side.forgone` | PASS |
+| `pair.w1.signalled` |  | w1: opposite-side trades signalled | 17 → **9** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `tier1.opposite_side.mirror_trades_signalled` | PASS |
+| `pair.w1.soft_undecided_events` | `\pctPairUndecSoft` | w1: fill-time undecided events, `soft` | 2.2% → **0** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `variants.headline.fill_time_indeterminate_events` | PASS |
+| `pair.w1.hard_fills` |  | w1: `hard` variant fills | 0 → **583** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `variants.hard.fills` | PASS |
+| `pair.w1.hard_undecided_events` | `\pctPairUndecHard` | w1: fill-time undecided events, `hard` | 96.8% → **71** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `variants.hard.fill_time_indeterminate_events` | PASS: An event count; the old value was a rate. The result has no denominator for a `hard` rate. |
+| `pair.w2.fills_naive` |  | w2: naive fills | 2,298 → **775** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `naive.fills` | PASS |
+| `pair.w2.fills_faithful` |  | w2: faithful fills | 1,236 → **403** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `faithful.fills` | PASS |
+| `pair.w2.fn` | `\pairFillRange` | w2: f/n fills | 53.8% → **52.0%** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `gap.fills_f_over_n` | PASS |
+| `pair.w2.hpr_naive` | `\pairHPRRange` | w2: HPR naive | +3.5% → **+0.28%** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `gap.hpr_naive_pct` | PASS |
+| `pair.w2.hpr_faithful` | `\pairHPRRange` | w2: HPR faithful | −3.2% → **−0.31%** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `gap.hpr_faithful_pct` | PASS |
+| `pair.w2.exits_blocked` | `\pairStuck` | w2: exits blocked by T+2 | 16 → **4** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `tier1.settlement_asymmetry.exits_blocked_by_t2` | PASS |
+| `pair.w2.exits_wanted` |  | w2: exits wanted | 22 → **6** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `tier1.settlement_asymmetry.exits_wanted` | PASS |
+| `pair.w2.name_days` | `\pairNameDays` | w2: name-days held open | 758 → **180** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `tier1.settlement_asymmetry.name_days_held_open` | PASS |
+| `pair.w2.forgone` | `\pairSkipped` | w2: opposite-side trades forgone | 17 → **6** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `tier1.opposite_side.forgone` | PASS |
+| `pair.w2.signalled` |  | w2: opposite-side trades signalled | 17 → **6** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `tier1.opposite_side.mirror_trades_signalled` | PASS |
+| `pair.w2.soft_undecided_events` | `\pctPairUndecSoft` | w2: fill-time undecided events, `soft` | 2.2% → **0** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `variants.headline.fill_time_indeterminate_events` | PASS |
+| `pair.w2.hard_fills` |  | w2: `hard` variant fills | 0 → **377** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `variants.hard.fills` | PASS |
+| `pair.w2.hard_undecided_events` | `\pctPairUndecHard` | w2: fill-time undecided events, `hard` | 96.8% → **27** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `variants.hard.fill_time_indeterminate_events` | PASS: An event count; the old value was a rate. The result has no denominator for a `hard` rate. |
 | `pair.w1.adf_p` |  | w1 basis ADF p-value | — → **0.0000434** | ProtoPair: `result/credibility/w1.json` @ `0c8b77b` :: `adf_pvalue` | PASS |
 | `pair.w2.adf_p` |  | w2 basis ADF p-value (does not reject a unit root) | — → **0.537** | ProtoPair: `result/credibility/w2.json` @ `0c8b77b` :: `adf_pvalue` | PASS |
 
 ### Table II, ProtoMarketMaker: anchor (faithful arm flat each session)
 
-- **Repo:** `ProtoMarketMaker` (branch `rivf26`, HEAD `4474777` when generated)
+- **Repo:** `ProtoMarketMaker` (branch `rivf26`, HEAD `c92e2b7` when generated)
 - **Command:** `.venv/bin/python -m proto_market_maker.experiments.mm_anchor <window>`
 - **Data slice:** `data/{band,l2,market}/<window>/` (`data/<window>-MANIFEST.md`, checked under `slice.*`)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `mm.krx2025.fills_naive` |  | krx2025, all 40 sessions: naive fills | 910 → **693** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `naive.fills` | PASS |
-| `mm.krx2025.hpr_naive` |  | krx2025, 40 sessions: HPR naive | 56.75% → **+29.57%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `naive.hpr` | PASS |
-| `mm.krx2025.fills_naive_pre` |  | krx2025, 20 pre-cutover sessions: naive fills | — → **228** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `naive_pre_cutover_only.fills` | PASS |
-| `mm.krx2025.hpr_naive_pre` |  | krx2025, pre-cutover: HPR naive | — → **−5.22%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `naive_pre_cutover_only.hpr` | PASS |
-| `mm.krx2025.fills_faithful` | `\mmFillsF` | krx2025, 40 sessions: faithful fills, conservative | 402 (submission); 116 (before the rerun) → **366** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `faithful.fills` | PASS |
-| `mm.krx2025.fills_opt` | `\mmFillsOpt` | krx2025, 40 sessions: faithful fills, optimistic | 160 (before the rerun) → **444** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `faithful_by_queue.optimistic.fills` | PASS |
-| `mm.krx2025.hpr_faithful` |  | krx2025, 40 sessions: HPR faithful, conservative | 31.62% (submission); −6.03% (before the rerun) → **−0.73%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `faithful.hpr` | PASS |
-| `mm.krx2025.fn` | `\mmFillRange` | krx2025: f/n, all 40 sessions | 44% (submission); 16.7% (before the rerun) → **52.8%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `fills_ratio_f_over_n` | PASS |
-| `mm.krx2025.fills_faithful_pre` |  | krx2025, 20 pre-cutover sessions: faithful fills, conservative | **116** (unchanged) | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `faithful.krx.pre.fills` | PASS |
-| `mm.krx2025.fills_faithful_post` |  | krx2025, 20 post-cutover sessions: faithful fills, conservative | 0 (refused, before the rerun) → **250** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `faithful.krx.post.fills` | PASS |
-| `mm.krx2025.fn_pre` | `\mmFillRange` | krx2025: f/n, 20 pre-cutover sessions (like for like) | **50.9%** (unchanged) | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: computed from `result/mm_anchor/krx2025.json` `faithful.krx.pre.fills`; `result/mm_anchor/krx2025.json` `naive_pre_cutover_only.fills` | PASS |
-| `mm.krx2025.queue_spread` | `\pctMMQueueSwing` | krx2025: queue spread (opt − cons) / opt | 27.5% (before the rerun) → **17.6%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `tier1.queue_fill_spread.conservative_vs_optimistic_pct` | PASS |
-| `mm.krx2025.undecided_pre` | `\pctMMUndecPre` | krx2025: conservative undecided orders, pre-cutover | 99.94% (submission, events) → **99.76%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `faithful.krx.pre.indeterminate_order_rate` | PASS: Counts orders; the submission's 99.94% / 99.92% counted fill-evaluation events. |
-| `mm.krx2025.undecided_post` | `\pctMMUndecPost` | krx2025: conservative undecided orders, post-cutover | 99.92% (submission, events); none (refused, before the rerun) → **99.21%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `faithful.krx.post.indeterminate_order_rate` | PASS |
-| `mm.krx2025.refused_post` |  | krx2025: post-cutover sessions refused (of 20) | 20 (before the rerun) → **0** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `tier1.post_cutover_refused_sessions` | PASS |
-| `mm.krx2025.engine_commit` |  | krx2025 anchor ran on plutus-simulator | 31e3405 → **8d46c56** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `plutus_simulator_commit` (first 7 characters) | PASS |
-| `mm.im2022.fills_naive` |  | im2022: naive fills | — → **129** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `naive.fills` | PASS |
-| `mm.im2022.hpr_naive` |  | im2022: HPR naive | — → **−12.93%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `naive.hpr` | PASS |
-| `mm.im2022.fills_faithful` |  | im2022: faithful fills, conservative | — → **70** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `faithful.fills` | PASS |
-| `mm.im2022.fills_opt` |  | im2022: faithful fills, optimistic | — → **98** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `faithful_by_queue.optimistic.fills` | PASS |
-| `mm.im2022.hpr_faithful` |  | im2022: HPR faithful, conservative (flat each session) | — → **+2.19%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `faithful.hpr` | PASS |
-| `mm.im2022.fn` | `\mmFillRange` | im2022: f/n | — → **54.3%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `fills_ratio_f_over_n` | PASS |
-| `mm.im2022.queue_spread` |  | im2022: queue spread | — → **28.6%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `tier1.queue_fill_spread.conservative_vs_optimistic_pct` | PASS |
-| `mm.im2022.undecided_pre` |  | im2022: conservative undecided orders, before 2022-12-15 | — → **99.87%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `faithful.im_step.pre.indeterminate_order_rate` | PASS |
-| `mm.im2022.undecided_post` |  | im2022: conservative undecided orders, from 2022-12-15 | — → **99.99%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `faithful.im_step.post.indeterminate_order_rate` | PASS |
-| `mm.deposit` | `\mmDeposit` | MM deposit (đ) | — → **500,000,000** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `faithful.deposit_dong` | PASS |
-| `mm.contracts_pre` | `\mmContractsPre` | dated-IM capacity on 2022-12-14 (13%) | 37 → **36** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `faithful.capacity.[date=2022-12-14].contracts` | PASS |
-| `mm.contracts_post` | `\mmContractsPost` | dated-IM capacity on 2022-12-15 (17%) | **28** (unchanged) | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `faithful.capacity.[date=2022-12-15].contracts` | PASS |
+| `mm.krx2025.fills_naive` |  | krx2025, all 40 sessions: naive fills | 910 → **693** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `naive.fills` | PASS |
+| `mm.krx2025.hpr_naive` |  | krx2025, 40 sessions: HPR naive | 56.75% → **+29.57%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `naive.hpr` | PASS |
+| `mm.krx2025.fills_naive_pre` |  | krx2025, 20 pre-cutover sessions: naive fills | — → **228** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `naive_pre_cutover_only.fills` | PASS |
+| `mm.krx2025.hpr_naive_pre` |  | krx2025, pre-cutover: HPR naive | — → **−5.22%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `naive_pre_cutover_only.hpr` | PASS |
+| `mm.krx2025.fills_faithful` | `\mmFillsF` | krx2025, 40 sessions: faithful fills, conservative | 402 (submission); 116 (before the rerun) → **366** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `faithful.fills` | PASS |
+| `mm.krx2025.fills_opt` | `\mmFillsOpt` | krx2025, 40 sessions: faithful fills, optimistic | 160 (before the rerun) → **444** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `faithful_by_queue.optimistic.fills` | PASS |
+| `mm.krx2025.hpr_faithful` |  | krx2025, 40 sessions: HPR faithful, conservative | 31.62% (submission); −6.03% (before the rerun) → **−0.73%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `faithful.hpr` | PASS |
+| `mm.krx2025.fn` | `\mmFillRange` | krx2025: f/n, all 40 sessions | 44% (submission); 16.7% (before the rerun) → **52.8%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `fills_ratio_f_over_n` | PASS |
+| `mm.krx2025.fills_faithful_pre` |  | krx2025, 20 pre-cutover sessions: faithful fills, conservative | **116** (unchanged) | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `faithful.krx.pre.fills` | PASS |
+| `mm.krx2025.fills_faithful_post` |  | krx2025, 20 post-cutover sessions: faithful fills, conservative | 0 (refused, before the rerun) → **250** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `faithful.krx.post.fills` | PASS |
+| `mm.krx2025.fn_pre` | `\mmFillRange` | krx2025: f/n, 20 pre-cutover sessions (like for like) | **50.9%** (unchanged) | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: computed from `result/mm_anchor/krx2025.json` `faithful.krx.pre.fills`; `result/mm_anchor/krx2025.json` `naive_pre_cutover_only.fills` | PASS |
+| `mm.krx2025.queue_spread` | `\pctMMQueueSwing` | krx2025: queue spread (opt − cons) / opt | 27.5% (before the rerun) → **17.6%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `tier1.queue_fill_spread.conservative_vs_optimistic_pct` | PASS |
+| `mm.krx2025.undecided_pre` | `\pctMMUndecPre` | krx2025: conservative undecided orders, pre-cutover | 99.94% (submission, events) → **99.76%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `faithful.krx.pre.indeterminate_order_rate` | PASS: Counts orders; the submission's 99.94% / 99.92% counted fill-evaluation events. |
+| `mm.krx2025.undecided_post` | `\pctMMUndecPost` | krx2025: conservative undecided orders, post-cutover | 99.92% (submission, events); none (refused, before the rerun) → **99.21%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `faithful.krx.post.indeterminate_order_rate` | PASS |
+| `mm.krx2025.refused_post` |  | krx2025: post-cutover sessions refused (of 20) | 20 (before the rerun) → **0** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `tier1.post_cutover_refused_sessions` | PASS |
+| `mm.krx2025.engine_commit` |  | krx2025 anchor ran on plutus-simulator | 31e3405 → **8d46c56** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `c92e2b7` :: `plutus_simulator_commit` (first 7 characters) | PASS |
+| `mm.im2022.fills_naive` |  | im2022: naive fills | — → **129** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `naive.fills` | PASS |
+| `mm.im2022.hpr_naive` |  | im2022: HPR naive | — → **−12.93%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `naive.hpr` | PASS |
+| `mm.im2022.fills_faithful` |  | im2022: faithful fills, conservative | — → **70** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `faithful.fills` | PASS |
+| `mm.im2022.fills_opt` |  | im2022: faithful fills, optimistic | — → **98** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `faithful_by_queue.optimistic.fills` | PASS |
+| `mm.im2022.hpr_faithful` |  | im2022: HPR faithful, conservative (flat each session) | — → **+2.19%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `faithful.hpr` | PASS |
+| `mm.im2022.fn` | `\mmFillRange` | im2022: f/n | — → **54.3%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `fills_ratio_f_over_n` | PASS |
+| `mm.im2022.queue_spread` |  | im2022: queue spread | — → **28.6%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `tier1.queue_fill_spread.conservative_vs_optimistic_pct` | PASS |
+| `mm.im2022.undecided_pre` |  | im2022: conservative undecided orders, before 2022-12-15 | — → **99.87%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `faithful.im_step.pre.indeterminate_order_rate` | PASS |
+| `mm.im2022.undecided_post` |  | im2022: conservative undecided orders, from 2022-12-15 | — → **99.99%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `faithful.im_step.post.indeterminate_order_rate` | PASS |
+| `mm.deposit` | `\mmDeposit` | MM deposit (đ) | — → **500,000,000** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `faithful.deposit_dong` | PASS |
+| `mm.contracts_pre` | `\mmContractsPre` | dated-IM capacity on 2022-12-14 (13%) | 37 → **36** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `faithful.capacity.[date=2022-12-14].contracts` | PASS |
+| `mm.contracts_post` | `\mmContractsPost` | dated-IM capacity on 2022-12-15 (17%) | **28** (unchanged) | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `c92e2b7` :: `faithful.capacity.[date=2022-12-15].contracts` | PASS |
 
 ### ProtoMarketMaker attribution ladder (algorithm A fixed)
 
-- **Repo:** `ProtoMarketMaker` (branch `rivf26`, HEAD `4474777` when generated)
+- **Repo:** `ProtoMarketMaker` (branch `rivf26`, HEAD `c92e2b7` when generated)
 - **Command:** `.venv/bin/python -m proto_market_maker.experiments.mm_faithful_a <window> --queue <q>`, then `.venv/bin/python -m proto_market_maker.experiments.mm_ladder <window>`
 - **Data slice:** as the MM anchor
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `ladder.im2022.n0.hpr` |  | im2022: N0 HPR | — → **−12.93%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| N0 \|/ cell 5 | PASS |
-| `ladder.im2022.n0.fills` |  | im2022: N0 fills | — → **129** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| N0 \|/ cell 2 | PASS |
-| `ladder.im2022.n1.hpr` |  | im2022: N1 HPR | — → **−15.90%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| N1 \|/ cell 5 | PASS |
-| `ladder.im2022.n1.fills` |  | im2022: N1 fills | — → **129** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| N1 \|/ cell 2 | PASS |
-| `ladder.im2022.n2.hpr` |  | im2022: N2 HPR | — → **−15.90%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| N2 \|/ cell 5 | PASS |
-| `ladder.im2022.n2.fills` |  | im2022: N2 fills | — → **129** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| N2 \|/ cell 2 | PASS |
-| `ladder.im2022.n3.hpr` |  | im2022: N3 HPR | — → **−16.42%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| N3 \|/ cell 5 | PASS |
-| `ladder.im2022.n3.fills` |  | im2022: N3 fills | — → **129** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| N3 \|/ cell 2 | PASS |
-| `ladder.im2022.f-opt.hpr` |  | im2022: F-opt HPR | — → **−2.52%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| F\-opt \|/ cell 5 | PASS |
-| `ladder.im2022.f-opt.fills` |  | im2022: F-opt fills | — → **198** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| F\-opt \|/ cell 2 | PASS |
-| `ladder.im2022.f-con.hpr` |  | im2022: F-con HPR | — → **−11.47%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| F\-con \|/ cell 5 | PASS |
-| `ladder.im2022.f-con.fills` |  | im2022: F-con fills | — → **116** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| F\-con \|/ cell 2 | PASS |
-| `ladder.krx2025.n0.hpr` |  | krx2025, all 40 sessions: N0 HPR | — → **+29.57%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=N0].hpr` | PASS |
-| `ladder.krx2025.n0.fills` |  | krx2025, all 40 sessions: N0 fills | — → **693** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=N0].fills` | PASS |
-| `ladder.krx2025.n1.hpr` |  | krx2025, all 40 sessions: N1 HPR | — → **−41.99%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=N1].hpr` | PASS |
-| `ladder.krx2025.n1.fills` |  | krx2025, all 40 sessions: N1 fills | — → **693** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=N1].fills` | PASS |
-| `ladder.krx2025.n2.hpr` |  | krx2025, all 40 sessions: N2 HPR | — → **−41.99%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=N2].hpr` | PASS |
-| `ladder.krx2025.n2.fills` |  | krx2025, all 40 sessions: N2 fills | — → **693** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=N2].fills` | PASS |
-| `ladder.krx2025.n3.hpr` |  | krx2025, all 40 sessions: N3 HPR | — → **−44.77%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=N3].hpr` | PASS |
-| `ladder.krx2025.n3.fills` |  | krx2025, all 40 sessions: N3 fills | — → **693** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=N3].fills` | PASS |
-| `ladder.krx2025.f-opt.hpr` |  | krx2025, all 40 sessions: F-opt HPR | — → **−12.02%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-opt].hpr` | PASS |
-| `ladder.krx2025.f-opt.fills` |  | krx2025, all 40 sessions: F-opt fills | — → **575** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-opt].fills` | PASS |
-| `ladder.krx2025.f-con.hpr` |  | krx2025, all 40 sessions: F-con HPR | — → **−42.96%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-con].hpr` | PASS |
-| `ladder.krx2025.f-con.fills` |  | krx2025, all 40 sessions: F-con fills | — → **358** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-con].fills` | PASS |
-| `ladder.krx2025.pre.n0.hpr` |  | krx2025, 20 pre-cutover sessions: N0 HPR | — → **−5.22%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=N0].hpr` | PASS |
-| `ladder.krx2025.pre.n0.fills` |  | krx2025, 20 pre-cutover sessions: N0 fills | — → **228** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=N0].fills` | PASS |
-| `ladder.krx2025.pre.n1.hpr` |  | krx2025, 20 pre-cutover sessions: N1 HPR | — → **−14.09%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=N1].hpr` | PASS |
-| `ladder.krx2025.pre.n1.fills` |  | krx2025, 20 pre-cutover sessions: N1 fills | — → **228** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=N1].fills` | PASS |
-| `ladder.krx2025.pre.n2.hpr` |  | krx2025, 20 pre-cutover sessions: N2 HPR | — → **−14.09%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=N2].hpr` | PASS |
-| `ladder.krx2025.pre.n2.fills` |  | krx2025, 20 pre-cutover sessions: N2 fills | — → **228** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=N2].fills` | PASS |
-| `ladder.krx2025.pre.n3.hpr` |  | krx2025, 20 pre-cutover sessions: N3 HPR | — → **−15.02%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=N3].hpr` | PASS |
-| `ladder.krx2025.pre.n3.fills` |  | krx2025, 20 pre-cutover sessions: N3 fills | — → **228** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=N3].fills` | PASS |
-| `ladder.krx2025.pre.f-opt.hpr` |  | krx2025, 20 pre-cutover sessions: F-opt HPR | — → **−7.58%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=F-opt].hpr` | PASS |
-| `ladder.krx2025.pre.f-opt.fills` |  | krx2025, 20 pre-cutover sessions: F-opt fills | — → **261** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=F-opt].fills` | PASS |
-| `ladder.krx2025.pre.f-con.hpr` |  | krx2025, 20 pre-cutover sessions: F-con HPR | — → **−25.55%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=F-con].hpr` | PASS |
-| `ladder.krx2025.pre.f-con.fills` |  | krx2025, 20 pre-cutover sessions: F-con fills | — → **153** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=F-con].fills` | PASS |
-| `ladder.krx2025.post.n0.hpr` |  | krx2025, 20 post-cutover sessions: N0 HPR | — (refused before the rerun) → **+36.70%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=N0].hpr` | PASS |
-| `ladder.krx2025.post.n0.fills` |  | krx2025, 20 post-cutover sessions: N0 fills | — → **465** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=N0].fills` | PASS |
-| `ladder.krx2025.post.n1.hpr` |  | krx2025, 20 post-cutover sessions: N1 HPR | — (refused before the rerun) → **−32.47%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=N1].hpr` | PASS |
-| `ladder.krx2025.post.n1.fills` |  | krx2025, 20 post-cutover sessions: N1 fills | — → **465** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=N1].fills` | PASS |
-| `ladder.krx2025.post.n2.hpr` |  | krx2025, 20 post-cutover sessions: N2 HPR | — (refused before the rerun) → **−32.47%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=N2].hpr` | PASS |
-| `ladder.krx2025.post.n2.fills` |  | krx2025, 20 post-cutover sessions: N2 fills | — → **465** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=N2].fills` | PASS |
-| `ladder.krx2025.post.n3.hpr` |  | krx2025, 20 post-cutover sessions: N3 HPR | — (refused before the rerun) → **−35.01%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=N3].hpr` | PASS |
-| `ladder.krx2025.post.n3.fills` |  | krx2025, 20 post-cutover sessions: N3 fills | — → **465** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=N3].fills` | PASS |
-| `ladder.krx2025.post.f-opt.hpr` |  | krx2025, 20 post-cutover sessions: F-opt HPR | — (refused before the rerun) → **−4.81%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=F-opt].hpr` | PASS |
-| `ladder.krx2025.post.f-opt.fills` |  | krx2025, 20 post-cutover sessions: F-opt fills | — → **314** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=F-opt].fills` | PASS |
-| `ladder.krx2025.post.f-con.hpr` |  | krx2025, 20 post-cutover sessions: F-con HPR | — (refused before the rerun) → **−23.39%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=F-con].hpr` | PASS |
-| `ladder.krx2025.post.f-con.fills` |  | krx2025, 20 post-cutover sessions: F-con fills | — → **205** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.post_cutover.rungs.[rung=F-con].fills` | PASS |
-| `ladder.im2022.f-opt.fn` |  | im2022: F-opt fills / N0 fills | — → **153.5%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: computed from `result/mm_ladder/im2022.md` row /^\| F-opt \|/ cell 2; `result/mm_ladder/im2022.md` row /^\| N0 \|/ cell 2 | PASS: Above 100%: §6 criterion 1 (faithful fills < naive) fails for this arm. |
-| `ladder.im2022.f-con.fn` |  | im2022: F-con fills / N0 fills | — → **89.9%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: computed from `result/mm_ladder/im2022.md` row /^\| F-con \|/ cell 2; `result/mm_ladder/im2022.md` row /^\| N0 \|/ cell 2 | PASS |
-| `ladder.krx2025.f-opt.fn` |  | krx2025, all 40 sessions: F-opt fills / N0 fills | — → **83.0%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: computed from `result/mm_ladder/krx2025.json` `rungs.[rung=F-opt].fills`; `result/mm_ladder/krx2025.json` `rungs.[rung=N0].fills` | PASS |
-| `ladder.krx2025.f-con.fn` |  | krx2025, all 40 sessions: F-con fills / N0 fills | — → **51.7%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: computed from `result/mm_ladder/krx2025.json` `rungs.[rung=F-con].fills`; `result/mm_ladder/krx2025.json` `rungs.[rung=N0].fills` | PASS |
-| `ladder.krx2025.pre.f-opt.fn` |  | krx2025, 20 pre-cutover sessions: F-opt fills / N0 fills | — → **114.5%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: computed from `result/mm_ladder/krx2025.json` `views.pre_cutover.rungs.[rung=F-opt].fills`; `result/mm_ladder/krx2025.json` `views.pre_cutover.rungs.[rung=N0].fills` | PASS: Above 100%: §6 criterion 1 (faithful fills < naive) fails for this arm. |
-| `ladder.krx2025.pre.f-con.fn` |  | krx2025, 20 pre-cutover sessions: F-con fills / N0 fills | — → **67.1%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: computed from `result/mm_ladder/krx2025.json` `views.pre_cutover.rungs.[rung=F-con].fills`; `result/mm_ladder/krx2025.json` `views.pre_cutover.rungs.[rung=N0].fills` | PASS |
-| `ladder.krx2025.post.f-opt.fn` |  | krx2025, 20 post-cutover sessions: F-opt fills / N0 fills | — → **67.5%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: computed from `result/mm_ladder/krx2025.json` `views.post_cutover.rungs.[rung=F-opt].fills`; `result/mm_ladder/krx2025.json` `views.post_cutover.rungs.[rung=N0].fills` | PASS |
-| `ladder.krx2025.post.f-con.fn` |  | krx2025, 20 post-cutover sessions: F-con fills / N0 fills | — → **44.1%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: computed from `result/mm_ladder/krx2025.json` `views.post_cutover.rungs.[rung=F-con].fills`; `result/mm_ladder/krx2025.json` `views.post_cutover.rungs.[rung=N0].fills` | PASS |
-| `ladder.im2022.json_agrees` |  | im2022: ladder JSON HPRs equal the markdown's first table | — → **6** | ProtoMarketMaker: `result/mm_ladder/im2022.json` @ `4474777` :: `result/mm_ladder/im2022.json` `rungs[].hpr` vs `result/mm_ladder/im2022.md` | PASS |
-| `ladder.im2022.f-opt.source_sha` |  | im2022: F-opt faithful-A result file matches the sha256 the ladder records | — → **1** | ProtoMarketMaker: `result/mm_ladder/im2022.json` @ `4474777` :: sha256 of the file at `faithful_sources.F-opt.path` vs `faithful_sources.F-opt.sha256` | PASS |
-| `ladder.im2022.f-con.source_sha` |  | im2022: F-con faithful-A result file matches the sha256 the ladder records | — → **1** | ProtoMarketMaker: `result/mm_ladder/im2022.json` @ `4474777` :: sha256 of the file at `faithful_sources.F-con.path` vs `faithful_sources.F-con.sha256` | PASS |
-| `ladder.krx2025.json_agrees` |  | krx2025: ladder JSON HPRs equal the markdown's first table | — → **6** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `result/mm_ladder/krx2025.json` `rungs[].hpr` vs `result/mm_ladder/krx2025.md` | PASS |
-| `ladder.krx2025.f-opt.source_sha` |  | krx2025: F-opt faithful-A result file matches the sha256 the ladder records | — → **1** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: sha256 of the file at `faithful_sources.F-opt.path` vs `faithful_sources.F-opt.sha256` | PASS |
-| `ladder.krx2025.f-con.source_sha` |  | krx2025: F-con faithful-A result file matches the sha256 the ladder records | — → **1** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: sha256 of the file at `faithful_sources.F-con.path` vs `faithful_sources.F-con.sha256` | PASS |
-| `ladder.im2022.f-con.undecided` |  | im2022: F-con undecided orders | — → **99.88%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `4474777` :: row /^\| F-con \|/ cell 7 | PASS |
-| `ladder.krx2025.f-con.undecided` |  | krx2025, all 40 sessions: F-con undecided orders | 99.63% (pre-cutover, before the rerun) → **99.54%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-con].undecided_order_rate` | PASS |
-| `ladder.krx2025.pre.f-con.undecided` |  | krx2025, pre-cutover: F-con undecided orders | **99.63%** (unchanged) | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `views.pre_cutover.rungs.[rung=F-con].undecided_order_rate` | PASS |
-| `ladder.krx2025.f-con.margin_calls` |  | krx2025, all 40 sessions: F-con margin calls | — → **31** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-con].margin_calls` | PASS |
-| `ladder.krx2025.f-con.forced_executed` |  | krx2025: F-con forced liquidations executed | — → **3** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-con].forced_liquidations_executed` | PASS |
-| `ladder.krx2025.f-opt.ccp_nights` |  | krx2025: F-opt post-KRX CCP nights with a position | — → **20** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-opt].ccp_nights` | PASS |
-| `ladder.krx2025.f-opt.ccp_indeterminate` |  | krx2025: F-opt CCP nights indeterminate | — → **0** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-opt].ccp_indeterminate_nights` | PASS |
-| `ladder.krx2025.f-opt.ccp_calendar_unknown` |  | krx2025: F-opt calendar-spread charge UNKNOWN | — → **0** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-opt].ccp_calendar_spread_unknown` | PASS |
-| `ladder.krx2025.f-con.ccp_nights` |  | krx2025: F-con post-KRX CCP nights with a position | — → **19** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-con].ccp_nights` | PASS |
-| `ladder.krx2025.f-con.ccp_indeterminate` |  | krx2025: F-con CCP nights indeterminate | — → **0** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-con].ccp_indeterminate_nights` | PASS |
-| `ladder.krx2025.f-con.ccp_calendar_unknown` |  | krx2025: F-con calendar-spread charge UNKNOWN | — → **0** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `4474777` :: `rungs.[rung=F-con].ccp_calendar_spread_unknown` | PASS |
-| `ladder.markout.im2022.n3.5m` |  | im2022, all 40 sessions: mean 5-min markout per fill, N3 (index pts; + good for the maker) | −2.24 naive / −0.78 faithful (first 6 im2022 sessions, prose) → **−0.71** | ProtoMarketMaker: `result/mm_markout/im2022_markout.json` @ `4474777` :: `arms.N3.markout_mean_points.5m` | PASS |
-| `ladder.markout.im2022.f-opt.5m` |  | im2022, all 40 sessions: mean 5-min markout per fill, F-opt (index pts; + good for the maker) | — → **+0.41** | ProtoMarketMaker: `result/mm_markout/im2022_markout.json` @ `4474777` :: `arms.F-opt.markout_mean_points.5m` | PASS |
-| `ladder.markout.im2022.f-con.5m` |  | im2022, all 40 sessions: mean 5-min markout per fill, F-con (index pts; + good for the maker) | — → **−0.57** | ProtoMarketMaker: `result/mm_markout/im2022_markout.json` @ `4474777` :: `arms.F-con.markout_mean_points.5m` | PASS |
-| `ladder.markout.krx2025.n3.5m` |  | krx2025, all 40 sessions: mean 5-min markout per fill, N3 (index pts; + good for the maker) | — → **−2.22** | ProtoMarketMaker: `result/mm_markout/krx2025_markout.json` @ `4474777` :: `arms.N3.markout_mean_points.5m` | PASS |
-| `ladder.markout.krx2025.f-opt.5m` |  | krx2025, all 40 sessions: mean 5-min markout per fill, F-opt (index pts; + good for the maker) | — → **−0.68** | ProtoMarketMaker: `result/mm_markout/krx2025_markout.json` @ `4474777` :: `arms.F-opt.markout_mean_points.5m` | PASS |
-| `ladder.markout.krx2025.f-con.5m` |  | krx2025, all 40 sessions: mean 5-min markout per fill, F-con (index pts; + good for the maker) | — → **−0.31** | ProtoMarketMaker: `result/mm_markout/krx2025_markout.json` @ `4474777` :: `arms.F-con.markout_mean_points.5m` | PASS |
-| `ladder.markout.im2022.f-opt.1m` |  | im2022: mean 1-min markout per fill, F-opt (record for the WITHDRAWN 'no ghost fills' claim) | — → **+0.21** | ProtoMarketMaker: `result/mm_markout/im2022_markout.json` @ `4474777` :: `arms.F-opt.markout_mean_points.1m` | PASS: Withdrawn claim: kept as the record only; the paper does not state 'no ghost fills'. |
-| `ladder.markout.krx2025.f-opt.1m` |  | krx2025: mean 1-min markout per fill, F-opt (record for the WITHDRAWN 'no ghost fills' claim) | — → **+0.06** | ProtoMarketMaker: `result/mm_markout/krx2025_markout.json` @ `4474777` :: `arms.F-opt.markout_mean_points.1m` | PASS: Withdrawn claim: kept as the record only; the paper does not state 'no ghost fills'. |
+| `ladder.im2022.n0.hpr` |  | im2022: N0 HPR | — → **−12.93%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| N0 \|/ cell 5 | PASS |
+| `ladder.im2022.n0.fills` |  | im2022: N0 fills | — → **129** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| N0 \|/ cell 2 | PASS |
+| `ladder.im2022.n1.hpr` |  | im2022: N1 HPR | — → **−15.90%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| N1 \|/ cell 5 | PASS |
+| `ladder.im2022.n1.fills` |  | im2022: N1 fills | — → **129** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| N1 \|/ cell 2 | PASS |
+| `ladder.im2022.n2.hpr` |  | im2022: N2 HPR | — → **−15.90%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| N2 \|/ cell 5 | PASS |
+| `ladder.im2022.n2.fills` |  | im2022: N2 fills | — → **129** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| N2 \|/ cell 2 | PASS |
+| `ladder.im2022.n3.hpr` |  | im2022: N3 HPR | — → **−16.42%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| N3 \|/ cell 5 | PASS |
+| `ladder.im2022.n3.fills` |  | im2022: N3 fills | — → **129** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| N3 \|/ cell 2 | PASS |
+| `ladder.im2022.f-opt.hpr` |  | im2022: F-opt HPR | — → **−2.52%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| F\-opt \|/ cell 5 | PASS |
+| `ladder.im2022.f-opt.fills` |  | im2022: F-opt fills | — → **198** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| F\-opt \|/ cell 2 | PASS |
+| `ladder.im2022.f-con.hpr` |  | im2022: F-con HPR | — → **−11.47%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| F\-con \|/ cell 5 | PASS |
+| `ladder.im2022.f-con.fills` |  | im2022: F-con fills | — → **116** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| F\-con \|/ cell 2 | PASS |
+| `ladder.krx2025.n0.hpr` |  | krx2025, all 40 sessions: N0 HPR | — → **+29.57%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=N0].hpr` | PASS |
+| `ladder.krx2025.n0.fills` |  | krx2025, all 40 sessions: N0 fills | — → **693** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=N0].fills` | PASS |
+| `ladder.krx2025.n1.hpr` |  | krx2025, all 40 sessions: N1 HPR | — → **−41.99%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=N1].hpr` | PASS |
+| `ladder.krx2025.n1.fills` |  | krx2025, all 40 sessions: N1 fills | — → **693** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=N1].fills` | PASS |
+| `ladder.krx2025.n2.hpr` |  | krx2025, all 40 sessions: N2 HPR | — → **−41.99%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=N2].hpr` | PASS |
+| `ladder.krx2025.n2.fills` |  | krx2025, all 40 sessions: N2 fills | — → **693** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=N2].fills` | PASS |
+| `ladder.krx2025.n3.hpr` |  | krx2025, all 40 sessions: N3 HPR | — → **−44.77%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=N3].hpr` | PASS |
+| `ladder.krx2025.n3.fills` |  | krx2025, all 40 sessions: N3 fills | — → **693** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=N3].fills` | PASS |
+| `ladder.krx2025.f-opt.hpr` |  | krx2025, all 40 sessions: F-opt HPR | — → **−12.02%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-opt].hpr` | PASS |
+| `ladder.krx2025.f-opt.fills` |  | krx2025, all 40 sessions: F-opt fills | — → **575** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-opt].fills` | PASS |
+| `ladder.krx2025.f-con.hpr` |  | krx2025, all 40 sessions: F-con HPR | — → **−42.96%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-con].hpr` | PASS |
+| `ladder.krx2025.f-con.fills` |  | krx2025, all 40 sessions: F-con fills | — → **358** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-con].fills` | PASS |
+| `ladder.krx2025.pre.n0.hpr` |  | krx2025, 20 pre-cutover sessions: N0 HPR | — → **−5.22%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=N0].hpr` | PASS |
+| `ladder.krx2025.pre.n0.fills` |  | krx2025, 20 pre-cutover sessions: N0 fills | — → **228** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=N0].fills` | PASS |
+| `ladder.krx2025.pre.n1.hpr` |  | krx2025, 20 pre-cutover sessions: N1 HPR | — → **−14.09%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=N1].hpr` | PASS |
+| `ladder.krx2025.pre.n1.fills` |  | krx2025, 20 pre-cutover sessions: N1 fills | — → **228** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=N1].fills` | PASS |
+| `ladder.krx2025.pre.n2.hpr` |  | krx2025, 20 pre-cutover sessions: N2 HPR | — → **−14.09%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=N2].hpr` | PASS |
+| `ladder.krx2025.pre.n2.fills` |  | krx2025, 20 pre-cutover sessions: N2 fills | — → **228** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=N2].fills` | PASS |
+| `ladder.krx2025.pre.n3.hpr` |  | krx2025, 20 pre-cutover sessions: N3 HPR | — → **−15.02%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=N3].hpr` | PASS |
+| `ladder.krx2025.pre.n3.fills` |  | krx2025, 20 pre-cutover sessions: N3 fills | — → **228** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=N3].fills` | PASS |
+| `ladder.krx2025.pre.f-opt.hpr` |  | krx2025, 20 pre-cutover sessions: F-opt HPR | — → **−7.58%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=F-opt].hpr` | PASS |
+| `ladder.krx2025.pre.f-opt.fills` |  | krx2025, 20 pre-cutover sessions: F-opt fills | — → **261** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=F-opt].fills` | PASS |
+| `ladder.krx2025.pre.f-con.hpr` |  | krx2025, 20 pre-cutover sessions: F-con HPR | — → **−25.55%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=F-con].hpr` | PASS |
+| `ladder.krx2025.pre.f-con.fills` |  | krx2025, 20 pre-cutover sessions: F-con fills | — → **153** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=F-con].fills` | PASS |
+| `ladder.krx2025.post.n0.hpr` |  | krx2025, 20 post-cutover sessions: N0 HPR | — (refused before the rerun) → **+36.70%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=N0].hpr` | PASS |
+| `ladder.krx2025.post.n0.fills` |  | krx2025, 20 post-cutover sessions: N0 fills | — → **465** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=N0].fills` | PASS |
+| `ladder.krx2025.post.n1.hpr` |  | krx2025, 20 post-cutover sessions: N1 HPR | — (refused before the rerun) → **−32.47%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=N1].hpr` | PASS |
+| `ladder.krx2025.post.n1.fills` |  | krx2025, 20 post-cutover sessions: N1 fills | — → **465** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=N1].fills` | PASS |
+| `ladder.krx2025.post.n2.hpr` |  | krx2025, 20 post-cutover sessions: N2 HPR | — (refused before the rerun) → **−32.47%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=N2].hpr` | PASS |
+| `ladder.krx2025.post.n2.fills` |  | krx2025, 20 post-cutover sessions: N2 fills | — → **465** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=N2].fills` | PASS |
+| `ladder.krx2025.post.n3.hpr` |  | krx2025, 20 post-cutover sessions: N3 HPR | — (refused before the rerun) → **−35.01%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=N3].hpr` | PASS |
+| `ladder.krx2025.post.n3.fills` |  | krx2025, 20 post-cutover sessions: N3 fills | — → **465** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=N3].fills` | PASS |
+| `ladder.krx2025.post.f-opt.hpr` |  | krx2025, 20 post-cutover sessions: F-opt HPR | — (refused before the rerun) → **−4.81%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=F-opt].hpr` | PASS |
+| `ladder.krx2025.post.f-opt.fills` |  | krx2025, 20 post-cutover sessions: F-opt fills | — → **314** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=F-opt].fills` | PASS |
+| `ladder.krx2025.post.f-con.hpr` |  | krx2025, 20 post-cutover sessions: F-con HPR | — (refused before the rerun) → **−23.39%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=F-con].hpr` | PASS |
+| `ladder.krx2025.post.f-con.fills` |  | krx2025, 20 post-cutover sessions: F-con fills | — → **205** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.post_cutover.rungs.[rung=F-con].fills` | PASS |
+| `ladder.im2022.f-opt.fn` |  | im2022: F-opt fills / N0 fills | — → **153.5%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: computed from `result/mm_ladder/im2022.md` row /^\| F-opt \|/ cell 2; `result/mm_ladder/im2022.md` row /^\| N0 \|/ cell 2 | PASS: Above 100%: §6 criterion 1 (faithful fills < naive) fails for this arm. |
+| `ladder.im2022.f-con.fn` |  | im2022: F-con fills / N0 fills | — → **89.9%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: computed from `result/mm_ladder/im2022.md` row /^\| F-con \|/ cell 2; `result/mm_ladder/im2022.md` row /^\| N0 \|/ cell 2 | PASS |
+| `ladder.krx2025.f-opt.fn` |  | krx2025, all 40 sessions: F-opt fills / N0 fills | — → **83.0%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: computed from `result/mm_ladder/krx2025.json` `rungs.[rung=F-opt].fills`; `result/mm_ladder/krx2025.json` `rungs.[rung=N0].fills` | PASS |
+| `ladder.krx2025.f-con.fn` |  | krx2025, all 40 sessions: F-con fills / N0 fills | — → **51.7%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: computed from `result/mm_ladder/krx2025.json` `rungs.[rung=F-con].fills`; `result/mm_ladder/krx2025.json` `rungs.[rung=N0].fills` | PASS |
+| `ladder.krx2025.pre.f-opt.fn` |  | krx2025, 20 pre-cutover sessions: F-opt fills / N0 fills | — → **114.5%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: computed from `result/mm_ladder/krx2025.json` `views.pre_cutover.rungs.[rung=F-opt].fills`; `result/mm_ladder/krx2025.json` `views.pre_cutover.rungs.[rung=N0].fills` | PASS: Above 100%: §6 criterion 1 (faithful fills < naive) fails for this arm. |
+| `ladder.krx2025.pre.f-con.fn` |  | krx2025, 20 pre-cutover sessions: F-con fills / N0 fills | — → **67.1%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: computed from `result/mm_ladder/krx2025.json` `views.pre_cutover.rungs.[rung=F-con].fills`; `result/mm_ladder/krx2025.json` `views.pre_cutover.rungs.[rung=N0].fills` | PASS |
+| `ladder.krx2025.post.f-opt.fn` |  | krx2025, 20 post-cutover sessions: F-opt fills / N0 fills | — → **67.5%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: computed from `result/mm_ladder/krx2025.json` `views.post_cutover.rungs.[rung=F-opt].fills`; `result/mm_ladder/krx2025.json` `views.post_cutover.rungs.[rung=N0].fills` | PASS |
+| `ladder.krx2025.post.f-con.fn` |  | krx2025, 20 post-cutover sessions: F-con fills / N0 fills | — → **44.1%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: computed from `result/mm_ladder/krx2025.json` `views.post_cutover.rungs.[rung=F-con].fills`; `result/mm_ladder/krx2025.json` `views.post_cutover.rungs.[rung=N0].fills` | PASS |
+| `ladder.im2022.json_agrees` |  | im2022: ladder JSON HPRs equal the markdown's first table | — → **6** | ProtoMarketMaker: `result/mm_ladder/im2022.json` @ `c92e2b7` :: `result/mm_ladder/im2022.json` `rungs[].hpr` vs `result/mm_ladder/im2022.md` | PASS |
+| `ladder.im2022.f-opt.source_sha` |  | im2022: F-opt faithful-A result file matches the sha256 the ladder records | — → **1** | ProtoMarketMaker: `result/mm_ladder/im2022.json` @ `c92e2b7` :: sha256 of the file at `faithful_sources.F-opt.path` vs `faithful_sources.F-opt.sha256` | PASS |
+| `ladder.im2022.f-con.source_sha` |  | im2022: F-con faithful-A result file matches the sha256 the ladder records | — → **1** | ProtoMarketMaker: `result/mm_ladder/im2022.json` @ `c92e2b7` :: sha256 of the file at `faithful_sources.F-con.path` vs `faithful_sources.F-con.sha256` | PASS |
+| `ladder.krx2025.json_agrees` |  | krx2025: ladder JSON HPRs equal the markdown's first table | — → **6** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `result/mm_ladder/krx2025.json` `rungs[].hpr` vs `result/mm_ladder/krx2025.md` | PASS |
+| `ladder.krx2025.f-opt.source_sha` |  | krx2025: F-opt faithful-A result file matches the sha256 the ladder records | — → **1** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: sha256 of the file at `faithful_sources.F-opt.path` vs `faithful_sources.F-opt.sha256` | PASS |
+| `ladder.krx2025.f-con.source_sha` |  | krx2025: F-con faithful-A result file matches the sha256 the ladder records | — → **1** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: sha256 of the file at `faithful_sources.F-con.path` vs `faithful_sources.F-con.sha256` | PASS |
+| `ladder.im2022.f-con.undecided` |  | im2022: F-con undecided orders | — → **99.88%** | ProtoMarketMaker: `result/mm_ladder/im2022.md` @ `c92e2b7` :: row /^\| F-con \|/ cell 7 | PASS |
+| `ladder.krx2025.f-con.undecided` |  | krx2025, all 40 sessions: F-con undecided orders | 99.63% (pre-cutover, before the rerun) → **99.54%** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-con].undecided_order_rate` | PASS |
+| `ladder.krx2025.pre.f-con.undecided` |  | krx2025, pre-cutover: F-con undecided orders | **99.63%** (unchanged) | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `views.pre_cutover.rungs.[rung=F-con].undecided_order_rate` | PASS |
+| `ladder.krx2025.f-con.margin_calls` |  | krx2025, all 40 sessions: F-con margin calls | — → **31** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-con].margin_calls` | PASS |
+| `ladder.krx2025.f-con.forced_executed` |  | krx2025: F-con forced liquidations executed | — → **3** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-con].forced_liquidations_executed` | PASS |
+| `ladder.krx2025.f-opt.ccp_nights` |  | krx2025: F-opt post-KRX CCP nights with a position | — → **20** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-opt].ccp_nights` | PASS |
+| `ladder.krx2025.f-opt.ccp_indeterminate` |  | krx2025: F-opt CCP nights indeterminate | — → **0** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-opt].ccp_indeterminate_nights` | PASS |
+| `ladder.krx2025.f-opt.ccp_calendar_unknown` |  | krx2025: F-opt calendar-spread charge UNKNOWN | — → **0** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-opt].ccp_calendar_spread_unknown` | PASS |
+| `ladder.krx2025.f-con.ccp_nights` |  | krx2025: F-con post-KRX CCP nights with a position | — → **19** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-con].ccp_nights` | PASS |
+| `ladder.krx2025.f-con.ccp_indeterminate` |  | krx2025: F-con CCP nights indeterminate | — → **0** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-con].ccp_indeterminate_nights` | PASS |
+| `ladder.krx2025.f-con.ccp_calendar_unknown` |  | krx2025: F-con calendar-spread charge UNKNOWN | — → **0** | ProtoMarketMaker: `result/mm_ladder/krx2025.json` @ `c92e2b7` :: `rungs.[rung=F-con].ccp_calendar_spread_unknown` | PASS |
+| `ladder.markout.im2022.n3.5m` |  | im2022, all 40 sessions: mean 5-min markout per fill, N3 (index pts; + good for the maker) | −2.24 naive / −0.78 faithful (first 6 im2022 sessions, prose) → **−0.71** | ProtoMarketMaker: `result/mm_markout/im2022_markout.json` @ `c92e2b7` :: `arms.N3.markout_mean_points.5m` | PASS |
+| `ladder.markout.im2022.f-opt.5m` |  | im2022, all 40 sessions: mean 5-min markout per fill, F-opt (index pts; + good for the maker) | — → **+0.41** | ProtoMarketMaker: `result/mm_markout/im2022_markout.json` @ `c92e2b7` :: `arms.F-opt.markout_mean_points.5m` | PASS |
+| `ladder.markout.im2022.f-con.5m` |  | im2022, all 40 sessions: mean 5-min markout per fill, F-con (index pts; + good for the maker) | — → **−0.57** | ProtoMarketMaker: `result/mm_markout/im2022_markout.json` @ `c92e2b7` :: `arms.F-con.markout_mean_points.5m` | PASS |
+| `ladder.markout.krx2025.n3.5m` |  | krx2025, all 40 sessions: mean 5-min markout per fill, N3 (index pts; + good for the maker) | — → **−2.22** | ProtoMarketMaker: `result/mm_markout/krx2025_markout.json` @ `c92e2b7` :: `arms.N3.markout_mean_points.5m` | PASS |
+| `ladder.markout.krx2025.f-opt.5m` |  | krx2025, all 40 sessions: mean 5-min markout per fill, F-opt (index pts; + good for the maker) | — → **−0.68** | ProtoMarketMaker: `result/mm_markout/krx2025_markout.json` @ `c92e2b7` :: `arms.F-opt.markout_mean_points.5m` | PASS |
+| `ladder.markout.krx2025.f-con.5m` |  | krx2025, all 40 sessions: mean 5-min markout per fill, F-con (index pts; + good for the maker) | — → **−0.31** | ProtoMarketMaker: `result/mm_markout/krx2025_markout.json` @ `c92e2b7` :: `arms.F-con.markout_mean_points.5m` | PASS |
+| `ladder.markout.im2022.f-opt.1m` |  | im2022: mean 1-min markout per fill, F-opt (record for the WITHDRAWN 'no ghost fills' claim) | — → **+0.21** | ProtoMarketMaker: `result/mm_markout/im2022_markout.json` @ `c92e2b7` :: `arms.F-opt.markout_mean_points.1m` | PASS: Withdrawn claim: kept as the record only; the paper does not state 'no ghost fills'. |
+| `ladder.markout.krx2025.f-opt.1m` |  | krx2025: mean 1-min markout per fill, F-opt (record for the WITHDRAWN 'no ghost fills' claim) | — → **+0.06** | ProtoMarketMaker: `result/mm_markout/krx2025_markout.json` @ `c92e2b7` :: `arms.F-opt.markout_mean_points.1m` | PASS: Withdrawn claim: kept as the record only; the paper does not state 'no ghost fills'. |
 
 ### Data-slice integrity (sha256 of every committed slice file vs its manifest)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `c2bb172` when generated)
 - **Command:** this checker
 - **Data slice:** each manifest named in the row
 
@@ -662,11 +669,11 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 | `slice.pair.market.w2.manifest` |  | ProtoPair `data/market/w2/DATA-MANIFEST.md`: files matching sha256 | — → **11** | ProtoPair: `data/market/w2/DATA-MANIFEST.md` @ `0c8b77b` :: files whose sha256 matches the manifest | PASS |
 | `slice.grid.manifest.w2021_11.manifest` |  | ProtoGrid `data/manifest/w2021_11/DATA-MANIFEST.md`: files matching sha256 | — → **8** | ProtoGrid: `data/manifest/w2021_11/DATA-MANIFEST.md` @ `199a61f` :: files whose sha256 matches the manifest | PASS |
 | `slice.grid.manifest.w2022_10.manifest` |  | ProtoGrid `data/manifest/w2022_10/DATA-MANIFEST.md`: files matching sha256 | — → **8** | ProtoGrid: `data/manifest/w2022_10/DATA-MANIFEST.md` @ `199a61f` :: files whose sha256 matches the manifest | PASS |
-| `slice.marketmaker.im2022.manifest` |  | ProtoMarketMaker `data/im2022-MANIFEST.md`: files matching sha256 | — → **12** | ProtoMarketMaker: `data/im2022-MANIFEST.md` @ `f0894d5` :: files whose sha256 matches the manifest | PASS |
-| `slice.marketmaker.krx2025.manifest` |  | ProtoMarketMaker `data/krx2025-MANIFEST.md`: files matching sha256 | — → **12** | ProtoMarketMaker: `data/krx2025-MANIFEST.md` @ `4474777` :: files whose sha256 matches the manifest | PASS |
-| `slice.smartbeta.result.w2022` |  | SB `result/null_anchor/w2022.json` recorded slice sha256 match the committed files | — → **11** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `02bc8ca` :: `provenance.slices` sha256 vs the committed files | PASS |
-| `slice.smartbeta.result.w2023` |  | SB `result/null_anchor/w2023.json` recorded slice sha256 match the committed files | — → **11** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `02bc8ca` :: `provenance.slices` sha256 vs the committed files | PASS |
-| `slice.pair.result.w1` |  | Pair `result/pair_anchor/w1.json` recorded slice sha256 match the committed files | — → **11** | ProtoPair: `result/pair_anchor/w1.json` @ `adee6db` :: `slice` sha256 vs the committed files | PASS |
-| `slice.pair.result.w2` |  | Pair `result/pair_anchor/w2.json` recorded slice sha256 match the committed files | — → **11** | ProtoPair: `result/pair_anchor/w2.json` @ `adee6db` :: `slice` sha256 vs the committed files | PASS |
+| `slice.marketmaker.im2022.manifest` |  | ProtoMarketMaker `data/im2022-MANIFEST.md`: files matching sha256 | — → **12** | ProtoMarketMaker: `data/im2022-MANIFEST.md` @ `f507d2d` :: files whose sha256 matches the manifest | PASS |
+| `slice.marketmaker.krx2025.manifest` |  | ProtoMarketMaker `data/krx2025-MANIFEST.md`: files matching sha256 | — → **12** | ProtoMarketMaker: `data/krx2025-MANIFEST.md` @ `b636a30` :: files whose sha256 matches the manifest | PASS |
+| `slice.smartbeta.result.w2022` |  | SB `result/null_anchor/w2022.json` recorded slice sha256 match the committed files | — → **11** | ProtoSmartBeta: `result/null_anchor/w2022.json` @ `bdc741e` :: `provenance.slices` sha256 vs the committed files | PASS |
+| `slice.smartbeta.result.w2023` |  | SB `result/null_anchor/w2023.json` recorded slice sha256 match the committed files | — → **11** | ProtoSmartBeta: `result/null_anchor/w2023.json` @ `bdc741e` :: `provenance.slices` sha256 vs the committed files | PASS |
+| `slice.pair.result.w1` |  | Pair `result/pair_anchor/w1.json` recorded slice sha256 match the committed files | — → **11** | ProtoPair: `result/pair_anchor/w1.json` @ `505ca0e` :: `slice` sha256 vs the committed files | PASS |
+| `slice.pair.result.w2` |  | Pair `result/pair_anchor/w2.json` recorded slice sha256 match the committed files | — → **11** | ProtoPair: `result/pair_anchor/w2.json` @ `505ca0e` :: `slice` sha256 vs the committed files | PASS |
 
 <!-- END GENERATED -->

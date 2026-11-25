@@ -231,7 +231,9 @@ because the reconstructed ladder before 2023-01-03 carries no displayed
 sizes at all. **Counter 2, the dated-margin affordability shift:** the same
 500,000,000đ deposit affords **37 contracts** at the 13% VSD-IM rate and
 **28** once it steps to 17% on 2022-12-15 — a **24% (9-contract)**
-affordability cut at an unchanged price — with **zero** margin calls or
+affordability cut at an unchanged price (as recorded from the original,
+since-lost run; the camera-ready rerun measures **36 → 28**, an 8-contract
+cut: `docs/camera-ready-numbers.md`, discrepancy #4) — with **zero** margin calls or
 forced liquidations over the OOS run (**0/0**) and a peak margin utilisation
 of **52.3%**. Both of those are **intraday-flat** results: the faithful arm
 builds a fresh backend *per trading day* and flattens at each day's close

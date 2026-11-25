@@ -46,7 +46,7 @@ def test_no_fail_on_committed_results():
     fails = [(r.entry.id, r.detail) for r in results if r.verdict == "FAIL"]
     assert not fails, fails
     verdicts = {r.verdict for r in results}
-    assert "PASS" in verdicts and "PENDING" in verdicts
+    assert "PASS" in verdicts   # PENDING is allowed but no longer expected: every number has a source
 
 
 def test_a_wrong_value_fails(tmp_path):
