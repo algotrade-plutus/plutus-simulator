@@ -146,4 +146,7 @@ ghost-side limitation (LIMITATIONS item 2) stays disclosed. Not assessed: S2's e
 - **Beyond 3 book levels:** stay undecided; the queue band carries the result (no data in this context).
 - **MarketMaker in the paper:** decided later. Meanwhile, the repo gets a full preliminary report
   (`ProtoMarketMaker/result/REPORT.md`).
-- **Post-KRX derivatives orders:** open (see the discussion of 2026-11-25).
+- **Post-KRX derivatives orders:** KRX admits them, so the engine keeps admitting them. The margin rule is now
+  modelled in both layers: the broker checks intraday against VSDC's published initial-margin rate, and VSDC
+  computes the binding requirement once after the close (QĐ 26, Phụ lục 2; binary test; top-up by 09:30 T+1).
+  Unpublished inputs (calendar-spread rate, haircuts) give UNKNOWN, never a guess.
