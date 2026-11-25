@@ -281,7 +281,8 @@ A_E1 = "docs/reference/tables/t2/e1_aggregates.json"
 T_E1 = "docs/reference/tables/t2/e1_published/totals.json"
 F_E1 = "figures/e1_fill_divergence.json"
 P_E1 = "docs/reference/tables/t2/e1_published"
-F2A = "docs/reference/tables/t2/indeterminate_after_change2.json"
+F2A = "docs/reference/tables/t2/indeterminate_after_band_edge_fix.json"
+F2C = "docs/reference/tables/t2/indeterminate_after_change2.json"
 F2B = "docs/reference/tables/t2/indeterminate_before_change2.json"
 F3 = "figures/f3_cross_policy_divergence.json"
 FUT = "docs/reference/tables/t2/futures_margin.md"
@@ -298,7 +299,7 @@ GROUPS: dict[str, Group] = {
     "f2": Group("F2: the indeterminate rate, bar vs tick", SIM,
                 "`PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices "
                 "(see `docs/reference/tables/t2/indeterminate.md`); the figure and its JSON are re-rendered with "
-                "`measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_change2.json`",
+                "`measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`",
                 SL_F2),
     "f3": Group("F3: fill-policy axis (S1) and queue axis (S9)", SIM,
                 "`env -u PLUTUS_DATA_ROOT pytest strategies/test_f3_cross_policy.py strategies/test_s9_queue_sensitivity.py` "
@@ -437,16 +438,20 @@ def _registry() -> list[Entry]:
         pct("f2.bar.ci_lo", "f2", "bar, Wilson 95% low", "32.3", "29.7%", arm(F2A, BAR, "ci_low"), decimals=1),
         pct("f2.bar.ci_hi", "f2", "bar, Wilson 95% high", "39.4", "35.7%", arm(F2A, BAR, "ci_high"), decimals=1),
         num("f2.bar.n", "f2", "bar, fill evaluations", "698", "950", arm(F2A, BAR, "evaluations")),
-        pct("f2.tick_opt", "f2", "undecided, `book_walk` tick, optimistic queue", "85.6%", "10.1%",
+        pct("f2.tick_opt", "f2", "undecided, `book_walk` tick, optimistic queue", "85.6%", "7.1%",
             arm(F2A, OPT, "rate"), decimals=1),
-        pct("f2.tick_opt.ci_lo", "f2", "tick optimistic, Wilson 95% low", "83.5", "8.7%", arm(F2A, OPT, "ci_low"),
+        pct("f2.tick_opt.ci_lo", "f2", "tick optimistic, Wilson 95% low", "83.5", "5.9%", arm(F2A, OPT, "ci_low"),
             decimals=1),
-        pct("f2.tick_opt.ci_hi", "f2", "tick optimistic, Wilson 95% high", "87.4", "11.7%", arm(F2A, OPT, "ci_high"),
+        pct("f2.tick_opt.ci_hi", "f2", "tick optimistic, Wilson 95% high", "87.4", "8.5%", arm(F2A, OPT, "ci_high"),
             decimals=1),
-        num("f2.tick_opt.n", "f2", "tick optimistic, fill evaluations", "1,212", "1,484", arm(F2A, OPT, "evaluations")),
-        pct("f2.tick_con", "f2", "undecided, `book_walk` tick, conservative queue", "99.7%", "60.2%",
+        num("f2.tick_opt.n", "f2", "tick optimistic, fill evaluations", "1,212", "1,443", arm(F2A, OPT, "evaluations")),
+        pct("f2.tick_con", "f2", "undecided, `book_walk` tick, conservative queue", "99.7%", "58.7%",
             arm(F2A, CON, "rate"), decimals=1),
-        num("f2.tick_con.n", "f2", "tick conservative, fill evaluations", "1,545", "1,650", arm(F2A, CON, "evaluations")),
+        num("f2.tick_con.n", "f2", "tick conservative, fill evaluations", "1,545", "1,611", arm(F2A, CON, "evaluations")),
+        pct("f2.tick_opt.before_band_fix", "f2", "tick optimistic before the band-edge fix (`67f18fa`)", "—", "10.1%",
+            arm(F2C, OPT, "rate"), decimals=1),
+        pct("f2.tick_con.before_band_fix", "f2", "tick conservative before the band-edge fix (`67f18fa`)", "—", "60.2%",
+            arm(F2C, CON, "rate"), decimals=1),
         pct("f2.tick_con.before_change2", "f2", "tick conservative before change 2 (`e528633`)", "99.7%", "78.2%",
             arm(F2B, CON, "rate"), decimals=1),
         pct("f2.bar.resolution_limit", "f2", "bar: share whose cause is the resolution limit", "35.8%", "32.6%",
@@ -455,9 +460,9 @@ def _registry() -> list[Entry]:
             "66", "90", J(SIM, "figures/f2_indeterminate_rate.json", "instrument_days")),
         pct("f2.figure.bar", "f2", "figure data: bar", "35.8%", "32.6%",
             arm("figures/f2_indeterminate_rate.json", BAR, "rate"), decimals=1),
-        pct("f2.figure.tick_opt", "f2", "figure data: tick optimistic", "85.6%", "10.1%",
+        pct("f2.figure.tick_opt", "f2", "figure data: tick optimistic", "85.6%", "7.1%",
             arm("figures/f2_indeterminate_rate.json", OPT, "rate"), decimals=1),
-        pct("f2.figure.tick_con", "f2", "figure data: tick conservative", "99.7%", "60.2%",
+        pct("f2.figure.tick_con", "f2", "figure data: tick conservative", "99.7%", "58.7%",
             arm("figures/f2_indeterminate_rate.json", CON, "rate"), decimals=1),
         num("f2.tick.resolution_limit", "f2", "tick (both queues): resolution-limit share", "0", "0",
             CALC(lambda x, y: x + y, arm(F2A, OPT, "resolution_limit_share"), arm(F2A, CON, "resolution_limit_share"))),

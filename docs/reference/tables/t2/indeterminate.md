@@ -18,7 +18,10 @@ the indeterminate rate (F2)"). That table is **not** edited here; this file is t
   slices. Change 2 touches only `src/plutus/market/session/book_walk.py` among the code this measurement runs.
 - **CI:** 95% Wilson. **N** = fill evaluations (each live order, each mark that reaches the fill policy), so N
   differs between arms and between code versions: an order that fills earlier stops being evaluated.
-- Raw outputs: `indeterminate_before_change2.json`, `indeterminate_after_change2.json` (this directory).
+- Raw outputs: `indeterminate_before_change2.json`, `indeterminate_after_change2.json`,
+  `indeterminate_after_band_edge_fix.json` (this directory). **The camera-ready values are the last one**: after the
+  band-edge fix (`67f18fa`) the tick arms lose their 48 `{book, low}` evaluations each, so tick optimistic is
+  **7.1%** [5.9, 8.5], 102 / 1,443, and tick conservative **58.7%** [56.3, 61.1], 946 / 1,611; the bar is unchanged.
 
 ## The rows
 

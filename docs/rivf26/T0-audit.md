@@ -366,3 +366,12 @@ S-8, S-11, S-12, S-17; C-1..C-3; M-1..M-4).
   across the scenarios and strategies suites is byte-identical to `rivf26` (1,409 advances, all before the cutover).
   The checker is unchanged: 264 PASS, 0 FAIL, 20 PENDING.
 - **Counts.** Unit suite 2,206 passed, 453 skipped (was 2,187); scenarios 39 passed; strategies 18 passed, 2 skipped.
+
+### 4k. F2 rerun after the band-edge fix (2026-11-25)
+
+`67f18fa` removes the band-edge gap that left 48 evaluations per tick arm undecided (`{book, low}`). Rerun of
+`measurements/indeterminate_rate.py` on the same 90 days: bar 32.6% (unchanged), tick optimistic 10.1% → 7.1%,
+tick conservative 60.2% → 58.7%. Evaluations fall (1,484 → 1,443; 1,650 → 1,611) because orders that now fill stop
+being re-evaluated. Result in `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`; figure re-rendered;
+checker updated. The MarketMaker rerun on `373f9a7` and the E1 rerun in the T8.3 benchmark showed no change from
+this fix, so F2 is the only paper number it moves.

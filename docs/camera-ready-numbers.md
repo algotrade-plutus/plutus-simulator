@@ -197,10 +197,10 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 - Macros with no number behind them yet: `\sbWin` `\gridWin` `\mmWin` `\pairWin` (window labels, not
   numbers: w2022/w2023, w2022_10/w2021_11, krx2025/im2022, w1/w2), `\pairFlipWin` (both windows flip),
   `\nAcceptance` (no definition found in the handoff), `\cameraTag` (set at freeze).
-- **F2 predates the band-edge fix `67f18fa`.** Its tick arms carry 48 evaluations each whose cause is
-  `{book, low}` (the band-edge gap that fix removes; `indeterminate_after_change2.json`). §4i reports no outcome
-  change in the scenario and strategy suites but does not mention F2. F2 was not rerun here; a rerun could lower the
-  tick rates (10.1%, 60.2%).
+- **F2 rerun after the band-edge fix `67f18fa` (2026-11-25, engine `7c36a43`).** The 48 `{book, low}` evaluations
+  per tick arm are gone: tick optimistic 10.1% → **7.1%**, tick conservative 60.2% → **58.7%**, bar unchanged at
+  32.6%. Result: `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`; the figure is re-rendered from it.
+  The reversal (tick below bar) is stronger.
 - `strategies/fixtures/extract/` has no sha256 manifest, so the S9 queue numbers have no slice hash.
 - Numbers that exist only in prose are PENDING with a note (S2, J18, validator edges, property counts); they
   need a committed result file or an exact test pin before they can be checked.
@@ -211,7 +211,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### E1: fill-policy divergence over the 2022 HSX population
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `a2021d3` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
 - **Command:** `PYTHONPATH=src:. python -m measurements.e1_regenerate run --data-dir <rivf26-data>/t2-e1`, then `python measurements/e1_publish.py --data-root <rivf26-data>/t2-e1 --out docs/reference/tables/t2/e1_published`
 - **Data slice:** `rivf26/data/t2-e1/` (391 HSX tickers, 2022; not shipped, statistics only; sha256 in the map's slice table)
 
@@ -265,34 +265,36 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### F2: the indeterminate rate, bar vs tick
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `a2021d3` when generated)
-- **Command:** `PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices (see `docs/reference/tables/t2/indeterminate.md`); the figure and its JSON are re-rendered with `measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_change2.json`
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Command:** `PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices (see `docs/reference/tables/t2/indeterminate.md`); the figure and its JSON are re-rendered with `measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`
 - **Data slice:** `rivf26/data/t2-indeterminate/{daily,book}` (FPT, HPG, HTV, 2022-10-20..11-30; not shipped)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `f2.days` |  | instrument-days (FPT, HPG, HTV) | 66 → **90** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `instrument_days` | PASS |
-| `f2.bar` |  | undecided, `hard` at the daily bar | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=BAR / hard].rate` | PASS |
-| `f2.bar.ci_lo` |  | bar, Wilson 95% low | 32.3 → **29.7%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=BAR / hard].ci_low` | PASS |
-| `f2.bar.ci_hi` |  | bar, Wilson 95% high | 39.4 → **35.7%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=BAR / hard].ci_high` | PASS |
-| `f2.bar.n` |  | bar, fill evaluations | 698 → **950** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=BAR / hard].evaluations` | PASS |
-| `f2.tick_opt` |  | undecided, `book_walk` tick, optimistic queue | 85.6% → **10.1%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
-| `f2.tick_opt.ci_lo` |  | tick optimistic, Wilson 95% low | 83.5 → **8.7%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (optimistic)].ci_low` | PASS |
-| `f2.tick_opt.ci_hi` |  | tick optimistic, Wilson 95% high | 87.4 → **11.7%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (optimistic)].ci_high` | PASS |
-| `f2.tick_opt.n` |  | tick optimistic, fill evaluations | 1,212 → **1,484** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (optimistic)].evaluations` | PASS |
-| `f2.tick_con` |  | undecided, `book_walk` tick, conservative queue | 99.7% → **60.2%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
-| `f2.tick_con.n` |  | tick conservative, fill evaluations | 1,545 → **1,650** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (conservative)].evaluations` | PASS |
+| `f2.days` |  | instrument-days (FPT, HPG, HTV) | 66 → **90** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `instrument_days` | PASS |
+| `f2.bar` |  | undecided, `hard` at the daily bar | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].rate` | PASS |
+| `f2.bar.ci_lo` |  | bar, Wilson 95% low | 32.3 → **29.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].ci_low` | PASS |
+| `f2.bar.ci_hi` |  | bar, Wilson 95% high | 39.4 → **35.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].ci_high` | PASS |
+| `f2.bar.n` |  | bar, fill evaluations | 698 → **950** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].evaluations` | PASS |
+| `f2.tick_opt` |  | undecided, `book_walk` tick, optimistic queue | 85.6% → **7.1%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
+| `f2.tick_opt.ci_lo` |  | tick optimistic, Wilson 95% low | 83.5 → **5.9%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (optimistic)].ci_low` | PASS |
+| `f2.tick_opt.ci_hi` |  | tick optimistic, Wilson 95% high | 87.4 → **8.5%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (optimistic)].ci_high` | PASS |
+| `f2.tick_opt.n` |  | tick optimistic, fill evaluations | 1,212 → **1,443** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (optimistic)].evaluations` | PASS |
+| `f2.tick_con` |  | undecided, `book_walk` tick, conservative queue | 99.7% → **58.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
+| `f2.tick_con.n` |  | tick conservative, fill evaluations | 1,545 → **1,611** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (conservative)].evaluations` | PASS |
+| `f2.tick_opt.before_band_fix` |  | tick optimistic before the band-edge fix (`67f18fa`) | — → **10.1%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
+| `f2.tick_con.before_band_fix` |  | tick conservative before the band-edge fix (`67f18fa`) | — → **60.2%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
 | `f2.tick_con.before_change2` |  | tick conservative before change 2 (`e528633`) | 99.7% → **78.2%** | `docs/reference/tables/t2/indeterminate_before_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
-| `f2.bar.resolution_limit` |  | bar: share whose cause is the resolution limit | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=BAR / hard].resolution_limit_share` | PASS |
+| `f2.bar.resolution_limit` |  | bar: share whose cause is the resolution limit | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].resolution_limit_share` | PASS |
 | `f2.figure.days` |  | figure data (`figures/f2_indeterminate_rate.json`) carries the same days | 66 → **90** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `instrument_days` | PASS |
 | `f2.figure.bar` |  | figure data: bar | 35.8% → **32.6%** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `arms.[label=BAR / hard].rate` | PASS |
-| `f2.figure.tick_opt` |  | figure data: tick optimistic | 85.6% → **10.1%** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
-| `f2.figure.tick_con` |  | figure data: tick conservative | 99.7% → **60.2%** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
-| `f2.tick.resolution_limit` |  | tick (both queues): resolution-limit share | **0** (unchanged) | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: computed from `docs/reference/tables/t2/indeterminate_after_change2.json` `arms.[label=TICK / book-walk (optimistic)].resolution_limit_share`; `docs/reference/tables/t2/indeterminate_after_change2.json` `arms.[label=TICK / book-walk (conservative)].resolution_limit_share` | PASS |
+| `f2.figure.tick_opt` |  | figure data: tick optimistic | 85.6% → **7.1%** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
+| `f2.figure.tick_con` |  | figure data: tick conservative | 99.7% → **58.7%** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
+| `f2.tick.resolution_limit` |  | tick (both queues): resolution-limit share | **0** (unchanged) | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: computed from `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` `arms.[label=TICK / book-walk (optimistic)].resolution_limit_share`; `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` `arms.[label=TICK / book-walk (conservative)].resolution_limit_share` | PASS |
 
 ### F3: fill-policy axis (S1) and queue axis (S9)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `a2021d3` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_f3_cross_policy.py strategies/test_s9_queue_sensitivity.py` (writes `figures/f3_cross_policy_divergence.json`)
 - **Data slice:** `strategies/fixtures/parquet/` (DATA-MANIFEST, checked below) and `strategies/fixtures/extract/` (no sha256 manifest; `PROVENANCE.md` only)
 
@@ -313,7 +315,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Derivatives margin: regime split, the IM step, margin-call incidence
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `a2021d3` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/t2_futures_margin.py <rivf26-data>/t2-futures-margin`
 - **Data slice:** `rivf26/data/t2-futures-margin/` (VN30F front month, 2021-06-01..2022-12-30; sha256 in `docs/reference/tables/t2/futures_margin.md`)
 
@@ -335,7 +337,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Equity admission, band agreement, tick-grid conformity
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `a2021d3` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
 - **Command:** `measurements/equity_admission.py`, `band_conformance.py`, `grid_conformity.py` (exact invocations in `docs/reference/tables/t2/hsx_daily.md`)
 - **Data slice:** `rivf26/data/t2-hsx-daily/` and `t2-hsx-daily-grid-history/` (sha256 in `docs/reference/tables/t2/hsx_daily.md`)
 
@@ -360,7 +362,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### T8: rule versions, broker fields, maintenance effort, validator, properties, benchmark
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `a2021d3` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
 - **Command:** `PYTHONPATH=src python measurements/t8_counts.py`; `python measurements/maintenance_effort.py --markdown`; `PYTHONPATH=src:. python measurements/perf_benchmark.py`
 - **Data slice:** none (engine source and git history)
 
@@ -396,7 +398,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Test-suite counts (F4)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `a2021d3` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest tests`; `pytest scenarios`; `pytest strategies` (each on its own)
 - **Data slice:** shipped fixtures
 
@@ -411,7 +413,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Scenario and strategy findings quoted in the text
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `a2021d3` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_s2_*.py scenarios`
 - **Data slice:** shipped fixtures
 
@@ -638,7 +640,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Data-slice integrity (sha256 of every committed slice file vs its manifest)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `a2021d3` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
 - **Command:** this checker
 - **Data slice:** each manifest named in the row
 

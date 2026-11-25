@@ -30,64 +30,44 @@
       "label": "TICK / book-walk (optimistic)",
       "resolution": "tick",
       "policy": "book_walk:optimistic",
-      "evaluations": 1484,
-      "indeterminate": 150,
-      "rate": 0.10107816711590296,
-      "ci_low": 0.08675705624513627,
-      "ci_high": 0.11745923106112524,
+      "evaluations": 1443,
+      "indeterminate": 102,
+      "rate": 0.07068607068607069,
+      "ci_low": 0.05857038767438424,
+      "ci_high": 0.08508146689031951,
       "by_cause": {
-        "book": {
-          "count": 48,
-          "share": 0.03234501347708895,
-          "class": "data-ceiling"
-        },
-        "low": {
-          "count": 48,
-          "share": 0.03234501347708895,
-          "class": "data-ceiling"
-        },
         "volume": {
           "count": 102,
-          "share": 0.06873315363881402,
+          "share": 0.07068607068607069,
           "class": "data-ceiling"
         }
       },
       "resolution_limit_share": 0.0,
-      "data_ceiling_share": 0.1334231805929919
+      "data_ceiling_share": 0.07068607068607069
     },
     {
       "label": "TICK / book-walk (conservative)",
       "resolution": "tick",
       "policy": "book_walk:conservative",
-      "evaluations": 1650,
-      "indeterminate": 994,
-      "rate": 0.6024242424242424,
-      "ci_low": 0.5785987008614898,
-      "ci_high": 0.6257739723456613,
+      "evaluations": 1611,
+      "indeterminate": 946,
+      "rate": 0.5872129112352577,
+      "ci_low": 0.5629916830251952,
+      "ci_high": 0.6110192073102635,
       "by_cause": {
-        "book": {
-          "count": 48,
-          "share": 0.02909090909090909,
-          "class": "data-ceiling"
-        },
         "book_size": {
           "count": 842,
-          "share": 0.5103030303030303,
-          "class": "data-ceiling"
-        },
-        "low": {
-          "count": 48,
-          "share": 0.02909090909090909,
+          "share": 0.5226567349472377,
           "class": "data-ceiling"
         },
         "volume": {
           "count": 104,
-          "share": 0.06303030303030303,
+          "share": 0.06455617628801986,
           "class": "data-ceiling"
         }
       },
       "resolution_limit_share": 0.0,
-      "data_ceiling_share": 0.6315151515151515
+      "data_ceiling_share": 0.5872129112352577
     }
   ],
   "finding": "Refining bar->tick does not remove the indeterminacy; it trades the resolution-limit cause (fill_unobservable_at_resolution, dominant at BAR, structurally ZERO at TICK) for data-ceiling causes (book_size/volume). The tick rate depends on the queue assumption (F3's axis): optimistic decides most touches so the rate falls; conservative names the full data ceiling so it does not -- but neither tick arm carries any resolution-limit cause.",

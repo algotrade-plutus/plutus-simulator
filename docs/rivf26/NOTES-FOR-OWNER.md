@@ -136,7 +136,7 @@ ghost-side limitation (LIMITATIONS item 2) stays disclosed. Not assessed: S2's e
 
 - **Principle:** the repos keep every experiment value faithfully, documented in full and easy to follow. The paper
   picks a coherent, succinct subset and a narrative; the details stay in the repo documents.
-- **F2:** report the reversal openly (tick 10.1% undecided vs bar 32.6%); it supports the paper's case. Test to be
+- **F2:** report the reversal openly (tick 7.1% undecided vs bar 32.6%, after the band-edge fix; was 10.1%); it supports the paper's case. Test to be
   rewritten to pin these values.
 - **2016 tick revision:** disclose (the rulebook starts on 2020-01-01; earlier dates resolve to UNKNOWN). Not sourced.
 - **12 uncovered rule edges:** disclose with the count; pinned by `test_rule_tables.py::OPEN_EDGES`.
