@@ -11,7 +11,7 @@ each repo.
 
 | # | Deliverable | Repo · commit | Evidence |
 |---|---|---|---|
-| 1 | **`PlutusBackend`** — reusable `ExchangeSession` facade (`src/plutus/execution/`) | plutus · `14ac995` | 2 tests pass on the shipped fixtures; submits the FPT buy and **fills at 74.0** (J1 case), reads `cash()`/`holdings()` |
+| 1 | **`PlutusBackend`** — reusable `ExchangeSession` facade (`src/plutus/execution/`) | plutus · `189d05c` | 2 tests pass on the shipped fixtures; submits the FPT buy and **fills at 74.0** (J1 case), reads `cash()`/`holdings()` |
 | 2 | ProtoSmartBeta on `rivf-2026` + Plutus editable path dep | ProtoSmartBeta · `29eaeb0` | `from plutus.execution import PlutusBackend` works inside the proto venv |
 | 3 | **Parquet data layer** (4 I/O sites repointed; `return`/`ac_return` cast to float) | ProtoSmartBeta · `e5c4b96` | **behaviour-preserving: IS `1.2971462146128898` and OOS `-0.3497436972790686` reproduce bit-for-bit** |
 | 4 | Regression gate as a test (`tests/test_regression_baseline.py`) | (same) | 2 tests pass — the exact-reproduction gate |
@@ -98,7 +98,7 @@ switching MTL→LIMIT-at-close), **0 indeterminate**. The **drawdown is unchange
 — same risk profile; only the return level moves, and the movable part is mostly
 frictions (advance fee, lot granularity, fill timing) a naive backtest could also
 add. SB is the null anchor. Committed: ProtoSmartBeta `3280d39`
-(`experiments/null_anchor.py`, `tests/test_null_anchor.py`), plutus `505fc6b`
+(`experiments/null_anchor.py`, `tests/test_null_anchor.py`), plutus `1c1e3c9`
 (`docs/reference/tables/experiments_registry.md`). Regenerate: `python -m
 proto_smart_beta.experiments.{extract_market,null_anchor}`.
 

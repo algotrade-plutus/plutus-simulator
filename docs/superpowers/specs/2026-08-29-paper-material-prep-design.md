@@ -104,7 +104,7 @@ is inspectable. Wilson score intervals accompany every headline **proportion**.
   the **post-KRX scenario regime** the code implements (`scenario_margin.py`), rather than
   conceding it unmodelled.
 - **MUST #5 → RESOLVED** in `PUBLISH-CHECKLIST.md` (still says "Open, and live" at `:29`), citing
-  the D71 fix (commit `74e667a`, `exchange.py:2665-2668`, `test_j37_tick_atc_published_close.py`).
+  the D71 fix (commit `25ad5b6`, `exchange.py:2665-2668`, `test_j37_tick_atc_published_close.py`).
 - **Suite counts** everywhere: checklist `:7,:28,:30`, `FEATURES.md:29`, `outline:302`, README
   badge → per-suite **market 1628 / scenarios 38 / strategies 11**; drop the "17 failing" datahub
   qualifier (they pass under the venv).

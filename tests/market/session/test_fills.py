@@ -780,7 +780,7 @@ def test_soft_labels_a_market_fill_inside_the_band_as_traded_through(
 
 
 def test_soft_market_fill_on_a_close_inside_the_band_without_the_extreme():
-    """The close-bound path (``68e1c33``): no low, but a close strictly inside
+    """The close-bound path (``b966d4a``): no low, but a close strictly inside
     the band is a trade on record off the edge -- observed, so traded through."""
     decision = SoftFillPolicy().evaluate(
         _order(**_MARKET), _interval(close=Decimal('97.0')), HSX_EXCHANGE)

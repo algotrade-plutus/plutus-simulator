@@ -448,11 +448,11 @@ def _registry() -> list[Entry]:
         pct("f2.tick_con", "f2", "undecided, `book_walk` tick, conservative queue", "99.7%", "58.7%",
             arm(F2A, CON, "rate"), decimals=1),
         num("f2.tick_con.n", "f2", "tick conservative, fill evaluations", "1,545", "1,611", arm(F2A, CON, "evaluations")),
-        pct("f2.tick_opt.before_band_fix", "f2", "tick optimistic before the band-edge fix (`67f18fa`)", "—", "10.1%",
+        pct("f2.tick_opt.before_band_fix", "f2", "tick optimistic before the band-edge fix (`ba0d9f4`)", "—", "10.1%",
             arm(F2C, OPT, "rate"), decimals=1),
-        pct("f2.tick_con.before_band_fix", "f2", "tick conservative before the band-edge fix (`67f18fa`)", "—", "60.2%",
+        pct("f2.tick_con.before_band_fix", "f2", "tick conservative before the band-edge fix (`ba0d9f4`)", "—", "60.2%",
             arm(F2C, CON, "rate"), decimals=1),
-        pct("f2.tick_con.before_change2", "f2", "tick conservative before change 2 (`e528633`)", "99.7%", "78.2%",
+        pct("f2.tick_con.before_change2", "f2", "tick conservative before change 2 (`254aa1d`)", "99.7%", "78.2%",
             arm(F2B, CON, "rate"), decimals=1),
         pct("f2.bar.resolution_limit", "f2", "bar: share whose cause is the resolution limit", "35.8%", "32.6%",
             arm(F2A, BAR, "resolution_limit_share"), decimals=1),
@@ -611,14 +611,14 @@ def _registry() -> list[Entry]:
         num("t8.bench.e1_wall", "t8", "E1 wall time, full 2022 population (s)", "—", "7.14",
             J(SIM, BENCH, "e1", "wall_s"), tol=0.005, macro=r"\EoneWall"),
         num("t8.bench.e1_rss", "t8", "E1 peak RSS (MB)", "—", "285.8", J(SIM, BENCH, "e1", "peak_rss_mb"), tol=0.05),
-        Entry("t8.bench.commit", "t8", "benchmark ran on plutus-simulator", "—", "373f9a7", expected="373f9a7",
+        Entry("t8.bench.commit", "t8", "benchmark ran on plutus-simulator", "—", "8d46c56", expected="8d46c56",
               get=J(SIM, BENCH, "machine", "plutus_simulator_commit")),
     ]
 
     # ---- Test counts ------------------------------------------------------------------------------------------
-    freeze = ("To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `67f18fa`/`dcaecb9`: the 2 strict "
+    freeze = ("To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `ba0d9f4`/`6e6c104`: the 2 strict "
               "xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` "
-              "(`11ba6cd`, 7 tests) and any later commit.")
+              "(`3b44fd9`, 7 tests) and any later commit.")
     R += [
         pending("tests.unit.passed", "tests", "unit tests passed", "1,646", "2,180", freeze, macro=r"\nUnitTests"),
         pending("tests.unit.xfailed", "tests", "unit tests xfailed (strict)", "—", "0", freeze),
@@ -770,8 +770,8 @@ def _registry() -> list[Entry]:
             macro=r"\pctMMUndecPost"),
         num("mm.krx2025.refused_post", "mm", "krx2025: post-cutover sessions refused (of 20)", "20 (before the rerun)",
             "0", mk("krx2025", "tier1", "post_cutover_refused_sessions")),
-        Entry("mm.krx2025.engine_commit", "mm", "krx2025 anchor ran on plutus-simulator", "fc94743", "373f9a7",
-              expected="373f9a7", get=CALC(lambda c: c[:7], mk("krx2025", "plutus_simulator_commit"),
+        Entry("mm.krx2025.engine_commit", "mm", "krx2025 anchor ran on plutus-simulator", "31e3405", "8d46c56",
+              expected="8d46c56", get=CALC(lambda c: c[:7], mk("krx2025", "plutus_simulator_commit"),
                                            desc="`plutus_simulator_commit` (first 7 characters)")),
         num("mm.im2022.fills_naive", "mm", "im2022: naive fills", "—", "129", mk("im2022", "naive", "fills")),
         pct("mm.im2022.hpr_naive", "mm", "im2022: HPR naive", "—", "−12.93%", mk("im2022", "naive", "hpr"), decimals=2),

@@ -325,8 +325,8 @@ worse than no scenario page."
 
 **The five MUST items (the publish gate) — ALL LANDED:** #1 order-book walk
 (J13/J28/J30) · #2 amendment re-runs encumbrance (**J27**) · #3 forced liquidation
-executes (J3/J5) · #4 daily VM cash settlement (2026-08-29 `3e7e17a`; J3/J6/J26) ·
-#5 tick-path close-as-ATC (2026-08-29 `74e667a`; J37).
+executes (J3/J5) · #4 daily VM cash settlement (2026-08-29 `2c8be0f`; J3/J6/J26) ·
+#5 tick-path close-as-ATC (2026-08-29 `25ad5b6`; J37).
 
 **Launch subset (15):** J1,J2,J11,J13,J15,J16,J17,J18,J5,J6,J26,J27,J25,J20,J10 —
 every group represented, every MUST exhibited, the headline defensible.
@@ -456,12 +456,12 @@ implemented. The five guardrails the paper must not overstate:
 
 ## 10. Cleanup & core strengthening
 
-- **Dead trader stack archived** (`d27d4cd`): bot/algorithm/portfolio/position/
+- **Dead trader stack archived** (`d8ef026`): bot/algorithm/portfolio/position/
   transaction → `archive/legacy-trader-stack/` (no `__init__.py`, not shipped, not
   deleted; history kept). Only importable before via an accidental `import utils`
   resolving to `tests/utils.py`. D31 resolved.
 - **`evaluation/` scoped** as an optional metrics helper (kept; 216 tests).
-- **FEL added** (`db29e9d`) — §7 / PAPER-HANDOFF §4.
+- **FEL added** (`f1a618e`) — §7 / PAPER-HANDOFF §4.
 - **The D-series defect inventory** (`FEATURES.md` §17): ~60 IDs, ~20 struck FIXED,
   ~40 open — **most open ones are docstring/naming mismatches with no behavioural
   effect.** The four behaviourally-substantive open defects the paper should know:

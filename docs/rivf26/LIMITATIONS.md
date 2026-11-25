@@ -2,8 +2,8 @@
 
 Everything here is known, reproducible and left as is on purpose. In each case the engine reports the limit
 (INDETERMINATE, UNKNOWN, or a counted event) rather than guessing. Fixed during camera-ready work, so **no longer**
-limitations: the conservative queue's taker sweeps (`e528633`); the derivatives VM baseline on adds and flips
-(`8295502`); brokers relaxing VSDC derivatives terms (`52c6d5c`); band-edge orders on book (tick) sessions, now
+limitations: the conservative queue's taker sweeps (`254aa1d`); the derivatives VM baseline on adds and flips
+(`64e826e`); brokers relaxing VSDC derivatives terms (`815c581`); band-edge orders on book (tick) sessions, now
 decided from the book walk (`a729b7e`); `soft` labelling every market-order fill `TRADED_THROUGH`, now graded like
 a limit at the band edge (`694ae11`); the post-KRX derivatives margin model, now QĐ 26's two layers (`e976a1b`).
 Their numbers (1, 4 and 5) are kept as stubs so references to the others stay valid.

@@ -8,10 +8,10 @@ are its output verbatim.*
 
 **History is too entangled to measure "lines changed to add one dated change" from commit diffs.** No dated
 change in this repository was added *after* the mechanism carrying it existed. `rulebook.py` has five commits
-in all (`b737f6f` creates it with 464 lines; `7ee32b9` +1,913; `7b56e95` +327; `bc7f793` +150; `a95d59f` one
+in all (`1337db8` creates it with 464 lines; `2add565` +1,913; `f81b97c` +327; `92593d5` +150; `534af1e` one
 path line), and every dated row arrived inside one of those bulk commits together with the resolver, the
 session and their tests. The dated series kept outside the rulebook (`margin.VSD_INITIAL_MARGIN`,
-`core.constant.get_trading_unit`) arrived in `0d91323`, which fixed six unrelated defects at once (12 files,
+`core.constant.get_trading_unit`) arrived in `8fa76e7`, which fixed six unrelated defects at once (12 files,
 +511/-72). A per-commit diff would therefore measure "build the mechanism and several other things", not the
 cost of one dated change, and is not reported as if it were. The last table shows how large each contributing
 commit was.
@@ -61,7 +61,7 @@ Rule data : change-specific engine, per change: **IM 15 : 0** (plus 3 undated co
 
 ## Output of `measurements/maintenance_effort.py --markdown`
 
-Measured at HEAD `8295502`.
+Measured at HEAD `64e826e`.
 
 | Change | Effective | Rule data | Undated duplicate scalars | Engine, change-specific | Engine, per-family resolver (shared) | Tests |
 |---|---|---:|---:|---:|---:|---:|
@@ -75,32 +75,32 @@ Lines are non-blank source lines at `HEAD`. Rule data counts the whole row (valu
 
 | Change | Class | Lines by commit |
 |---|---|---|
-| vsd_im_2022_12_15 | rule_data | `7ee32b9` 14, `0d91323` 1 |
-| vsd_im_2022_12_15 | dup_scalar | `0d91323` 2, `5238c8d` 1 |
-| vsd_im_2022_12_15 | mechanism | `7ee32b9` 10, `0d91323` 8 |
-| vsd_im_2022_12_15 | tests | `68e30b1` 73, `bc7f793` 14, `7ee32b9` 13, `9c862f2` 9, `0d91323` 8 |
-| hsx_lot_2021_01_04 | rule_data | `7ee32b9` 12, `0d91323` 1 |
-| hsx_lot_2021_01_04 | engine_specific | `0d91323` 4 |
-| hsx_lot_2021_01_04 | mechanism | `7ee32b9` 12, `0d91323` 5 |
-| hsx_lot_2021_01_04 | tests | `7ee32b9` 18 |
-| krx_cutover_2025_05_05 | rule_data | `7ee32b9` 38, `7b56e95` 28, `bc7f793` 11, `b737f6f` 1, `5238c8d` 1 |
-| krx_cutover_2025_05_05 | engine_specific | `5238c8d` 15, `7ee32b9` 5 |
-| krx_cutover_2025_05_05 | mechanism | `7ee32b9` 1 |
-| krx_cutover_2025_05_05 | tests | `7ee32b9` 50, `5238c8d` 8, `bfc1197` 8 |
+| vsd_im_2022_12_15 | rule_data | `2add565` 14, `8fa76e7` 1 |
+| vsd_im_2022_12_15 | dup_scalar | `8fa76e7` 2, `1500c15` 1 |
+| vsd_im_2022_12_15 | mechanism | `2add565` 10, `8fa76e7` 8 |
+| vsd_im_2022_12_15 | tests | `d862ab6` 73, `92593d5` 14, `2add565` 13, `d339f55` 9, `8fa76e7` 8 |
+| hsx_lot_2021_01_04 | rule_data | `2add565` 12, `8fa76e7` 1 |
+| hsx_lot_2021_01_04 | engine_specific | `8fa76e7` 4 |
+| hsx_lot_2021_01_04 | mechanism | `2add565` 12, `8fa76e7` 5 |
+| hsx_lot_2021_01_04 | tests | `2add565` 18 |
+| krx_cutover_2025_05_05 | rule_data | `2add565` 38, `f81b97c` 28, `92593d5` 11, `1337db8` 1, `1500c15` 1 |
+| krx_cutover_2025_05_05 | engine_specific | `1500c15` 15, `2add565` 5 |
+| krx_cutover_2025_05_05 | mechanism | `2add565` 1 |
+| krx_cutover_2025_05_05 | tests | `2add565` 50, `1500c15` 8, `6e20d81` 8 |
 
 ### How large those commits were (entanglement)
 
 | Commit | Date | Files | +lines | -lines | Subject |
 |---|---|---:|---:|---:|---|
-| `9c862f2` | 2026-08-25 | 5 | 562 | 0 | Add plutus.market value and verdict types |
-| `b737f6f` | 2026-08-25 | 14 | 13323 | 47 | Read the settlement series correctly and retire tradeoff T2 |
-| `7ee32b9` | 2026-08-25 | 13 | 6972 | 16 | Build Tier 1: the exchange session, seven modules behind one API |
-| `0d91323` | 2026-08-25 | 12 | 511 | 72 | Fix six verified rulebook defects and add broker terms as config |
-| `bc7f793` | 2026-08-26 | 16 | 10053 | 522 | Tier 2: charges, sale advance, corporate actions, probabilistic fills, pair trading |
-| `7b56e95` | 2026-08-26 | 12 | 3607 | 136 | Repair all ten Tier 1 defects; 997 -> 1035 passing |
-| `bfc1197` | 2026-08-26 | 2 | 359 | 0 | Measure the corpus exposure to dated rule changes -- the lead claim's warrant |
-| `5238c8d` | 2026-08-27 | 4 | 7506 | 138 | Add the broker-profile system with PLUTUS_DEFAULT, and apply the KRX corrections |
-| `68e30b1` | 2026-08-27 | 40 | 22787 | 63 | Validate the whole simulator end to end; the accounting holds, the fill model does not |
+| `d339f55` | 2026-08-25 | 5 | 562 | 0 | Add plutus.market value and verdict types |
+| `1337db8` | 2026-08-25 | 14 | 13323 | 47 | Read the settlement series correctly and retire tradeoff T2 |
+| `2add565` | 2026-08-25 | 13 | 6972 | 16 | Build Tier 1: the exchange session, seven modules behind one API |
+| `8fa76e7` | 2026-08-25 | 12 | 511 | 72 | Fix six verified rulebook defects and add broker terms as config |
+| `92593d5` | 2026-08-26 | 16 | 10053 | 522 | Tier 2: charges, sale advance, corporate actions, probabilistic fills, pair trading |
+| `f81b97c` | 2026-08-26 | 12 | 3607 | 136 | Repair all ten Tier 1 defects; 997 -> 1035 passing |
+| `6e20d81` | 2026-08-26 | 2 | 359 | 0 | Measure the corpus exposure to dated rule changes -- the lead claim's warrant |
+| `1500c15` | 2026-08-27 | 4 | 7506 | 138 | Add the broker-profile system with PLUTUS_DEFAULT, and apply the KRX corrections |
+| `d862ab6` | 2026-08-27 | 40 | 22787 | 63 | Validate the whole simulator end to end; the accounting holds, the fill model does not |
 
 - **krx_cutover_2025_05_05**: Not counted: the post-KRX margin model (scenario_margin.py, ~3,000 lines) and the broker-profile regime machinery, which the cutover motivated but which do not name its date. The KRX cutover is a rule SET: these rows are the dated rows that name it.
 - **HOSE tick change 2016-09-12**: encoded in `src/`: no -- outside the rulebook window (COVERAGE_START 2020-01-01), so not measurable.

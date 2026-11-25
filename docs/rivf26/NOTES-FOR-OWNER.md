@@ -5,7 +5,7 @@
 **What the 16.7% was.** S8 is an intraday market maker on FPT for one day (2022-11-09). A few of its orders
 are marketable (they act as takers). The conservative queue's *taker* path had no trade-size data wired in, so
 it marked those orders "undecided". That was an engine wiring gap, not a property of the data: the sized tape
-existed and the maker path already used it. Change 2 (`e528633`) wired the tape into the taker path too, so
+existed and the maker path already used it. Change 2 (`254aa1d`) wired the tape into the taker path too, so
 those orders are now decided: 0%.
 
 **What the figure actually shows is unchanged: the 18.9% swing.** The same strategy on the same data fills

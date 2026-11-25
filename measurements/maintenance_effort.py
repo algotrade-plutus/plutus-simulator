@@ -7,11 +7,11 @@ lines of table rows and citations and close to zero lines of engine code.
 **What git history can and cannot show here -- read this first.** No dated
 change in this repository was ever added *after* the mechanism that carries it
 existed. ``src/plutus/market/session/rulebook.py`` has five commits in all
-(``b737f6f`` creates it with 464 lines, ``7ee32b9`` adds 1,913, ``7b56e95`` 327,
-``bc7f793`` 150, ``a95d59f`` one path line), and every dated row arrived in one
+(``1337db8`` creates it with 464 lines, ``2add565`` adds 1,913, ``f81b97c`` 327,
+``92593d5`` 150, ``534af1e`` one path line), and every dated row arrived in one
 of those bulk commits together with the resolver, the session and their tests.
 The dated series outside the rulebook (``margin.VSD_INITIAL_MARGIN``,
-``core.constant.get_trading_unit``) arrived in ``0d91323``, a commit that fixed
+``core.constant.get_trading_unit``) arrived in ``8fa76e7``, a commit that fixed
 six unrelated defects at once. So a per-commit diff count would measure "build
 the mechanism and five other things", not "add one dated change", and is not
 reported as if it were.

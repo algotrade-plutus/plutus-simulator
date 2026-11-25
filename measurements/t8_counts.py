@@ -20,7 +20,7 @@ survey documents, and reviewer R2 (m5) asked for their breakdowns:
   authoritative count is runtime: every :class:`RuleInterval` in
   ``rulebook._build_tables('vn-2020-2026')``, which is what ``Rulebook.at(ts)``
   resolves against. The 97 in the paper was a *source-text* count
-  (``PAPER-COMPENDIUM.md`` commit ``141d547``: "84 cited + 13 unsourced = 97"),
+  (``PAPER-COMPENDIUM.md`` commit ``fd7a031``: "84 cited + 13 unsourced = 97"),
   which this script reproduces as grep counts over ``rulebook.py`` so the
   difference is visible: 84 is the number of ``confidence=Confidence.`` keyword
   occurrences and 13 the number of ``_unsourced(`` occurrences, which includes

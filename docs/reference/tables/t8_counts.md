@@ -43,14 +43,14 @@ recorded as data). The paper's "eleven record an absence as data" and "twelve ru
 (76%) are high confidence; 27 are medium, low or unverified, 10 of them rows that record an absence".
 Among the 100 `KNOWN` rows: 83 HIGH, 10 MEDIUM, 7 LOW, 0 UNVERIFIED.
 
-**Where 97 came from.** Commit `141d547` (2026-08-30, `docs/reference/PAPER-COMPENDIUM.md` section 2a)
+**Where 97 came from.** Commit `fd7a031` (2026-08-30, `docs/reference/PAPER-COMPENDIUM.md` section 2a)
 says "84 cited + 13 unsourced = 97". Those are source-text grep counts over `rulebook.py`, reproduced below:
 84 occurrences of `confidence=Confidence.` and 13 of `_unsourced(`. That is not a count of rule versions:
 the 13 includes `_unsourced`'s own definition and a docstring mention (11 real calls), and the 84 counts
 every explicit grade argument once per call site -- on `_interval` calls, on 4 of the `_unsourced` calls
 (so those are counted twice) and on direct `RuleCitation`s -- while several call sites sit inside loops
 over venues or keys and produce several rows. `rulebook.py` has changed one
-line since `141d547` (a path in a docstring), so the difference is the counting method, not new rows. The
+line since `fd7a031` (a path in a docstring), so the difference is the counting method, not new rows. The
 runtime count is the one to quote. The derived totals change with it: "341 encoded in the engine" (97 + 244)
 becomes **358** (114 + 244).
 

@@ -1,12 +1,12 @@
 # T0 audit: setup, DB access, and what runs with no corpus (2026-11-24)
 
-Handoff: `docs/HANDOFF-2026-11-24-camera-ready.md`, task T0. Branch `rivf26` (from `master` @ `5b54b53`).
+Handoff: `docs/HANDOFF-2026-11-24-camera-ready.md`, task T0. Branch `rivf26` (from `master` @ `f63c2d5`).
 
 ## 1. Setup
 
 | Repo | Branch | Base |
 |---|---|---|
-| `plutus-simulator` | `rivf26` | `master` @ `5b54b53` |
+| `plutus-simulator` | `rivf26` | `master` @ `f63c2d5` |
 | `proto/ProtoSmartBeta` | `rivf26` | `main` @ `f5c9e8e` (public, pre-RIVF) |
 | `proto/ProtoMarketMaker` | `rivf26` | `main` @ `44acefc` (public, pre-RIVF) |
 | `proto/ProtoGrid` | `rivf26` | new empty repo (`git init`) |
@@ -95,13 +95,13 @@ ticker-days the fixture already holds (scratch copy only; nothing committed).
 | S8 market maker (×2) | pass | pass |
 | S9 queue sensitivity | pass | pass |
 
-The handoff says the strategy tests run from the shipped fixtures. **At `5b54b53` they don't: 7 fail.**
+The handoff says the strategy tests run from the shipped fixtures. **At `f63c2d5` they don't: 7 fail.**
 
 ## 4. Root causes
 
 ### 4a. The daily fixture predates the HIGH/LOW wiring (fixed in B)
 
-- `strategies/fixtures/` was cut on 2026-08-29 (commit `c44082b`), and `regenerate.py`'s `DAILY_TABLES` has
+- `strategies/fixtures/` was cut on 2026-08-29 (commit `946d5a0`), and `regenerate.py`'s `DAILY_TABLES` has
   no `quote_max`/`quote_min`.
 - On 2026-08-30, `DataHubSource` started serving session HIGH/LOW from those tables (see its docstring).
 - Without them, every marketable order on a daily bar resolves to INDETERMINATE: `BAND_LOCK … the session
@@ -179,7 +179,7 @@ ghost-bid problem prevents for now.
 
 ### Pre-existing failure, not caused by RIVF'26 work
 
-`tests/validation/test_runner.py::test_a_forced_liquidation_reports_and_executes` fails at `5b54b53` (the
+`tests/validation/test_runner.py::test_a_forced_liquidation_reports_and_executes` fails at `f63c2d5` (the
 handoff commit) as well as now. Not investigated yet. Full unit suite at this commit: 2,006 passed, 533
 skipped, this 1 failed (with the `[mcp]` extra installed; without it, collection stops on `fastmcp`).
 
@@ -266,7 +266,7 @@ Effect on shipped results:
 - **SB base check: Google Drive check skipped (owner decision).** The DB is the settled source; the coordinator's
   recommendation was to skip it, since the DB is the settled source and the drift is documented with evidence.
 
-## 4f. Numbers moved by the VM-baseline fix (`8295502`)
+## 4f. Numbers moved by the VM-baseline fix (`64e826e`)
 
 The fix corrects contracts added to (or flipped from) a derivatives position after a daily settlement. Rechecked:
 
@@ -279,12 +279,12 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
   - ProtoPair (both windows, all variants);
   - scenarios (39 pass) and strategies (18 pass, 2 skip).
 - Not affected by construction: SB, Grid, E1, HSX daily (equities only); the old flat-each-session MM anchor.
-- MM faithful-A (overnight carry) is being rerun on `8295502`.
+- MM faithful-A (overnight carry) is being rerun on `64e826e`.
 
-## 4g. T8.4–T8.6 results that correct the paper (merged `61a9fc7`)
+## 4g. T8.4–T8.6 results that correct the paper (merged `48d5af2`)
 
 - **Rule versions: 114, not 97** (93 keys, 12 families; 87 HIGH, 11 MEDIUM, 9 LOW, 7 UNVERIFIED; 11 record an
-  absence). The 97 was a text-match count in `PAPER-COMPENDIUM.md` (`141d547`) that missed rows built in loops.
+  absence). The 97 was a text-match count in `PAPER-COMPENDIUM.md` (`fd7a031`) that missed rows built in loops.
   So "341 encoded in the engine" becomes 358, and "only a handful medium/low/unverified" is 27 of 114.
 - **Broker fields: 244 confirmed** (18 profiles: 14 firms + PLUTUS_DEFAULT + 3 vintages). Published 110, supplied 0
   as shipped (11 if `fill_from=PLUTUS_DEFAULT`), inferred 21, not published 113. "Published vs supplied" is really
@@ -298,9 +298,9 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
 ## 4h. Band-lock fix and the full unit suite green (2026-11-24)
 
 - **The long-standing failure** `test_a_forced_liquidation_reports_and_executes` was an engine bug introduced in
-  `c9c4c06` (2026-09-11), confirmed by running the test at that commit and the one before. On a bar with a close but
+  `c803842` (2026-09-11), confirmed by running the test at that commit and the one before. On a bar with a close but
   no high/low, every order marketable into the band edge was INDETERMINATE, even when the close itself proves the
-  edge was traded through. The forced close is always priced at the floor, so it never filled. Fixed in `68e1c33`:
+  edge was traded through. The forced close is always priced at the floor, so it never filled. Fixed in `b966d4a`:
   a close strictly inside the band passes through to the fill policy, and a close on the edge stays INDETERMINATE.
   **E1, F2 and F3 are unchanged** (rerun on the fix).
 - **`test_book_walk.py`** runs on a shipped 207 KB fixture (96 pass, 0 skip; was 18 pass, 80 skip). One re-pin (HTV
@@ -308,11 +308,11 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
   against the raw rows. The two band-lock-on-book-session tests are strict xfail (LIMITATIONS #1).
 - **Full unit suite: 2,162 passed, 0 failed, 2 xfailed, 453 skipped** (was 1 failed, 533 skipped).
 - `figures/e1_fill_divergence.json` and `figures/f2_indeterminate_rate.png` are regenerated with the camera-ready
-  values (`t4_camera_ready.md`). **Correction (2026-11-25):** `82a68cf` regenerated only the F2 PNG;
+  values (`t4_camera_ready.md`). **Correction (2026-11-25):** `b8c1488` regenerated only the F2 PNG;
   `figures/f2_indeterminate_rate.json` still held the old 66-day values (35.8% / 85.6% / 99.7%). It is now
   re-rendered from `docs/reference/tables/t2/indeterminate_after_change2.json` with
   `measurements/indeterminate_rate.py --from-json` (90 days, 32.6% / 10.1% / 60.2%); the JSON is byte-identical
-  to that file and the re-rendered PNG is byte-identical to the one committed in `82a68cf`.
+  to that file and the re-rendered PNG is byte-identical to the one committed in `b8c1488`.
 
 ## 4i. Band-edge orders on book sessions; soft market-order evidence (2026-11-25, LIMITATIONS #1 and #5)
 
@@ -322,7 +322,7 @@ The fix corrects contracts added to (or flipped from) a derivatives position aft
   order or limit at the ceiling/floor was INDETERMINATE `{book, low|high}`, however open the book was. Fix: a policy
   that reads its own book (`READS_ITS_OWN_BOOK`, set by the book walk) skips the bar tier on a continuous interval
   with no book. An instantaneous lock on the state is honoured one direction only (`TICK_BOOK` → NO_FILL, `UNKNOWN`
-  → INDETERMINATE `{book}`, the pre-`348e010` fill-time refusal); otherwise the walk decides. A ghost lock still
+  → INDETERMINATE `{book}`, the pre-`12a9d82` fill-time refusal); otherwise the walk decides. A ghost lock still
   comes back INDETERMINATE through the walk's crossed/stale refusals (#2 is unchanged). Daily sessions and the
   soft/hard/probabilistic policies are untouched. The two strict-xfail tests pass; four new tests pin the real
   interval shape (buy market / limit at ceiling, sell at floor fill from the book; HPG ghost stays INDETERMINATE).
@@ -369,9 +369,9 @@ S-8, S-11, S-12, S-17; C-1..C-3; M-1..M-4).
 
 ### 4k. F2 rerun after the band-edge fix (2026-11-25)
 
-`67f18fa` removes the band-edge gap that left 48 evaluations per tick arm undecided (`{book, low}`). Rerun of
+`ba0d9f4` removes the band-edge gap that left 48 evaluations per tick arm undecided (`{book, low}`). Rerun of
 `measurements/indeterminate_rate.py` on the same 90 days: bar 32.6% (unchanged), tick optimistic 10.1% → 7.1%,
 tick conservative 60.2% → 58.7%. Evaluations fall (1,484 → 1,443; 1,650 → 1,611) because orders that now fill stop
 being re-evaluated. Result in `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`; figure re-rendered;
-checker updated. The MarketMaker rerun on `373f9a7` and the E1 rerun in the T8.3 benchmark showed no change from
+checker updated. The MarketMaker rerun on `8d46c56` and the E1 rerun in the T8.3 benchmark showed no change from
 this fix, so F2 is the only paper number it moves.

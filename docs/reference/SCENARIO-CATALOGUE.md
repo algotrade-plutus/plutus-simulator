@@ -88,7 +88,7 @@ a landed item keeps its row and its number. This is what they are:
 
 | # | Item | Checklist state | Exhibited by |
 |---|---|---|---|
-| **MUST #1** | **Order-book walk.** Without it *"fills happen at a single price with no depth"* | **LANDED 2026-08-27**, commit `c6b7ef6`; reasoning moved to RESOLVED. **Two residuals, and neither of them is "no depth"** — see below | **J13**'s sweep half and **J21**, both now *partial* on those residuals; **J9**'s staleness half |
+| **MUST #1** | **Order-book walk.** Without it *"fills happen at a single price with no depth"* | **LANDED 2026-08-27**, commit `c0d0a55`; reasoning moved to RESOLVED. **Two residuals, and neither of them is "no depth"** — see below | **J13**'s sweep half and **J21**, both now *partial* on those residuals; **J9**'s staleness half |
 | **MUST #2** | **Amendment re-runs encumbrance and admission** | Not started. Its citation and its defect statement **were both corrected** on 2026-08-27, in the checklist itself | **J27, and nothing else** |
 | **MUST #5** | **The tick path must implement the stated close-as-ATC approximation.** On a tick run an ATC fill (or an LO carried into the cross) returns a stale pre-auction tick (`state.last`) instead of the published close the stated model uses. A **design-conformance** defect, not an error-size one | Not started; **added 2026-08-27**. Placed above #3/#4 on the checklist by fix priority — the number is an identity, not a rank | **J14** and **J7** (blocked); declared in the tick caveats of **J6, J10, J17, J20** |
 | **MUST #3** | **Forced liquidation must EXECUTE, not just report** — `detail['executed']` is `False` on every one | Not started | J3, J19, **J4**, J10 |
@@ -248,7 +248,7 @@ ceiling** — nearly the whole band. Worked case: **HPG 2022-11-16, close 13.35 
 unless they supply `quote_open`/`quote_max`/`quote_min` — **fields that are on disk and
 withheld by the adapter, not fields the corpus lacks**. One item CLOSED since an earlier
 draft: `BAND_LOCK` used to refuse **at entry only** with no fill-time counterpart (a
-checklist SHOULD); **that SHOULD was closed on 2026-08-27 by commit `c6b7ef6`**, as a side
+checklist SHOULD); **that SHOULD was closed on 2026-08-27 by commit `c0d0a55`**, as a side
 effect of the order-book walk — a book locked at the ceiling has no asks below it, so a
 marketable buy finds nothing and fills nothing, and the entry/fill asymmetry is gone. **Do
 not publish J2 with that asymmetry still listed as open.**
@@ -340,7 +340,7 @@ block or nothing" and "whatever is there".
   `ExpiryTrigger.NO_OPPOSITE_ORDER` exists and is legal in the TIF table, but **nothing in
   `src/plutus` ever raises it**. On a daily bar there is no book to observe, so it cannot be.
   State the clause as **unmodelled**. *(**Restated 2026-08-27**: a book now **does** exist to
-  observe — `BookWalkFillPolicy` over `DepthSource`, landed in `c6b7ef6` — so the reason has
+  observe — `BookWalkFillPolicy` over `DepthSource`, landed in `c0d0a55` — so the reason has
   moved from *"no book exists"* to *"no book is on the default path, and nothing raises the
   trigger even when one is injected."* The clause is still unmodelled; the excuse is
   narrower, and a narrower excuse is the honest one.)*
@@ -438,7 +438,7 @@ scenario is for and the strategy line says so.
 rather than converted at a guess**, and dies at session end as a day order. Four
 declarations required:
 - **MUST #1 (order-book walk) has LANDED — and the sweep half still does not run on the
-  default path.** *(Commit `c6b7ef6`, 2026-08-27; the checklist's old *"fills happen at a
+  default path.** *(Commit `c0d0a55`, 2026-08-27; the checklist's old *"fills happen at a
   single price with no depth"* is retired to its RESOLVED section and must not be quoted as
   current.)* The **default** residual pricing is unchanged and is still one point:
   `exchange.py:3357-3359` — `last = record.fills[-1].price if record.fills else None`,
@@ -1177,7 +1177,7 @@ constructs the policy and supplies depth.**
 
 **Status change, 2026-08-27, and the derivation is printed because the conclusion moved.**
 J21 was graded `blocked` on **publish-checklist MUST #1, "In progress"**. **MUST #1 has
-LANDED** — commit `c6b7ef6`, *"Walk the order book instead of filling at a single price"*;
+LANDED** — commit `c0d0a55`, *"Walk the order book instead of filling at a single price"*;
 `src/plutus/market/adapters/depth.py` and `src/plutus/market/session/book_walk.py` are both
 present and the checklist has moved its reasoning to RESOLVED. **A scenario cannot be
 blocked by an item that does not exist.** What survives is the checklist's own **two
@@ -1925,7 +1925,7 @@ almost no volume. The correct output on a thin name is **more INDETERMINATE, not
 `Blindness.CAP_UNCOMPUTABLE` where volume is unknown, `CAP_EXCEEDED` where it binds.
 
 *Runnable today* — **Partial. The rule half runs; the staleness half is not reachable from a
-config.** **MUST #1 has LANDED** (commit `c6b7ef6`, 2026-08-27), so J9 is no longer *blocked
+config.** **MUST #1 has LANDED** (commit `c0d0a55`, 2026-08-27), so J9 is no longer *blocked
 by a must-list item* — it carries the same **two residuals** J21 does: `book_walk.py` /
 `adapters/depth.py` are **injection-only** (reachable via `ExchangeSession.build(...,
 fill_policy=...)`, refused by `build_fill_policy` from a config block, `fills.py:2260-2276`)

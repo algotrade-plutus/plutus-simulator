@@ -30,11 +30,11 @@ J18, the property-test and validator counts).
 - **Macro** is the `paper/numbers.tex` macro the value fills (handoff §9). A blank macro means the number is
   quoted in the text or a table without its own macro, or is a check that backs one.
 - MM provenance: the four faithful-A runs, the ladders, the markouts and both anchors were rerun on
-  plutus-simulator `373f9a7` (ProtoMarketMaker `4474777`); each result JSON records that commit at start and end.
+  plutus-simulator `8d46c56` (ProtoMarketMaker `4474777`); each result JSON records that commit at start and end.
 
-## MM rerun 2026-11-25 (plutus-simulator `373f9a7`, ProtoMarketMaker `4474777`)
+## MM rerun 2026-11-25 (plutus-simulator `8d46c56`, ProtoMarketMaker `4474777`)
 
-- **What moved: krx2025 after the cutover, only.** `391e2e2` sources the post-KRX margin rule (QĐ 26's two layers:
+- **What moved: krx2025 after the cutover, only.** `4867d46` sources the post-KRX margin rule (QĐ 26's two layers:
   broker IM intraday, VSDC CCP requirement after the close; `T0-audit.md` §4j). The engine's margin model is no
   longer unresolved after 2025-05-05, so MM's guard accepts it and krx2025 trades all 40 sessions instead of
   refusing the 20 post-cutover ones. The krx2025 slice gained the VN30 index close (40 rows) that the CCP layer
@@ -47,10 +47,10 @@ J18, the property-test and validator counts).
   N3 −35.01%, F-opt −4.81%, F-con −23.39%). F-con over the window: 31 margin calls, 3 forced liquidations executed;
   CCP layer: 0 indeterminate nights and 0 calendar-spread UNKNOWN in both queues.
 - **Markouts:** full-window results replace the withdrawn 6-session figures (−2.24 / −0.78; withdrawn for a
-  roll-day marking bug, owner notes `39323a8`). The 1-min F-opt markout is kept only as the record for the
+  roll-day marking bug, owner notes `d0623bd`). The 1-min F-opt markout is kept only as the record for the
   withdrawn "no ghost fills" claim.
-- **Unchanged:** im2022 (anchor and ladder) and every krx2025 pre-cutover number. `67f18fa` (band-edge orders on
-  book sessions) and `dcaecb9` (soft market-order evidence label) change no MM number.
+- **Unchanged:** im2022 (anchor and ladder) and every krx2025 pre-cutover number. `ba0d9f4` (band-edge orders on
+  book sessions) and `6e6c104` (soft market-order evidence label) change no MM number.
 
 ## Table II at a glance (§6 acceptance, per window)
 
@@ -147,16 +147,16 @@ needs correcting, or the owner decides.
 
 1. **F2 figure data was stale. Fixed.** `figures/f2_indeterminate_rate.json` held the old 66-day population
    (bar 35.8%, tick optimistic 85.6%, tick conservative 99.7%), while `docs/rivf26/T0-audit.md` §4h said F2 was
-   regenerated (`82a68cf` changed only the PNG). It is now re-rendered from
+   regenerated (`b8c1488` changed only the PNG). It is now re-rendered from
    `docs/reference/tables/t2/indeterminate_after_change2.json` by `measurements/indeterminate_rate.py --from-json`
    (90 days, 32.6% / 10.1% / 60.2%): the JSON is byte-identical to the T2 file, and the re-rendered PNG is
    byte-identical to the committed one, so the PNG was already right. §4h is corrected; `f2.figure.*` checks it.
 2. **Unit-test count.** `docs/rivf26/T0-audit.md` §4h: "2,162 passed, 2 xfailed, 453 skipped"; the
-   coordinating session's later count was 2,169 + 2 xfailed (`pytest --collect-only tests` at `7fbe16b`: 2,624 =
+   coordinating session's later count was 2,169 + 2 xfailed (`pytest --collect-only tests` at `473166f`: 2,624 =
    2,169 + 2 + 453). §4i, after the band-edge fix: **2,180 passed, 0 xfailed, 453 skipped** (now the recorded
    value). That predates `tests/test_check_numbers.py` (7 tests), so the count is still to refresh at freeze.
 3. **ProtoPair README engine commit. Fixed** (ProtoPair `77aa71f`). The README headed its results "plutus-simulator
-   `0633a5b`"; both `result/pair_anchor/w*.json` record `b62e163`, which the README now states.
+   `17b58a6`"; both `result/pair_anchor/w*.json` record `566fda4`, which the README now states.
 4. **MM contract capacity at the IM step: 36 → 28, from the run** (`result/mm_anchor/im2022.json`
    `faithful.capacity`, 2022-12-14 → 2022-12-15). The plutus-simulator docs written for the camera-ready already
    say 36 → 28 (`NOTES-FOR-OWNER.md` §2, this map). Left for the owner, not edited:
@@ -197,7 +197,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 - Macros with no number behind them yet: `\sbWin` `\gridWin` `\mmWin` `\pairWin` (window labels, not
   numbers: w2022/w2023, w2022_10/w2021_11, krx2025/im2022, w1/w2), `\pairFlipWin` (both windows flip),
   `\nAcceptance` (no definition found in the handoff), `\cameraTag` (set at freeze).
-- **F2 rerun after the band-edge fix `67f18fa` (2026-11-25, engine `7c36a43`).** The 48 `{book, low}` evaluations
+- **F2 rerun after the band-edge fix `ba0d9f4` (2026-11-25, engine `51344fb`).** The 48 `{book, low}` evaluations
   per tick arm are gone: tick optimistic 10.1% → **7.1%**, tick conservative 60.2% → **58.7%**, bar unchanged at
   32.6%. Result: `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`; the figure is re-rendered from it.
   The reversal (tick below bar) is stronger.
@@ -211,61 +211,61 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### E1: fill-policy divergence over the 2022 HSX population
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
 - **Command:** `PYTHONPATH=src:. python -m measurements.e1_regenerate run --data-dir <rivf26-data>/t2-e1`, then `python measurements/e1_publish.py --data-root <rivf26-data>/t2-e1 --out docs/reference/tables/t2/e1_published`
 - **Data slice:** `rivf26/data/t2-e1/` (391 HSX tickers, 2022; not shipped, statistics only; sha256 in the map's slice table)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `e1.decisions` | `\nDecisions` | decisions (5 intents × ticker-days) | 477,537 → **484,949** | `docs/reference/tables/t2/e1_published/totals.json` @ `5b16aa1` :: `questions` | PASS |
-| `e1.agreed` |  | decisions on which all three policies agree | — → **332,549** | `docs/reference/tables/t2/e1_published/totals.json` @ `5b16aa1` :: `agreed` | PASS |
-| `e1.tickers` | `\nEoneTickers` | tickers (HSX stocks, ≥200 sessions in 2022) | 385 → **391** | `docs/reference/tables/t2/e1_published/totals.json` @ `5b16aa1` :: `tickers` | PASS |
-| `e1.ticker_days` |  | ticker-days | 95,815 → **97,269** | `docs/reference/tables/t2/e1_published/totals.json` @ `5b16aa1` :: `ticker_days` | PASS |
-| `e1.agree` | `\pctPolicyAgree` | policies agree | 68.4% → **68.57%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `agreement.p` | PASS |
-| `e1.disagree` | `\pctPolicyDisagree` | policies disagree | 31.6% → **31.43%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `disagreement.p` | PASS |
-| `e1.disagree.wilson_lo` |  | disagree, Wilson 95% low | 31.50 → **31.30%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `disagreement.wilson95.0` | PASS |
-| `e1.disagree.wilson_hi` |  | disagree, Wilson 95% high | 31.76 → **31.56%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `disagreement.wilson95.1` | PASS |
-| `e1.disagree.boot_lo` |  | disagree, ticker-cluster bootstrap 95% low | — → **30.97%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `disagreement.cluster_boot95.0` | PASS |
-| `e1.disagree.boot_hi` |  | disagree, ticker-cluster bootstrap 95% high | — → **31.84%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `disagreement.cluster_boot95.1` | PASS |
-| `e1.published.n_sum_month` |  | published by-month table sums to the decisions | — → **484,949** | `docs/reference/tables/t2/e1_published/by_month_intent.csv` @ `5b16aa1` :: sum of column `n` | PASS |
-| `e1.published.agreed_sum_month` |  | published by-month table sums to the agreed | — → **332,549** | `docs/reference/tables/t2/e1_published/by_month_intent.csv` @ `5b16aa1` :: sum of column `agreed` | PASS |
-| `e1.published.n_sum_ticker` |  | published by-ticker table sums to the decisions | — → **484,949** | `docs/reference/tables/t2/e1_published/by_ticker_intent.csv` @ `5b16aa1` :: sum of column `n` | PASS |
-| `e1.published.agreed_sum_ticker` |  | published by-ticker table sums to the agreed | — → **332,549** | `docs/reference/tables/t2/e1_published/by_ticker_intent.csv` @ `5b16aa1` :: sum of column `agreed` | PASS |
-| `e1.figure.decisions` |  | figure data (`figures/e1_fill_divergence.json`) carries the same N | 477,537 → **484,949** | `figures/e1_fill_divergence.json` @ `82a68cf` :: `questions` | PASS |
-| `e1.figure.agree` |  | figure data agreement rate | 68.4% → **68.57%** | `figures/e1_fill_divergence.json` @ `82a68cf` :: `agreement_rate` | PASS |
-| `e1.disagree.market_buy` |  | policies disagree: market order | 95.5% → **95.44%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.market_buy.disagreement.p` | PASS |
-| `e1.disagree.limit_buy_at_close` |  | policies disagree: limit buy at close | 23.1% → **23.13%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_buy_at_close.disagreement.p` | PASS |
-| `e1.disagree.limit_sell_at_close` |  | policies disagree: limit sell at close | 23.3% → **23.52%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_sell_at_close.disagreement.p` | PASS |
-| `e1.disagree.limit_buy_at_floor` |  | policies disagree: limit buy at floor | 9.9% → **9.15%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_buy_at_floor.disagreement.p` | PASS |
-| `e1.disagree.limit_sell_at_ceil` |  | policies disagree: limit sell at ceiling | 6.0% → **5.55%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_sell_at_ceil.disagreement.p` | PASS |
-| `e1.fill.market_buy.soft` |  | fill rate, market_buy, `soft` | 89.21% → **89.14%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.market_buy.fill.soft.p` | PASS |
-| `e1.fill.market_buy.hard` |  | fill rate, market_buy, `hard` | 0% → **0.00%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.market_buy.fill.hard.p` | PASS |
-| `e1.fill.market_buy.probabilistic` |  | fill rate, market_buy, `probabilistic` | 0% → **0.00%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.market_buy.fill.probabilistic.p` | PASS |
-| `e1.fill.limit_buy_at_close.soft` |  | fill rate, limit_buy_at_close, `soft` | 89.20% → **89.13%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_buy_at_close.fill.soft.p` | PASS |
-| `e1.fill.limit_buy_at_close.hard` |  | fill rate, limit_buy_at_close, `hard` | 72.32% → **72.30%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_buy_at_close.fill.hard.p` | PASS |
-| `e1.fill.limit_buy_at_close.probabilistic` |  | fill rate, limit_buy_at_close, `probabilistic` | 80.73% → **80.68%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_buy_at_close.fill.probabilistic.p` | PASS |
-| `e1.fill.limit_sell_at_close.soft` |  | fill rate, limit_sell_at_close, `soft` | 89.21% → **89.14%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_sell_at_close.fill.soft.p` | PASS |
-| `e1.fill.limit_sell_at_close.hard` |  | fill rate, limit_sell_at_close, `hard` | 72.81% → **72.55%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_sell_at_close.fill.hard.p` | PASS |
-| `e1.fill.limit_sell_at_close.probabilistic` |  | fill rate, limit_sell_at_close, `probabilistic` | 81.11% → **80.92%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_sell_at_close.fill.probabilistic.p` | PASS |
-| `e1.fill.limit_buy_at_floor.soft` |  | fill rate, limit_buy_at_floor, `soft` | 9.47% → **8.74%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_buy_at_floor.fill.soft.p` | PASS |
-| `e1.fill.limit_buy_at_floor.hard` |  | fill rate, limit_buy_at_floor, `hard` | 0% → **0.00%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_buy_at_floor.fill.hard.p` | PASS |
-| `e1.fill.limit_buy_at_floor.probabilistic` |  | fill rate, limit_buy_at_floor, `probabilistic` | 4.74% → **4.39%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_buy_at_floor.fill.probabilistic.p` | PASS |
-| `e1.fill.limit_sell_at_ceil.soft` |  | fill rate, limit_sell_at_ceil, `soft` | 5.64% → **5.21%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_sell_at_ceil.fill.soft.p` | PASS |
-| `e1.fill.limit_sell_at_ceil.hard` |  | fill rate, limit_sell_at_ceil, `hard` | 0% → **0.00%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_sell_at_ceil.fill.hard.p` | PASS |
-| `e1.fill.limit_sell_at_ceil.probabilistic` |  | fill rate, limit_sell_at_ceil, `probabilistic` | 2.76% → **2.55%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_intent.limit_sell_at_ceil.fill.probabilistic.p` | PASS |
-| `e1.undecided.hard` |  | undecided share, `hard` | 33.4% → **33.26%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_policy.hard.indeterminate.p` | PASS |
-| `e1.undecided.soft` |  | undecided share, `soft` | 2.7% → **2.75%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_policy.soft.indeterminate.p` | PASS |
-| `e1.undecided.probabilistic` |  | undecided share, `probabilistic` | 21.0% → **20.97%** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `by_policy.probabilistic.indeterminate.p` | PASS |
-| `e1.shares.soft` | `\sharesSoft` | filled shares, `soft` | 245.8M → **247,376,400** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `executed_quantity.soft` | PASS |
-| `e1.shares.hard` | `\sharesHard` | filled shares, `hard` | 128.5M → **129,818,200** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `executed_quantity.hard` | PASS |
-| `e1.shares.probabilistic` |  | filled shares, `probabilistic` | 148M → **149,450,400** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `executed_quantity.probabilistic` | PASS |
-| `e1.shares.ratio` | `\xSharesSoftHard` | filled shares, soft / hard | 1.91× → **1.91** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `soft_over_hard_quantity.ratio` | PASS |
-| `e1.shares.ratio.boot_lo` |  | soft / hard ratio, bootstrap 95% low | — → **1.89** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `soft_over_hard_quantity.cluster_boot95.0` | PASS |
-| `e1.shares.ratio.boot_hi` |  | soft / hard ratio, bootstrap 95% high | — → **1.92** | `docs/reference/tables/t2/e1_aggregates.json` @ `a42edee` :: `soft_over_hard_quantity.cluster_boot95.1` | PASS |
+| `e1.decisions` | `\nDecisions` | decisions (5 intents × ticker-days) | 477,537 → **484,949** | `docs/reference/tables/t2/e1_published/totals.json` @ `5b1390b` :: `questions` | PASS |
+| `e1.agreed` |  | decisions on which all three policies agree | — → **332,549** | `docs/reference/tables/t2/e1_published/totals.json` @ `5b1390b` :: `agreed` | PASS |
+| `e1.tickers` | `\nEoneTickers` | tickers (HSX stocks, ≥200 sessions in 2022) | 385 → **391** | `docs/reference/tables/t2/e1_published/totals.json` @ `5b1390b` :: `tickers` | PASS |
+| `e1.ticker_days` |  | ticker-days | 95,815 → **97,269** | `docs/reference/tables/t2/e1_published/totals.json` @ `5b1390b` :: `ticker_days` | PASS |
+| `e1.agree` | `\pctPolicyAgree` | policies agree | 68.4% → **68.57%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `agreement.p` | PASS |
+| `e1.disagree` | `\pctPolicyDisagree` | policies disagree | 31.6% → **31.43%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `disagreement.p` | PASS |
+| `e1.disagree.wilson_lo` |  | disagree, Wilson 95% low | 31.50 → **31.30%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `disagreement.wilson95.0` | PASS |
+| `e1.disagree.wilson_hi` |  | disagree, Wilson 95% high | 31.76 → **31.56%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `disagreement.wilson95.1` | PASS |
+| `e1.disagree.boot_lo` |  | disagree, ticker-cluster bootstrap 95% low | — → **30.97%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `disagreement.cluster_boot95.0` | PASS |
+| `e1.disagree.boot_hi` |  | disagree, ticker-cluster bootstrap 95% high | — → **31.84%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `disagreement.cluster_boot95.1` | PASS |
+| `e1.published.n_sum_month` |  | published by-month table sums to the decisions | — → **484,949** | `docs/reference/tables/t2/e1_published/by_month_intent.csv` @ `5b1390b` :: sum of column `n` | PASS |
+| `e1.published.agreed_sum_month` |  | published by-month table sums to the agreed | — → **332,549** | `docs/reference/tables/t2/e1_published/by_month_intent.csv` @ `5b1390b` :: sum of column `agreed` | PASS |
+| `e1.published.n_sum_ticker` |  | published by-ticker table sums to the decisions | — → **484,949** | `docs/reference/tables/t2/e1_published/by_ticker_intent.csv` @ `5b1390b` :: sum of column `n` | PASS |
+| `e1.published.agreed_sum_ticker` |  | published by-ticker table sums to the agreed | — → **332,549** | `docs/reference/tables/t2/e1_published/by_ticker_intent.csv` @ `5b1390b` :: sum of column `agreed` | PASS |
+| `e1.figure.decisions` |  | figure data (`figures/e1_fill_divergence.json`) carries the same N | 477,537 → **484,949** | `figures/e1_fill_divergence.json` @ `b8c1488` :: `questions` | PASS |
+| `e1.figure.agree` |  | figure data agreement rate | 68.4% → **68.57%** | `figures/e1_fill_divergence.json` @ `b8c1488` :: `agreement_rate` | PASS |
+| `e1.disagree.market_buy` |  | policies disagree: market order | 95.5% → **95.44%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.market_buy.disagreement.p` | PASS |
+| `e1.disagree.limit_buy_at_close` |  | policies disagree: limit buy at close | 23.1% → **23.13%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_buy_at_close.disagreement.p` | PASS |
+| `e1.disagree.limit_sell_at_close` |  | policies disagree: limit sell at close | 23.3% → **23.52%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_sell_at_close.disagreement.p` | PASS |
+| `e1.disagree.limit_buy_at_floor` |  | policies disagree: limit buy at floor | 9.9% → **9.15%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_buy_at_floor.disagreement.p` | PASS |
+| `e1.disagree.limit_sell_at_ceil` |  | policies disagree: limit sell at ceiling | 6.0% → **5.55%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_sell_at_ceil.disagreement.p` | PASS |
+| `e1.fill.market_buy.soft` |  | fill rate, market_buy, `soft` | 89.21% → **89.14%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.market_buy.fill.soft.p` | PASS |
+| `e1.fill.market_buy.hard` |  | fill rate, market_buy, `hard` | 0% → **0.00%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.market_buy.fill.hard.p` | PASS |
+| `e1.fill.market_buy.probabilistic` |  | fill rate, market_buy, `probabilistic` | 0% → **0.00%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.market_buy.fill.probabilistic.p` | PASS |
+| `e1.fill.limit_buy_at_close.soft` |  | fill rate, limit_buy_at_close, `soft` | 89.20% → **89.13%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_buy_at_close.fill.soft.p` | PASS |
+| `e1.fill.limit_buy_at_close.hard` |  | fill rate, limit_buy_at_close, `hard` | 72.32% → **72.30%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_buy_at_close.fill.hard.p` | PASS |
+| `e1.fill.limit_buy_at_close.probabilistic` |  | fill rate, limit_buy_at_close, `probabilistic` | 80.73% → **80.68%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_buy_at_close.fill.probabilistic.p` | PASS |
+| `e1.fill.limit_sell_at_close.soft` |  | fill rate, limit_sell_at_close, `soft` | 89.21% → **89.14%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_sell_at_close.fill.soft.p` | PASS |
+| `e1.fill.limit_sell_at_close.hard` |  | fill rate, limit_sell_at_close, `hard` | 72.81% → **72.55%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_sell_at_close.fill.hard.p` | PASS |
+| `e1.fill.limit_sell_at_close.probabilistic` |  | fill rate, limit_sell_at_close, `probabilistic` | 81.11% → **80.92%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_sell_at_close.fill.probabilistic.p` | PASS |
+| `e1.fill.limit_buy_at_floor.soft` |  | fill rate, limit_buy_at_floor, `soft` | 9.47% → **8.74%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_buy_at_floor.fill.soft.p` | PASS |
+| `e1.fill.limit_buy_at_floor.hard` |  | fill rate, limit_buy_at_floor, `hard` | 0% → **0.00%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_buy_at_floor.fill.hard.p` | PASS |
+| `e1.fill.limit_buy_at_floor.probabilistic` |  | fill rate, limit_buy_at_floor, `probabilistic` | 4.74% → **4.39%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_buy_at_floor.fill.probabilistic.p` | PASS |
+| `e1.fill.limit_sell_at_ceil.soft` |  | fill rate, limit_sell_at_ceil, `soft` | 5.64% → **5.21%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_sell_at_ceil.fill.soft.p` | PASS |
+| `e1.fill.limit_sell_at_ceil.hard` |  | fill rate, limit_sell_at_ceil, `hard` | 0% → **0.00%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_sell_at_ceil.fill.hard.p` | PASS |
+| `e1.fill.limit_sell_at_ceil.probabilistic` |  | fill rate, limit_sell_at_ceil, `probabilistic` | 2.76% → **2.55%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_intent.limit_sell_at_ceil.fill.probabilistic.p` | PASS |
+| `e1.undecided.hard` |  | undecided share, `hard` | 33.4% → **33.26%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_policy.hard.indeterminate.p` | PASS |
+| `e1.undecided.soft` |  | undecided share, `soft` | 2.7% → **2.75%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_policy.soft.indeterminate.p` | PASS |
+| `e1.undecided.probabilistic` |  | undecided share, `probabilistic` | 21.0% → **20.97%** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `by_policy.probabilistic.indeterminate.p` | PASS |
+| `e1.shares.soft` | `\sharesSoft` | filled shares, `soft` | 245.8M → **247,376,400** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `executed_quantity.soft` | PASS |
+| `e1.shares.hard` | `\sharesHard` | filled shares, `hard` | 128.5M → **129,818,200** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `executed_quantity.hard` | PASS |
+| `e1.shares.probabilistic` |  | filled shares, `probabilistic` | 148M → **149,450,400** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `executed_quantity.probabilistic` | PASS |
+| `e1.shares.ratio` | `\xSharesSoftHard` | filled shares, soft / hard | 1.91× → **1.91** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `soft_over_hard_quantity.ratio` | PASS |
+| `e1.shares.ratio.boot_lo` |  | soft / hard ratio, bootstrap 95% low | — → **1.89** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `soft_over_hard_quantity.cluster_boot95.0` | PASS |
+| `e1.shares.ratio.boot_hi` |  | soft / hard ratio, bootstrap 95% high | — → **1.92** | `docs/reference/tables/t2/e1_aggregates.json` @ `c7be283` :: `soft_over_hard_quantity.cluster_boot95.1` | PASS |
 
 ### F2: the indeterminate rate, bar vs tick
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/indeterminate_rate.py` on the T2 group D slices (see `docs/reference/tables/t2/indeterminate.md`); the figure and its JSON are re-rendered with `measurements/indeterminate_rate.py --from-json docs/reference/tables/t2/indeterminate_after_band_edge_fix.json`
 - **Data slice:** `rivf26/data/t2-indeterminate/{daily,book}` (FPT, HPG, HTV, 2022-10-20..11-30; not shipped)
 
@@ -282,138 +282,138 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 | `f2.tick_opt.n` |  | tick optimistic, fill evaluations | 1,212 → **1,443** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (optimistic)].evaluations` | PASS |
 | `f2.tick_con` |  | undecided, `book_walk` tick, conservative queue | 99.7% → **58.7%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
 | `f2.tick_con.n` |  | tick conservative, fill evaluations | 1,545 → **1,611** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=TICK / book-walk (conservative)].evaluations` | PASS |
-| `f2.tick_opt.before_band_fix` |  | tick optimistic before the band-edge fix (`67f18fa`) | — → **10.1%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
-| `f2.tick_con.before_band_fix` |  | tick conservative before the band-edge fix (`67f18fa`) | — → **60.2%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
-| `f2.tick_con.before_change2` |  | tick conservative before change 2 (`e528633`) | 99.7% → **78.2%** | `docs/reference/tables/t2/indeterminate_before_change2.json` @ `270a423` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
+| `f2.tick_opt.before_band_fix` |  | tick optimistic before the band-edge fix (`ba0d9f4`) | — → **10.1%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `ee42cb7` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
+| `f2.tick_con.before_band_fix` |  | tick conservative before the band-edge fix (`ba0d9f4`) | — → **60.2%** | `docs/reference/tables/t2/indeterminate_after_change2.json` @ `ee42cb7` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
+| `f2.tick_con.before_change2` |  | tick conservative before change 2 (`254aa1d`) | 99.7% → **78.2%** | `docs/reference/tables/t2/indeterminate_before_change2.json` @ `ee42cb7` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
 | `f2.bar.resolution_limit` |  | bar: share whose cause is the resolution limit | 35.8% → **32.6%** | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: `arms.[label=BAR / hard].resolution_limit_share` | PASS |
-| `f2.figure.days` |  | figure data (`figures/f2_indeterminate_rate.json`) carries the same days | 66 → **90** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `instrument_days` | PASS |
-| `f2.figure.bar` |  | figure data: bar | 35.8% → **32.6%** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `arms.[label=BAR / hard].rate` | PASS |
-| `f2.figure.tick_opt` |  | figure data: tick optimistic | 85.6% → **7.1%** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
-| `f2.figure.tick_con` |  | figure data: tick conservative | 99.7% → **58.7%** | `figures/f2_indeterminate_rate.json` @ `e4c5f87` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
+| `f2.figure.days` |  | figure data (`figures/f2_indeterminate_rate.json`) carries the same days | 66 → **90** | `figures/f2_indeterminate_rate.json` @ `8cf958a` :: `instrument_days` | PASS |
+| `f2.figure.bar` |  | figure data: bar | 35.8% → **32.6%** | `figures/f2_indeterminate_rate.json` @ `8cf958a` :: `arms.[label=BAR / hard].rate` | PASS |
+| `f2.figure.tick_opt` |  | figure data: tick optimistic | 85.6% → **7.1%** | `figures/f2_indeterminate_rate.json` @ `8cf958a` :: `arms.[label=TICK / book-walk (optimistic)].rate` | PASS |
+| `f2.figure.tick_con` |  | figure data: tick conservative | 99.7% → **58.7%** | `figures/f2_indeterminate_rate.json` @ `8cf958a` :: `arms.[label=TICK / book-walk (conservative)].rate` | PASS |
 | `f2.tick.resolution_limit` |  | tick (both queues): resolution-limit share | **0** (unchanged) | `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` @ `uncommitted` :: computed from `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` `arms.[label=TICK / book-walk (optimistic)].resolution_limit_share`; `docs/reference/tables/t2/indeterminate_after_band_edge_fix.json` `arms.[label=TICK / book-walk (conservative)].resolution_limit_share` | PASS |
 
 ### F3: fill-policy axis (S1) and queue axis (S9)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_f3_cross_policy.py strategies/test_s9_queue_sensitivity.py` (writes `figures/f3_cross_policy_divergence.json`)
 - **Data slice:** `strategies/fixtures/parquet/` (DATA-MANIFEST, checked below) and `strategies/fixtures/extract/` (no sha256 manifest; `PROVENANCE.md` only)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `f3.s1.soft.return` |  | S1 return under `soft` | −75.5% → **−76.4%** | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `fill_axis.soft.return_pct` | PASS |
-| `f3.s1.soft.fills` |  | S1 fills under `soft` | **5** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `fill_axis.soft.fills` | PASS |
-| `f3.s1.soft.forced` |  | S1 forced liquidations under `soft` | 2 → **3** | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `fill_axis.soft.forced` | PASS |
-| `f3.s1.soft.undecided` |  | S1 undecided under `soft` | **0%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `fill_axis.soft.indeterminate_rate` | PASS |
-| `f3.s1.hard.return` |  | S1 return under `hard` | **0.0%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `fill_axis.hard.return_pct` | PASS |
-| `f3.s1.hard.undecided` |  | S1 undecided under `hard` | **50%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `fill_axis.hard.indeterminate_rate` | PASS |
-| `f3.s1.probabilistic.undecided` |  | S1 undecided under `probabilistic` | **50%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `fill_axis.probabilistic.indeterminate_rate` | PASS |
-| `f3.queue.optimistic` | `\sharesQueueOpt` | S9 maker shares, optimistic queue | **152,600** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `queue_axis.optimistic.maker_shares` | PASS |
-| `f3.queue.conservative` | `\sharesQueueCons` | S9 maker shares, conservative queue | **123,700** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `queue_axis.conservative.maker_shares` | PASS |
-| `f3.queue.probabilistic` |  | S9 maker shares, probabilistic queue | **137,600** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `queue_axis.probabilistic.maker_shares` | PASS |
-| `f3.queue.swing` | `\pctQueueSwing` | queue swing (optimistic − conservative) / optimistic (F5) | **18.9%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: computed from `figures/f3_cross_policy_divergence.json` `queue_axis.optimistic.maker_shares`; `figures/f3_cross_policy_divergence.json` `queue_axis.conservative.maker_shares` | PASS |
-| `f3.queue.conservative.undecided` |  | S9 conservative queue undecided | 16.7% → **0%** | `figures/f3_cross_policy_divergence.json` @ `a1a3c56` :: `queue_axis.conservative.indeterminate_rate` | PASS |
+| `f3.s1.soft.return` |  | S1 return under `soft` | −75.5% → **−76.4%** | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `fill_axis.soft.return_pct` | PASS |
+| `f3.s1.soft.fills` |  | S1 fills under `soft` | **5** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `fill_axis.soft.fills` | PASS |
+| `f3.s1.soft.forced` |  | S1 forced liquidations under `soft` | 2 → **3** | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `fill_axis.soft.forced` | PASS |
+| `f3.s1.soft.undecided` |  | S1 undecided under `soft` | **0%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `fill_axis.soft.indeterminate_rate` | PASS |
+| `f3.s1.hard.return` |  | S1 return under `hard` | **0.0%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `fill_axis.hard.return_pct` | PASS |
+| `f3.s1.hard.undecided` |  | S1 undecided under `hard` | **50%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `fill_axis.hard.indeterminate_rate` | PASS |
+| `f3.s1.probabilistic.undecided` |  | S1 undecided under `probabilistic` | **50%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `fill_axis.probabilistic.indeterminate_rate` | PASS |
+| `f3.queue.optimistic` | `\sharesQueueOpt` | S9 maker shares, optimistic queue | **152,600** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `queue_axis.optimistic.maker_shares` | PASS |
+| `f3.queue.conservative` | `\sharesQueueCons` | S9 maker shares, conservative queue | **123,700** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `queue_axis.conservative.maker_shares` | PASS |
+| `f3.queue.probabilistic` |  | S9 maker shares, probabilistic queue | **137,600** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `queue_axis.probabilistic.maker_shares` | PASS |
+| `f3.queue.swing` | `\pctQueueSwing` | queue swing (optimistic − conservative) / optimistic (F5) | **18.9%** (unchanged) | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: computed from `figures/f3_cross_policy_divergence.json` `queue_axis.optimistic.maker_shares`; `figures/f3_cross_policy_divergence.json` `queue_axis.conservative.maker_shares` | PASS |
+| `f3.queue.conservative.undecided` |  | S9 conservative queue undecided | 16.7% → **0%** | `figures/f3_cross_policy_divergence.json` @ `da3d15f` :: `queue_axis.conservative.indeterminate_rate` | PASS |
 
 ### Derivatives margin: regime split, the IM step, margin-call incidence
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
 - **Command:** `PYTHONPATH=src:. python measurements/t2_futures_margin.py <rivf26-data>/t2-futures-margin`
 - **Data slice:** `rivf26/data/t2-futures-margin/` (VN30F front month, 2021-06-01..2022-12-30; sha256 in `docs/reference/tables/t2/futures_margin.md`)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `margin.entries` |  | entries in the VN30F front-month book | **381** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: regex /N = ([\d,]+) entries/ | PASS |
-| `margin.pre` | `\marginPre` | mean requirement, pre-KRX IM+VM | 17,692,385đ → **17,692,385** | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| mean margin requirement \| pre-KRX/ cell 3 | PASS |
-| `margin.post` | `\marginPost` | mean requirement, post-KRX scenario grid | 22,995,748đ → **22,995,748** | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| mean margin requirement \| post-KRX/ cell 3 | PASS |
-| `margin.regime_split` | `\pctMarginSwing` | regime split, post-KRX grid vs pre-KRX IM+VM | **+30.0%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: computed from `docs/reference/tables/t2/futures_margin.md` row /^\| mean margin requirement \| pre-KRX/ cell 3; `docs/reference/tables/t2/futures_margin.md` row /^\| mean margin requirement \| post-KRX/ cell 3 | PASS |
-| `margin.regime_split.table` |  | regime split as stated in the F1 table | **+30.0%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| \(1\) \*\*Regime split/ cell 3 | PASS |
-| `margin.im_step` |  | the 13% → 17% IM step alone (F1) | (shown as +30.0%) → **+30.8%** | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| \(2\) \*\*13% → 17% IM step/ cell 3 | PASS |
-| `margin.im_step.formula` |  | IM step = 17/13 − 1 (book-independent) | — → **+30.8%** | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: computed from `docs/reference/tables/t2/futures_margin.md` regex /(17,584,984)đ → 22,995,748đ/; `docs/reference/tables/t2/futures_margin.md` regex /17,584,984đ → (22,995,748)đ/ | PASS |
-| `margin.call.h5` | `\pctCallFive` | margin-call incidence, hold 5 | **6.30%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| margin-call incidence \| 5 \|/ cell 3 | PASS |
-| `margin.forced.h5` |  | forced-close incidence, hold 5 | **1.84%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| forced-close incidence \| 5 \|/ cell 3 | PASS |
-| `margin.call.h10` |  | margin-call incidence, hold 10 | **11.55%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| margin-call incidence \| 10 \|/ cell 3 | PASS |
-| `margin.forced.h10` |  | forced-close incidence, hold 10 | **8.66%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| forced-close incidence \| 10 \|/ cell 3 | PASS |
-| `margin.call.h20` | `\pctCallTwenty` | margin-call incidence, hold 20 | **13.12%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| margin-call incidence \| 20 \|/ cell 3 | PASS |
-| `margin.forced.h20` |  | forced-close incidence, hold 20 | **9.71%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `62d9308` :: row /^\| forced-close incidence \| 20 \|/ cell 3 | PASS |
+| `margin.entries` |  | entries in the VN30F front-month book | **381** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: regex /N = ([\d,]+) entries/ | PASS |
+| `margin.pre` | `\marginPre` | mean requirement, pre-KRX IM+VM | 17,692,385đ → **17,692,385** | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| mean margin requirement \| pre-KRX/ cell 3 | PASS |
+| `margin.post` | `\marginPost` | mean requirement, post-KRX scenario grid | 22,995,748đ → **22,995,748** | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| mean margin requirement \| post-KRX/ cell 3 | PASS |
+| `margin.regime_split` | `\pctMarginSwing` | regime split, post-KRX grid vs pre-KRX IM+VM | **+30.0%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: computed from `docs/reference/tables/t2/futures_margin.md` row /^\| mean margin requirement \| pre-KRX/ cell 3; `docs/reference/tables/t2/futures_margin.md` row /^\| mean margin requirement \| post-KRX/ cell 3 | PASS |
+| `margin.regime_split.table` |  | regime split as stated in the F1 table | **+30.0%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| \(1\) \*\*Regime split/ cell 3 | PASS |
+| `margin.im_step` |  | the 13% → 17% IM step alone (F1) | (shown as +30.0%) → **+30.8%** | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| \(2\) \*\*13% → 17% IM step/ cell 3 | PASS |
+| `margin.im_step.formula` |  | IM step = 17/13 − 1 (book-independent) | — → **+30.8%** | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: computed from `docs/reference/tables/t2/futures_margin.md` regex /(17,584,984)đ → 22,995,748đ/; `docs/reference/tables/t2/futures_margin.md` regex /17,584,984đ → (22,995,748)đ/ | PASS |
+| `margin.call.h5` | `\pctCallFive` | margin-call incidence, hold 5 | **6.30%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| margin-call incidence \| 5 \|/ cell 3 | PASS |
+| `margin.forced.h5` |  | forced-close incidence, hold 5 | **1.84%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| forced-close incidence \| 5 \|/ cell 3 | PASS |
+| `margin.call.h10` |  | margin-call incidence, hold 10 | **11.55%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| margin-call incidence \| 10 \|/ cell 3 | PASS |
+| `margin.forced.h10` |  | forced-close incidence, hold 10 | **8.66%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| forced-close incidence \| 10 \|/ cell 3 | PASS |
+| `margin.call.h20` | `\pctCallTwenty` | margin-call incidence, hold 20 | **13.12%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| margin-call incidence \| 20 \|/ cell 3 | PASS |
+| `margin.forced.h20` |  | forced-close incidence, hold 20 | **9.71%** (unchanged) | `docs/reference/tables/t2/futures_margin.md` @ `73f9f64` :: row /^\| forced-close incidence \| 20 \|/ cell 3 | PASS |
 
 ### Equity admission, band agreement, tick-grid conformity
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
 - **Command:** `measurements/equity_admission.py`, `band_conformance.py`, `grid_conformity.py` (exact invocations in `docs/reference/tables/t2/hsx_daily.md`)
 - **Data slice:** `rivf26/data/t2-hsx-daily/` and `t2-hsx-daily-grid-history/` (sha256 in `docs/reference/tables/t2/hsx_daily.md`)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `hsx.admission.lag0` |  | blocked entry, lag 0 (look-ahead) | 12.90% → **13.16%** | `docs/reference/tables/t2/hsx_daily/equity_admission.json` @ `3b3d765` :: `stocks_lag0.rate` | PASS |
-| `hsx.admission.lag0.n` |  | lag 0 attempts | 197,337 → **205,755** | `docs/reference/tables/t2/hsx_daily/equity_admission.json` @ `3b3d765` :: `stocks_lag0.attempts` | PASS |
-| `hsx.admission.lag1` |  | blocked entry, lag 1 (honest) | 5.84% → **6.03%** | `docs/reference/tables/t2/hsx_daily/equity_admission.json` @ `3b3d765` :: `stocks_lag1.rate` | PASS |
-| `hsx.admission.lag1.n` |  | lag 1 attempts | 197,521 → **205,958** | `docs/reference/tables/t2/hsx_daily/equity_admission.json` @ `3b3d765` :: `stocks_lag1.attempts` | PASS |
-| `hsx.band.agree` | `\pctBandAgree` | band agreement, HSX stock | 97.59% → **91.90%** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `3b3d765` :: `HSX stock.agreement_rate` | PASS |
-| `hsx.band.ci_lo` | `\ciBandAgree` | band agreement, Wilson 95% low | 97.52 → **91.78%** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `3b3d765` :: `HSX stock.ci_low` | PASS |
-| `hsx.band.ci_hi` | `\ciBandAgree` | band agreement, Wilson 95% high | 97.66 → **92.03%** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `3b3d765` :: `HSX stock.ci_high` | PASS |
-| `hsx.band.n` | `\nBandDays` | band agreement, HSX stock ticker-days | 179,784 → **182,367** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `3b3d765` :: `HSX stock.rows` | PASS |
-| `hsx.band.disagree` |  | band disagreements | 4,324 → **14,769** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `3b3d765` :: `HSX stock.disagree` | PASS |
-| `hsx.band.disagree_same_width` |  | disagreements with the band width right | — → **2** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `3b3d765` :: `HSX stock.disagree_same_width` | PASS |
-| `hsx.grid.history` | `\pctGridConform` | tick-grid conformity, library rule, all history | 99.999% → **99.9992%** | `docs/reference/tables/t2/hsx_daily/grid_conformity_history.json` @ `3b3d765` :: `HSX stocks.library_rate` | PASS |
-| `hsx.grid.history.naive` | `\pctGridNaive` | tick-grid conformity, naive flat 0.1, all history | 84.51% → **85.38%** | `docs/reference/tables/t2/hsx_daily/grid_conformity_history.json` @ `3b3d765` :: `HSX stocks.naive_rate` | PASS |
-| `hsx.grid.history.n` |  | closes, all history | 1,086,518 → **1,073,191** | `docs/reference/tables/t2/hsx_daily/grid_conformity_history.json` @ `3b3d765` :: `HSX stocks.observations` | PASS |
-| `hsx.grid.window` |  | tick-grid conformity, library rule, 2021–22 | (not measured) → **100.000%** | `docs/reference/tables/t2/hsx_daily/grid_conformity_window.json` @ `3b3d765` :: `HSX stocks.library_rate` | PASS |
-| `hsx.grid.window.naive` |  | tick-grid conformity, naive, 2021–22 | (not measured) → **72.94%** | `docs/reference/tables/t2/hsx_daily/grid_conformity_window.json` @ `3b3d765` :: `HSX stocks.naive_rate` | PASS |
-| `hsx.grid.window.n` |  | closes, 2021–22 | — → **186,271** | `docs/reference/tables/t2/hsx_daily/grid_conformity_window.json` @ `3b3d765` :: `HSX stocks.observations` | PASS |
+| `hsx.admission.lag0` |  | blocked entry, lag 0 (look-ahead) | 12.90% → **13.16%** | `docs/reference/tables/t2/hsx_daily/equity_admission.json` @ `77f5b3b` :: `stocks_lag0.rate` | PASS |
+| `hsx.admission.lag0.n` |  | lag 0 attempts | 197,337 → **205,755** | `docs/reference/tables/t2/hsx_daily/equity_admission.json` @ `77f5b3b` :: `stocks_lag0.attempts` | PASS |
+| `hsx.admission.lag1` |  | blocked entry, lag 1 (honest) | 5.84% → **6.03%** | `docs/reference/tables/t2/hsx_daily/equity_admission.json` @ `77f5b3b` :: `stocks_lag1.rate` | PASS |
+| `hsx.admission.lag1.n` |  | lag 1 attempts | 197,521 → **205,958** | `docs/reference/tables/t2/hsx_daily/equity_admission.json` @ `77f5b3b` :: `stocks_lag1.attempts` | PASS |
+| `hsx.band.agree` | `\pctBandAgree` | band agreement, HSX stock | 97.59% → **91.90%** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `77f5b3b` :: `HSX stock.agreement_rate` | PASS |
+| `hsx.band.ci_lo` | `\ciBandAgree` | band agreement, Wilson 95% low | 97.52 → **91.78%** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `77f5b3b` :: `HSX stock.ci_low` | PASS |
+| `hsx.band.ci_hi` | `\ciBandAgree` | band agreement, Wilson 95% high | 97.66 → **92.03%** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `77f5b3b` :: `HSX stock.ci_high` | PASS |
+| `hsx.band.n` | `\nBandDays` | band agreement, HSX stock ticker-days | 179,784 → **182,367** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `77f5b3b` :: `HSX stock.rows` | PASS |
+| `hsx.band.disagree` |  | band disagreements | 4,324 → **14,769** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `77f5b3b` :: `HSX stock.disagree` | PASS |
+| `hsx.band.disagree_same_width` |  | disagreements with the band width right | — → **2** | `docs/reference/tables/t2/hsx_daily/band_conformance.json` @ `77f5b3b` :: `HSX stock.disagree_same_width` | PASS |
+| `hsx.grid.history` | `\pctGridConform` | tick-grid conformity, library rule, all history | 99.999% → **99.9992%** | `docs/reference/tables/t2/hsx_daily/grid_conformity_history.json` @ `77f5b3b` :: `HSX stocks.library_rate` | PASS |
+| `hsx.grid.history.naive` | `\pctGridNaive` | tick-grid conformity, naive flat 0.1, all history | 84.51% → **85.38%** | `docs/reference/tables/t2/hsx_daily/grid_conformity_history.json` @ `77f5b3b` :: `HSX stocks.naive_rate` | PASS |
+| `hsx.grid.history.n` |  | closes, all history | 1,086,518 → **1,073,191** | `docs/reference/tables/t2/hsx_daily/grid_conformity_history.json` @ `77f5b3b` :: `HSX stocks.observations` | PASS |
+| `hsx.grid.window` |  | tick-grid conformity, library rule, 2021–22 | (not measured) → **100.000%** | `docs/reference/tables/t2/hsx_daily/grid_conformity_window.json` @ `77f5b3b` :: `HSX stocks.library_rate` | PASS |
+| `hsx.grid.window.naive` |  | tick-grid conformity, naive, 2021–22 | (not measured) → **72.94%** | `docs/reference/tables/t2/hsx_daily/grid_conformity_window.json` @ `77f5b3b` :: `HSX stocks.naive_rate` | PASS |
+| `hsx.grid.window.n` |  | closes, 2021–22 | — → **186,271** | `docs/reference/tables/t2/hsx_daily/grid_conformity_window.json` @ `77f5b3b` :: `HSX stocks.observations` | PASS |
 
 ### T8: rule versions, broker fields, maintenance effort, validator, properties, benchmark
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
 - **Command:** `PYTHONPATH=src python measurements/t8_counts.py`; `python measurements/maintenance_effort.py --markdown`; `PYTHONPATH=src:. python measurements/perf_benchmark.py`
 - **Data slice:** none (engine source and git history)
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `t8.rule_versions` | `\nRuleRows` | enforced rule versions (runtime rulebook rows) | 97 → **114** | `docs/reference/tables/t8_counts.md` @ `905f737` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 2 | PASS |
-| `t8.rule_keys` |  | rule keys | — → **93** | `docs/reference/tables/t8_counts.md` @ `905f737` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 1 | PASS |
-| `t8.rule_families` | `\nRuleTables` | rule families (tables) | **12** (unchanged) | `docs/reference/tables/t8_counts.md` @ `905f737` :: regex /\*\*Total \((\d+) families\)\*\*/ | PASS |
-| `t8.rule_high` |  | rule versions graded HIGH | — → **87** | `docs/reference/tables/t8_counts.md` @ `905f737` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 4 | PASS |
-| `t8.rule_not_high` | `\nEnforcedBelowHigh` | rule versions graded MEDIUM, LOW or UNVERIFIED | a handful → **27** | `docs/reference/tables/t8_counts.md` @ `905f737` :: computed from `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 5; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 6; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 7 | PASS |
-| `t8.rule_unknown` |  | rows that record an absence (UNKNOWN) | **11** (unchanged) | `docs/reference/tables/t8_counts.md` @ `905f737` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 10 | PASS |
-| `t8.broker_fields` |  | broker fields | **244** (unchanged) | `docs/reference/tables/t8_counts.md` @ `905f737` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 1 | PASS |
-| `t8.broker_published` |  | broker fields published by the firm | — → **110** | `docs/reference/tables/t8_counts.md` @ `905f737` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 2 | PASS |
-| `t8.broker_supplied` | `\nBrokerSupplied` | broker fields supplied by us (as shipped) | — → **0** | `docs/reference/tables/t8_counts.md` @ `905f737` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 3 | PASS |
-| `t8.broker_inferred` |  | broker fields inferred | — → **21** | `docs/reference/tables/t8_counts.md` @ `905f737` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 4 | PASS |
-| `t8.broker_unpublished` |  | broker fields recorded as not published | — → **113** | `docs/reference/tables/t8_counts.md` @ `905f737` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 5 | PASS |
-| `t8.encoded_total` |  | rules + broker fields encoded in the engine | 341 → **358** | `docs/reference/tables/t8_counts.md` @ `905f737` :: computed from `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 2; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 1 | PASS |
-| `t8.maint.im.data` | `\nMaintDataLines` | IM 13% → 17%: rule-data lines | — → **15** | `docs/reference/tables/t8_maintenance_effort.md` @ `905f737` :: row /^\| VSD initial margin 13% -> 17%/ cell 2 | PASS |
-| `t8.maint.im.engine` | `\nMaintCodeLines` | IM 13% → 17%: change-specific engine lines | — → **0** | `docs/reference/tables/t8_maintenance_effort.md` @ `905f737` :: row /^\| VSD initial margin 13% -> 17%/ cell 4 | PASS |
-| `t8.maint.im.dup` |  | IM 13% → 17%: undated duplicate scalars | — → **3** | `docs/reference/tables/t8_maintenance_effort.md` @ `905f737` :: row /^\| VSD initial margin 13% -> 17%/ cell 3 | PASS |
-| `t8.maint.lot.data` |  | HOSE lot 10 → 100: rule-data lines | — → **13** | `docs/reference/tables/t8_maintenance_effort.md` @ `905f737` :: row /^\| HOSE round lot 10 -> 100/ cell 2 | PASS |
-| `t8.maint.lot.engine` |  | HOSE lot 10 → 100: engine lines | — → **4** | `docs/reference/tables/t8_maintenance_effort.md` @ `905f737` :: row /^\| HOSE round lot 10 -> 100/ cell 4 | PASS |
-| `t8.maint.krx.data` |  | KRX cutover: rule-data lines | — → **79** | `docs/reference/tables/t8_maintenance_effort.md` @ `905f737` :: row /^\| KRX trading-system cutover/ cell 2 | PASS |
-| `t8.maint.krx.engine` |  | KRX cutover: engine lines | — → **20** | `docs/reference/tables/t8_maintenance_effort.md` @ `905f737` :: row /^\| KRX trading-system cutover/ cell 4 | PASS |
+| `t8.rule_versions` | `\nRuleRows` | enforced rule versions (runtime rulebook rows) | 97 → **114** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 2 | PASS |
+| `t8.rule_keys` |  | rule keys | — → **93** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 1 | PASS |
+| `t8.rule_families` | `\nRuleTables` | rule families (tables) | **12** (unchanged) | `docs/reference/tables/t8_counts.md` @ `883760b` :: regex /\*\*Total \((\d+) families\)\*\*/ | PASS |
+| `t8.rule_high` |  | rule versions graded HIGH | — → **87** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 4 | PASS |
+| `t8.rule_not_high` | `\nEnforcedBelowHigh` | rule versions graded MEDIUM, LOW or UNVERIFIED | a handful → **27** | `docs/reference/tables/t8_counts.md` @ `883760b` :: computed from `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 5; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 6; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 7 | PASS |
+| `t8.rule_unknown` |  | rows that record an absence (UNKNOWN) | **11** (unchanged) | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total \(12 families\)\*\*/ cell 10 | PASS |
+| `t8.broker_fields` |  | broker fields | **244** (unchanged) | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 1 | PASS |
+| `t8.broker_published` |  | broker fields published by the firm | — → **110** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 2 | PASS |
+| `t8.broker_supplied` | `\nBrokerSupplied` | broker fields supplied by us (as shipped) | — → **0** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 3 | PASS |
+| `t8.broker_inferred` |  | broker fields inferred | — → **21** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 4 | PASS |
+| `t8.broker_unpublished` |  | broker fields recorded as not published | — → **113** | `docs/reference/tables/t8_counts.md` @ `883760b` :: row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 5 | PASS |
+| `t8.encoded_total` |  | rules + broker fields encoded in the engine | 341 → **358** | `docs/reference/tables/t8_counts.md` @ `883760b` :: computed from `docs/reference/tables/t8_counts.md` row /^\| \*\*Total \(12 families\)\*\*/ cell 2; `docs/reference/tables/t8_counts.md` row /^\| \*\*Total\*\* \| \*\*244\*\*/ cell 1 | PASS |
+| `t8.maint.im.data` | `\nMaintDataLines` | IM 13% → 17%: rule-data lines | — → **15** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| VSD initial margin 13% -> 17%/ cell 2 | PASS |
+| `t8.maint.im.engine` | `\nMaintCodeLines` | IM 13% → 17%: change-specific engine lines | — → **0** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| VSD initial margin 13% -> 17%/ cell 4 | PASS |
+| `t8.maint.im.dup` |  | IM 13% → 17%: undated duplicate scalars | — → **3** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| VSD initial margin 13% -> 17%/ cell 3 | PASS |
+| `t8.maint.lot.data` |  | HOSE lot 10 → 100: rule-data lines | — → **13** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| HOSE round lot 10 -> 100/ cell 2 | PASS |
+| `t8.maint.lot.engine` |  | HOSE lot 10 → 100: engine lines | — → **4** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| HOSE round lot 10 -> 100/ cell 4 | PASS |
+| `t8.maint.krx.data` |  | KRX cutover: rule-data lines | — → **79** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| KRX trading-system cutover/ cell 2 | PASS |
+| `t8.maint.krx.engine` |  | KRX cutover: engine lines | — → **20** | `docs/reference/tables/t8_maintenance_effort.md` @ `883760b` :: row /^\| KRX trading-system cutover/ cell 4 | PASS |
 | `t8.validator.edges` |  | uncovered rule edges, all resolving to UNKNOWN | — → **12** | — | PENDING: Prose only (`docs/rivf26/NOTES-FOR-OWNER.md` §3.4, `LIMITATIONS.md` #8); pinned in `tests/market/session/test_rule_tables.py::OPEN_EDGES` but no committed result file. |
 | `t8.properties` | `\nProperties` | Hypothesis properties | — → **14** | — | PENDING: Prose only (`NOTES-FOR-OWNER.md` §3.5). No committed result file; count from `tests/properties/` at freeze. |
 | `t8.property_examples` | `\nPropertyExamples` | Hypothesis examples (plus 26 boundary cases) | — → **3,850** | — | PENDING: Prose only (`NOTES-FOR-OWNER.md` §3.5). No committed result file. |
-| `t8.bench.at_per_sec` | `\nAtPerSec` | `Rulebook.at(ts)` resolutions per second (warm) | — → **3,912,146** | `docs/reference/tables/t8_perf_benchmark.json` @ `a2021d3` :: `rulebook.at_per_second` | PASS |
-| `t8.bench.orders_per_sec` | `\nOrdersPerSec` | daily fill evaluations per second through `ExchangeSession` | — → **13,223** | `docs/reference/tables/t8_perf_benchmark.json` @ `a2021d3` :: `daily.fill_evaluations_per_second` | PASS |
-| `t8.bench.e1_wall` | `\EoneWall` | E1 wall time, full 2022 population (s) | — → **7.14** | `docs/reference/tables/t8_perf_benchmark.json` @ `a2021d3` :: `e1.wall_s` | PASS |
-| `t8.bench.e1_rss` |  | E1 peak RSS (MB) | — → **285.8** | `docs/reference/tables/t8_perf_benchmark.json` @ `a2021d3` :: `e1.peak_rss_mb` | PASS |
-| `t8.bench.commit` |  | benchmark ran on plutus-simulator | — → **373f9a7** | `docs/reference/tables/t8_perf_benchmark.json` @ `a2021d3` :: `machine.plutus_simulator_commit` | PASS |
+| `t8.bench.at_per_sec` | `\nAtPerSec` | `Rulebook.at(ts)` resolutions per second (warm) | — → **3,912,146** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `rulebook.at_per_second` | PASS |
+| `t8.bench.orders_per_sec` | `\nOrdersPerSec` | daily fill evaluations per second through `ExchangeSession` | — → **13,223** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `daily.fill_evaluations_per_second` | PASS |
+| `t8.bench.e1_wall` | `\EoneWall` | E1 wall time, full 2022 population (s) | — → **7.14** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `e1.wall_s` | PASS |
+| `t8.bench.e1_rss` |  | E1 peak RSS (MB) | — → **285.8** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `e1.peak_rss_mb` | PASS |
+| `t8.bench.commit` |  | benchmark ran on plutus-simulator | — → **8d46c56** | `docs/reference/tables/t8_perf_benchmark.json` @ `461e772` :: `machine.plutus_simulator_commit` | PASS |
 
 ### Test-suite counts (F4)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest tests`; `pytest scenarios`; `pytest strategies` (each on its own)
 - **Data slice:** shipped fixtures
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `tests.unit.passed` | `\nUnitTests` | unit tests passed | 1,646 → **2,180** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `67f18fa`/`dcaecb9`: the 2 strict xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` (`11ba6cd`, 7 tests) and any later commit. |
-| `tests.unit.xfailed` |  | unit tests xfailed (strict) | — → **0** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `67f18fa`/`dcaecb9`: the 2 strict xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` (`11ba6cd`, 7 tests) and any later commit. |
-| `tests.unit.skipped` |  | unit tests skipped (corpus-gated) | — → **453** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `67f18fa`/`dcaecb9`: the 2 strict xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` (`11ba6cd`, 7 tests) and any later commit. |
+| `tests.unit.passed` | `\nUnitTests` | unit tests passed | 1,646 → **2,180** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `ba0d9f4`/`6e6c104`: the 2 strict xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` (`3b44fd9`, 7 tests) and any later commit. |
+| `tests.unit.xfailed` |  | unit tests xfailed (strict) | — → **0** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `ba0d9f4`/`6e6c104`: the 2 strict xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` (`3b44fd9`, 7 tests) and any later commit. |
+| `tests.unit.skipped` |  | unit tests skipped (corpus-gated) | — → **453** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4i (after `ba0d9f4`/`6e6c104`: the 2 strict xfails now pass): 2,180 passed, 0 xfailed, 453 skipped. That count predates `tests/test_check_numbers.py` (`3b44fd9`, 7 tests) and any later commit. |
 | `tests.scenarios` | `\nScenarioTests` | scenario tests passed (0 skipped) | 38 → **39** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d. |
 | `tests.strategies.passed` | `\nStrategyTests` | strategy tests passed | 11 → **18** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d. |
 | `tests.strategies.skipped` |  | strategy tests skipped (E1, F2 need corpus slices) | — → **2** | — | PENDING: To refresh at freeze. Recorded in `docs/rivf26/T0-audit.md` §4d. |
 
 ### Scenario and strategy findings quoted in the text
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
 - **Command:** `env -u PLUTUS_DATA_ROOT pytest strategies/test_s2_*.py scenarios`
 - **Data slice:** shipped fixtures
 
@@ -534,7 +534,7 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 | `mm.krx2025.undecided_pre` | `\pctMMUndecPre` | krx2025: conservative undecided orders, pre-cutover | 99.94% (submission, events) → **99.76%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `faithful.krx.pre.indeterminate_order_rate` | PASS: Counts orders; the submission's 99.94% / 99.92% counted fill-evaluation events. |
 | `mm.krx2025.undecided_post` | `\pctMMUndecPost` | krx2025: conservative undecided orders, post-cutover | 99.92% (submission, events); none (refused, before the rerun) → **99.21%** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `faithful.krx.post.indeterminate_order_rate` | PASS |
 | `mm.krx2025.refused_post` |  | krx2025: post-cutover sessions refused (of 20) | 20 (before the rerun) → **0** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `tier1.post_cutover_refused_sessions` | PASS |
-| `mm.krx2025.engine_commit` |  | krx2025 anchor ran on plutus-simulator | fc94743 → **373f9a7** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `plutus_simulator_commit` (first 7 characters) | PASS |
+| `mm.krx2025.engine_commit` |  | krx2025 anchor ran on plutus-simulator | 31e3405 → **8d46c56** | ProtoMarketMaker: `result/mm_anchor/krx2025.json` @ `4474777` :: `plutus_simulator_commit` (first 7 characters) | PASS |
 | `mm.im2022.fills_naive` |  | im2022: naive fills | — → **129** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `naive.fills` | PASS |
 | `mm.im2022.hpr_naive` |  | im2022: HPR naive | — → **−12.93%** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `naive.hpr` | PASS |
 | `mm.im2022.fills_faithful` |  | im2022: faithful fills, conservative | — → **70** | ProtoMarketMaker: `result/mm_anchor/im2022.json` @ `4474777` :: `faithful.fills` | PASS |
@@ -640,18 +640,18 @@ the result files for any row it covers; nor between the SB, Grid and MM READMEs'
 
 ### Data-slice integrity (sha256 of every committed slice file vs its manifest)
 
-- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `7c36a43` when generated)
+- **Repo:** `plutus-simulator` (branch `rivf26`, HEAD `51344fb` when generated)
 - **Command:** this checker
 - **Data slice:** each manifest named in the row
 
 | ID | Macro | Number | Old → New | Source file @ commit :: field | Check |
 |---|---|---|---|---|---|
-| `slice.sim.scenarios.fixtures.daily` |  | `scenarios/fixtures/daily/DATA-MANIFEST.md`: files matching sha256 | — → **9** | `scenarios/fixtures/daily/DATA-MANIFEST.md` @ `5314bb6` :: files whose sha256 matches the manifest | PASS |
-| `slice.sim.scenarios.fixtures.book` |  | `scenarios/fixtures/book/DATA-MANIFEST.md`: files matching sha256 | — → **12** | `scenarios/fixtures/book/DATA-MANIFEST.md` @ `5314bb6` :: files whose sha256 matches the manifest | PASS |
-| `slice.sim.strategies.fixtures.parquet` |  | `strategies/fixtures/parquet/DATA-MANIFEST.md`: files matching sha256 | — → **9** | `strategies/fixtures/parquet/DATA-MANIFEST.md` @ `5314bb6` :: files whose sha256 matches the manifest | PASS |
-| `slice.sim.strategies.fixtures.s2_lock.daily` |  | `strategies/fixtures/s2_lock/daily/DATA-MANIFEST.md`: files matching sha256 | — → **4** | `strategies/fixtures/s2_lock/daily/DATA-MANIFEST.md` @ `1a98db6` :: files whose sha256 matches the manifest | PASS |
-| `slice.sim.strategies.fixtures.s2_lock.book` |  | `strategies/fixtures/s2_lock/book/DATA-MANIFEST.md`: files matching sha256 | — → **4** | `strategies/fixtures/s2_lock/book/DATA-MANIFEST.md` @ `1a98db6` :: files whose sha256 matches the manifest | PASS |
-| `slice.sim.tests.market.session.fixtures.book_walk` |  | `tests/market/session/fixtures/book_walk/DATA-MANIFEST.md`: files matching sha256 | — → **8** | `tests/market/session/fixtures/book_walk/DATA-MANIFEST.md` @ `f0434dc` :: files whose sha256 matches the manifest | PASS |
+| `slice.sim.scenarios.fixtures.daily` |  | `scenarios/fixtures/daily/DATA-MANIFEST.md`: files matching sha256 | — → **9** | `scenarios/fixtures/daily/DATA-MANIFEST.md` @ `74fc71a` :: files whose sha256 matches the manifest | PASS |
+| `slice.sim.scenarios.fixtures.book` |  | `scenarios/fixtures/book/DATA-MANIFEST.md`: files matching sha256 | — → **12** | `scenarios/fixtures/book/DATA-MANIFEST.md` @ `74fc71a` :: files whose sha256 matches the manifest | PASS |
+| `slice.sim.strategies.fixtures.parquet` |  | `strategies/fixtures/parquet/DATA-MANIFEST.md`: files matching sha256 | — → **9** | `strategies/fixtures/parquet/DATA-MANIFEST.md` @ `74fc71a` :: files whose sha256 matches the manifest | PASS |
+| `slice.sim.strategies.fixtures.s2_lock.daily` |  | `strategies/fixtures/s2_lock/daily/DATA-MANIFEST.md`: files matching sha256 | — → **4** | `strategies/fixtures/s2_lock/daily/DATA-MANIFEST.md` @ `e8d819c` :: files whose sha256 matches the manifest | PASS |
+| `slice.sim.strategies.fixtures.s2_lock.book` |  | `strategies/fixtures/s2_lock/book/DATA-MANIFEST.md`: files matching sha256 | — → **4** | `strategies/fixtures/s2_lock/book/DATA-MANIFEST.md` @ `e8d819c` :: files whose sha256 matches the manifest | PASS |
+| `slice.sim.tests.market.session.fixtures.book_walk` |  | `tests/market/session/fixtures/book_walk/DATA-MANIFEST.md`: files matching sha256 | — → **8** | `tests/market/session/fixtures/book_walk/DATA-MANIFEST.md` @ `6b4b9db` :: files whose sha256 matches the manifest | PASS |
 | `slice.smartbeta.market.w2022.manifest` |  | ProtoSmartBeta `data/market/w2022/DATA-MANIFEST.md`: files matching sha256 | — → **9** | ProtoSmartBeta: `data/market/w2022/DATA-MANIFEST.md` @ `b82c6f2` :: files whose sha256 matches the manifest | PASS |
 | `slice.smartbeta.market.w2023.manifest` |  | ProtoSmartBeta `data/market/w2023/DATA-MANIFEST.md`: files matching sha256 | — → **9** | ProtoSmartBeta: `data/market/w2023/DATA-MANIFEST.md` @ `b82c6f2` :: files whose sha256 matches the manifest | PASS |
 | `slice.smartbeta.signal.w2022.manifest` |  | ProtoSmartBeta `data/signal/w2022/DATA-MANIFEST.md`: files matching sha256 | — → **1** | ProtoSmartBeta: `data/signal/w2022/DATA-MANIFEST.md` @ `b82c6f2` :: files whose sha256 matches the manifest | PASS: The manifest lists an empty (0-row) ticker master that was not copied into the repo. |

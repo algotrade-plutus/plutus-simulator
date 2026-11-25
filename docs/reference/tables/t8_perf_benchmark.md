@@ -1,6 +1,6 @@
 # T8.3 performance benchmark
 
-Machine: Apple M6, 12 physical / 12 logical cores, 24.0 GB; macOS-27.0.1-arm64-arm-64bit-Mach-O; Python 3.15.2, DuckDB 2.0.1, pyarrow 26.0.1. plutus-simulator `373f9a7` (src dirty: False); load average at start (1.23, 2.17, 3.55).
+Machine: Apple M6, 12 physical / 12 logical cores, 24.0 GB; macOS-27.0.1-arm64-arm-64bit-Mach-O; Python 3.15.2, DuckDB 2.0.1, pyarrow 26.0.1. plutus-simulator `8d46c56` (src dirty: False); load average at start (1.23, 2.17, 3.55).
 
 | Measure | Value |
 |---|---:|

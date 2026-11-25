@@ -663,7 +663,7 @@ def _band_lock_by_state(side: Side, edge: Decimal,
     never authorise one): a lock against this side observed at the instant
     (``TICK_BOOK``) is a NO_FILL; one claimed on no evidence (``UNKNOWN``) is
     INDETERMINATE naming the book. Restores the fill-time refusal
-    ``BookWalkFillPolicy._lock_refusal`` made before ``348e010``.
+    ``BookWalkFillPolicy._lock_refusal`` made before ``12a9d82``.
     """
     state = interval.state
     if state.locked_side is not side:

@@ -116,8 +116,8 @@ library surface and its outcome matches the cited Vietnamese rule.
   wires the corpus.
 
 **Since landed (2026-08-29):** **MUST #4** — VM now settles in cash daily (`settle_daily` wired
-into `exchange._overnight_margin`, `3e7e17a`); J3/J6/J26 carry it. **MUST #5** — the tick-path
-closing auction returns the published close, not a stale `last` (D71 fixed, `74e667a`); exhibited
+into `exchange._overnight_margin`, `2c8be0f`); J3/J6/J26 carry it. **MUST #5** — the tick-path
+closing auction returns the published close, not a stale `last` (D71 fixed, `25ad5b6`); exhibited
 by **J37**. The auction *phase-carrying data path* for the default daily session (J7/J14) remains a
 checklist SHOULD, not a MUST — the auction fill itself is built and demonstrated (S4 crosses 8 ATO
 / 5 ATC through the session on `AuctionAwareDataHubSource`). **Still declared:** post-KRX
@@ -161,7 +161,7 @@ Credential + DB details are in memory (`production-db-access`, `local-quote-db-t
   tests pass**; the three tests that pinned the Tier-1 non-execution pass unchanged because
   they end on the first (cure-window) forced mark. **MUST #4** (VM settles in cash daily, A60)
   was a separate semantic change — **since landed 2026-08-29** (`settle_daily` wired into
-  `exchange._overnight_margin`, `3e7e17a`): VM is now the day's move settled in cash, not
+  `exchange._overnight_margin`, `2c8be0f`): VM is now the day's move settled in cash, not
   cumulative-since-entry. `scenarios/test_j3_forced_liquidation.py`.
 - **J27 — DONE, Tier 1 + Tier 2 green, via a real library build (MUST #2).** `amend` now
   re-runs the encumbrance and admission: an amend-up grows the reservation (70M → 105M) or is
@@ -194,5 +194,5 @@ Credential + DB details are in memory (`production-db-access`, `local-quote-db-t
 The publish checklist's MUST list is just "which scenarios are red." **All five are now green:**
 **#1** order-book walk (J13 sweep · J28 · J30); **#2** amend re-runs encumbrance/admission (J27);
 **#3** forced liquidation executes (J3 · J5); **#4** VM settles in cash daily (J3 · J6 · J26,
-`3e7e17a`, 2026-08-29); **#5** tick-path close-as-ATC (J37, `74e667a`, 2026-08-29). The release
+`2c8be0f`, 2026-08-29); **#5** tick-path close-as-ATC (J37, `25ad5b6`, 2026-08-29). The release
 gate is clear.

@@ -19,7 +19,7 @@ from the DB; book and tape (with sizes) from the archive.
 |---|---|---|---:|---|
 | `hard`, daily bar | 35.8% [32.3, 39.4] | **32.6%** [29.7, 35.7] | 950 | all of it the resolution limit, as before |
 | `book_walk` tick, optimistic | 85.6% [83.5, 87.4] | **10.1%** [8.7, 11.7] | 1,484 | sized book and tape now present |
-| `book_walk` tick, conservative | 99.7% [99.3, 99.9] | **60.2%** [57.9, 62.6] | 1,650 | 78.2% before change 2 (`e528633`) |
+| `book_walk` tick, conservative | 99.7% [99.3, 99.9] | **60.2%** [57.9, 62.6] | 1,650 | 78.2% before change 2 (`254aa1d`) |
 
 **The finding changes direction:** with sized data, tick is *more* decidable than the bar (10.1% vs 32.6%).
 What holds is the cause split: the resolution-limit cause appears only at the bar. `strategies/test_f2_*`
@@ -44,7 +44,7 @@ Source: `strategies/test_f3_cross_policy.py` (shipped fixture, regenerated from 
 
 | Policy | Old | New |
 |---|---|---|
-| `soft` | −75.5%, 5 fills, 0% undecided | **−76.4%**, 5 fills, 0% undecided, 3 forced (was 2). Moved by the VM-baseline fix `8295502` |
+| `soft` | −75.5%, 5 fills, 0% undecided | **−76.4%**, 5 fills, 0% undecided, 3 forced (was 2). Moved by the VM-baseline fix `64e826e` |
 | `hard` | 0.0%, 0 fills, 50% undecided | 0.0%, 0 fills, 50% |
 | `probabilistic` | 0.0%, 0 fills, 50% undecided | 0.0%, 0 fills, 50% |
 
@@ -54,7 +54,7 @@ Source: `strategies/test_s9_queue_sensitivity.py`, `test_f3_cross_policy.py`. FP
 | Queue | Old | New |
 |---|---|---|
 | optimistic | 152,600, 0% undecided | **152,600**, 0% |
-| conservative | 123,700 (−18.9%), **16.7% undecided** | **123,700 (−18.9%)**, **0% undecided**: its taker walk now reads the sized tape (change 2, `e528633`) |
+| conservative | 123,700 (−18.9%), **16.7% undecided** | **123,700 (−18.9%)**, **0% undecided**: its taker walk now reads the sized tape (change 2, `254aa1d`) |
 | probabilistic | 137,600, 0% undecided | **137,600**, 0% |
 
 ## Rule edition: derivatives margin (regime split, F1)
@@ -71,7 +71,7 @@ Book: 381 VN30F front-month entries, 2021-06-01..2022-12-30 (DB).
 grid equals a flat 17% exactly, so against the 17% rule in force on the eve of the cutover, KRX adds 0%.
 
 ## Funding level: margin-call incidence
-Source: `measurements/margin_incidence_account.py`. Same 381-entry book; funding 1.42×. Unchanged after `8295502`.
+Source: `measurements/margin_incidence_account.py`. Same 381-entry book; funding 1.42×. Unchanged after `64e826e`.
 
 | Hold | Call (old → new) | Forced (old → new) |
 |---|---|---|

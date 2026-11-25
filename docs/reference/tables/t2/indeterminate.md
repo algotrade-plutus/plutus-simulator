@@ -13,19 +13,19 @@ the indeterminate rate (F2)"). That table is **not** edited here; this file is t
   tape from the local archive (`--source archive`), because the DB has no bid/ask sizes before 2023-01-03.
   Slices: `t2-indeterminate/daily` and `t2-indeterminate/book` (manifests with sha256 beside them; parquet not
   committed). Both come from one logged run (`log_run`), split by source.
-- **Code:** "after change 2" = `rivf26` at `e528633` (the conservative queue reads the sized tape for taker
-  sweeps, T0-audit §4e). "Before change 2" = `src/` of `f3958d1`, run with the same measurement script and
+- **Code:** "after change 2" = `rivf26` at `254aa1d` (the conservative queue reads the sized tape for taker
+  sweeps, T0-audit §4e). "Before change 2" = `src/` of `04112de`, run with the same measurement script and
   slices. Change 2 touches only `src/plutus/market/session/book_walk.py` among the code this measurement runs.
 - **CI:** 95% Wilson. **N** = fill evaluations (each live order, each mark that reaches the fill policy), so N
   differs between arms and between code versions: an order that fills earlier stops being evaluated.
 - Raw outputs: `indeterminate_before_change2.json`, `indeterminate_after_change2.json`,
   `indeterminate_after_band_edge_fix.json` (this directory). **The camera-ready values are the last one**: after the
-  band-edge fix (`67f18fa`) the tick arms lose their 48 `{book, low}` evaluations each, so tick optimistic is
+  band-edge fix (`ba0d9f4`) the tick arms lose their 48 `{book, low}` evaluations each, so tick optimistic is
   **7.1%** [5.9, 8.5], 102 / 1,443, and tick conservative **58.7%** [56.3, 61.1], 946 / 1,611; the bar is unchanged.
 
 ## The rows
 
-| Row | Old (hermes, 66 days) | New, before change 2 (`f3958d1`) | New, after change 2 (`e528633`) |
+| Row | Old (hermes, 66 days) | New, before change 2 (`04112de`) | New, after change 2 (`254aa1d`) |
 |---|---|---|---|
 | `hard`, daily bar | **35.8%** [32.3, 39.4] | **32.6%** [29.7, 35.7], 310 / 950 | **32.6%** [29.7, 35.7], 310 / 950 (unchanged) |
 | `book_walk` tick, optimistic queue | **85.6%** [83.5, 87.4] | **10.1%** [8.7, 11.7], 150 / 1,484 | **10.1%** [8.7, 11.7], 150 / 1,484 (unchanged) |
