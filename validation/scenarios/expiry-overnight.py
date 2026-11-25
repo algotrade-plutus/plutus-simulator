@@ -999,33 +999,24 @@ def run_post_krx_margin_model(*, lots: int = 2,
     """What margin does an overnight position face **after** the KRX cutover?
 
     ``rulebook.margin_model()`` is the repository's own answer to that
-    question and at any date from 2025-05-05 it **raises**::
+    question. Until 2026-11-25 it **raised** at any date from 2025-05-05
+    (*"POST-KRX VALUE NOT SOURCED"*, citing QD 26 as *"never read"*), while
+    ``scenario_margin.py`` implemented QD 26 and its Phu luc 2 from a signed
+    package read end to end. That conflict is resolved: the owner adopted
+    QD 26's two-layer model, and the post-cutover row now resolves to
+    ``'krx_two_layer'`` (``docs/reference/krx-margin-research.md``).
 
-        margin_model@2026-03-09T09:30:00 is unknown: POST-KRX VALUE NOT
-        SOURCED.
+    So the session asks, and gets an answer, in two places:
 
-    **What this run used to measure is that the session never asked.** A
-    VN30F2603 position carried through the 2026-03-09 limit-down was margined
-    by ``IM + VM`` at 0.17 -- the pre-KRX broker formula, ten months past the
-    cutover -- and nothing raised, nothing was flagged, and
-    ``indeterminate_report`` counted zero.
-
-    It asks now, in two separate places, and they answer different questions:
-
-    * the **intraday** mark asks ``RuleSet.margin_model()``, still runs on
-      ``IM + VM`` because refusing to margin an open position is not the safer
-      answer, and records ``rule.margin_model.unsourced`` once per mark;
-    * the **overnight** layer takes the rulebook's refusal as the signal to
-      ask the *profile* instead. With no firm named there is nothing to ask,
-      so the end-of-day requirement is INDETERMINATE and moves the scalar.
-      :func:`run_post_krx_overnight_layer` varies that one input.
-
-    A conflict worth stating rather than resolving here: the rulebook's
-    post-KRX row says the COMS formula *"could not be obtained"* and cites a
-    document *"never read"*, while ``scenario_margin.py`` implements QD 26 and
-    its Phu luc 2 from a signed package read end to end. Both cannot be true.
-    Re-dating that row is a sourcing decision about a gazetted instrument and
-    is not taken in a validation scenario.
+    * the **intraday** mark is the broker layer -- ``IM`` on VSDC's published
+      0.17 on the futures price, with no VM term because no firm is named
+      (QD 26 has no VM component; research C-2 is open) -- and
+      ``rule.margin_model.unsourced`` no longer fires;
+    * the **overnight** layer is VSDC's own post-close ``MR`` on the
+      underlying's close. This source carries the future and not the VN30
+      index, so it is INDETERMINATE naming ``underlying_close`` -- never the
+      futures price, never the intraday number.
+      :func:`run_post_krx_overnight_layer` varies that input.
 
     Returns ``(result, strategy, margin_model, raised)`` where
     ``margin_model`` is the rulebook's answer if it has one and ``raised`` is
@@ -1043,8 +1034,8 @@ def run_post_krx_margin_model(*, lots: int = 2,
     result = run_scenario(Scenario(
         name=POST_KRX_2026.name, window=POST_KRX_2026, session=session,
         strategy=strategy, source=src,
-        note='The rulebook refuses to state the post-KRX margin model; the '
-             'session applies the pre-KRX one anyway.'))
+        note='Post-KRX: the broker layer on the published ratio intraday; '
+             'VSDC\'s post-close requirement needs the index close.'))
 
     model: Optional[str] = None
     raised: Optional[Exception] = None
@@ -1092,33 +1083,25 @@ def run_post_krx_overnight_layer(*, lots: int = 2,
                                  ) -> Tuple[OvernightLayer, ...]:
     """Post-KRX: what does the account actually owe over the close? Three arms.
 
-    :func:`run_post_krx_margin_model` measures that the *rulebook* refuses to
-    name the mechanism after the cutover. This measures what the session does
-    with that refusal, and it is where ``scenario_margin.py`` -- 1,069
-    executable lines with **zero call sites** when the fidelity audit ran --
-    is finally exercised.
-
-    The three arms differ in exactly one input each, so each names one thing
-    a user would have to fix:
+    Post-KRX the rulebook names QD 26's two-layer model, so the overnight
+    requirement is VSDC's CCP ``MR`` on VSDC's published ratio and the
+    underlying's close (:data:`~plutus.market.session.overnight.VSDC_CCP_MODEL`)
+    -- the firm is no longer what decides it. The three arms are kept so that
+    is visible:
 
     ``no firm``
-        No margin profile at all. Past the cutover the rulebook has no answer
-        and there is no firm to ask, so the overnight requirement is
-        **INDETERMINATE** -- ``margin_model_overnight.unstated``. It is *not*
-        ``IM + VM`` wearing a different label, and that is the point: before
-        this layer existed, a 2026 position was margined on the pre-KRX
-        formula, the run completed, and ``indeterminate_report()`` counted
-        zero.
+        No margin profile. The CCP layer needs none; this source carries no
+        index, so the requirement is **INDETERMINATE** naming
+        ``underlying_close`` -- *not* ``IM`` wearing a different label.
     ``SSI, index withheld``
-        SSI publishes the richest VSDC parameter mirror in the survey, so the
-        model is known -- and the source carries the future and not the index.
-        INDETERMINATE again, this time naming ``underlying_close``. Phu luc 2
+        A firm with the richest VSDC parameter mirror in the survey. Its
+        mirror is not consulted; the same ``underlying_close`` gap. Phu luc 2
         section 1.1's ``S`` is the underlying's close and substituting the
         futures price would fold the basis into all 21 scenarios.
     ``SSI, index served``
-        Everything present. The 21-scenario grid runs, and the number it
-        produces is compared against the ``IM + VM`` the same account faced
-        at the same close.
+        Everything present. The 21-scenario grid runs on 0.17, and the number
+        it produces is compared against the ``IM`` the same account faced at
+        the same close.
 
     **The index series here is the futures series, and that is a stated
     simplification rather than a measurement.** No VN30 index close for March

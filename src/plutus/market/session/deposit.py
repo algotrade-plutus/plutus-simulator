@@ -77,10 +77,13 @@ the regime change even though the formula does not.
           ``Pgm = Max((Rm + Sm + Dm), MM)`` -- scenario risk margin, basis
           margin, delivery margin, floored at a minimum margin -- and
           **variation margin is not a component at all**, because QD 26 Dieu 20
-          settles position P&L as a separate daily cash movement. That model is
-          specified in ``docs/reference/post-krx-margin-spec.md`` and is
-          deliberately **not built here**; building it is an author decision
-          that has not been taken.
+          settles position P&L as a separate daily cash movement. That CCP
+          model is not built here: it is ``overnight.vsdc_ccp_requirement``,
+          run once after the close (owner decision 2026-11-25). What this
+          module computes post-KRX is the **broker** layer -- ``IM`` on VSDC's
+          published ratio (QD 26 Dieu 5.1.1.b) plus resting-order margin, and
+          **no VM term** unless the firm's own intraday model states one
+          (:attr:`DerivativesAccount.post_krx_variation_margin`).
     utilisation = MR / deposit assets, tested against
           :class:`plutus.market.broker.BrokerTerms`' warning / call /
           forced-close ladder. **The ladder is ours** -- see the correction at
@@ -125,6 +128,7 @@ from typing import (Any, Callable, Dict, Mapping, Optional, Protocol, Sequence,
 from plutus.market.broker import BrokerTerms
 from plutus.market.margin import vsd_initial_margin
 from plutus.market.protocol import Order
+from plutus.market.session.rulebook import KRX_CUTOVER, MARGIN_MODEL_KRX
 from plutus.market.session.types import (AccountRef, BrokerProfile,
                                          ContractPosition, Encumbrance, Fill,
                                          InvestorClass, LiquidationRule,
@@ -144,6 +148,7 @@ __all__ = [
     'ContractLedger', 'DerivativesAccount',
     # the margin test
     'account_margin_requirement', 'margin_status', 'resolve_initial_margin_rate',
+    'unsettled_variation_loss', 'variation_margin_regime_is_krx',
     # the contract multiplier, resolved
     'MultiplierRule', 'UnknownContractMultiplier', 'resolve_contract_multiplier',
     # the call state machine
@@ -673,6 +678,44 @@ def margin_status(required: Decimal, assets: Decimal,
     return MarginStatus.OK
 
 
+def unsettled_variation_loss(account: 'DerivativesAccount',
+                             marks: Mapping[str, Decimal]) -> Decimal:
+    """The account's net loss since its variation baselines, else zero.
+
+    Loss-only and account-level (rulebook 6.3; QD 96 Dieu 5.3.b): the
+    portfolio's P&L against each contract's variation reference, netted, and
+    only a net loss counts. Pre-KRX this is the ``VM`` term of ``MR``; post-KRX
+    it is the cash the next daily settlement will move, which is what the
+    overnight layer needs to know when that settlement could not run.
+    """
+    portfolio_pnl = _ZERO
+    for code, position in account.contracts.positions().items():
+        price = account.mark_for(code, marks)
+        reference = account.variation_reference(code)
+        portfolio_pnl += (Decimal(position.net_quantity) * position.multiplier
+                          * (price - reference))
+    return -portfolio_pnl if portfolio_pnl < 0 else _ZERO
+
+
+def variation_margin_regime_is_krx(rules: Optional[RuleSetLike],
+                                   ts: datetime) -> bool:
+    """Whether ``ts`` is under QD 26's two-layer model, where VM is no part
+    of ``MR``. Asked of the dated rulebook when one is supplied (a pinned
+    counterfactual value is honoured as "not the KRX model"); by the cutover
+    date otherwise, matching the date-only fallback of
+    :func:`resolve_initial_margin_rate`.
+    """
+    if rules is None:
+        return ts.date() >= KRX_CUTOVER
+    asker = getattr(rules, 'margin_model', None)
+    if asker is None:
+        return False
+    try:
+        return asker() == MARGIN_MODEL_KRX
+    except LookupError:
+        return False
+
+
 def account_margin_requirement(account: 'DerivativesAccount',
                                marks: Mapping[str, Decimal],
                                rules: Optional[RuleSetLike],
@@ -774,7 +817,6 @@ def account_margin_requirement(account: 'DerivativesAccount',
         )
 
     initial = _ZERO
-    portfolio_pnl = _ZERO
     stale = []
     for code, position in account.contracts.positions().items():
         price = account.mark_for(code, marks)
@@ -782,13 +824,20 @@ def account_margin_requirement(account: 'DerivativesAccount',
             stale.append(code)
         rate = resolve_initial_margin_rate(rules, code, ts) + account.margin_buffer
         initial += rate * position.notional(price)
-        reference = account.variation_reference(code)
-        portfolio_pnl += (Decimal(position.net_quantity) * position.multiplier
-                          * (price - reference))
 
     # The loss-only rule, and the entire reason VM is not just "-P&L". An
     # account in profit posts the same MR as an account exactly flat.
-    variation = -portfolio_pnl if portfolio_pnl < 0 else _ZERO
+    #
+    # Post-KRX (QD 26) variation margin is NOT a component of MR: position
+    # P&L is a T+1 cash settlement (research S-5, C-2). The broker layer
+    # therefore carries no VM term after the cutover unless the firm's own
+    # intraday model states one -- ``account.post_krx_variation_margin``,
+    # set from the profile's ``margin_model_intraday`` (owner default,
+    # 2026-11-25). Pre-KRX it is always counted, as before.
+    variation = unsettled_variation_loss(account, marks)
+    if (variation_margin_regime_is_krx(rules, ts)
+            and not account.post_krx_variation_margin):
+        variation = _ZERO
 
     if resting:
         resting_margin = sum((r.encumbered_deposit for r in resting), _ZERO)
@@ -860,7 +909,8 @@ class DerivativesAccount:
                  expiries: Optional[Mapping[str, date]] = None,
                  multiplier_resolver: MultiplierResolver
                  = resolve_contract_multiplier,
-                 opened_at: Optional[datetime] = None) -> None:
+                 opened_at: Optional[datetime] = None,
+                 post_krx_variation_margin: bool = False) -> None:
         """
         Args:
             ref: must name :attr:`Pool.DERIVATIVES`. A securities ``AccountRef``
@@ -895,6 +945,12 @@ class DerivativesAccount:
             expiries: contract code -> last trading day, carried onto
                 :class:`ContractPosition` so an expiring contract is
                 identifiable without a second lookup.
+            post_krx_variation_margin: whether the broker's intraday
+                requirement keeps a (loss-only) VM term after the KRX
+                cutover. ``False`` by default: QD 26 has no VM component
+                (research S-5) and the C-2 question is open, so only a firm
+                whose own intraday model names VM (``IM + VM [+ DM]``) sets
+                it. No effect before the cutover.
         """
         if ref.pool is not Pool.DERIVATIVES:
             raise ValueError(
@@ -912,6 +968,7 @@ class DerivativesAccount:
         self.terms = terms
         self.investor = investor
         self.margin_buffer = margin_buffer
+        self.post_krx_variation_margin = post_krx_variation_margin
         self.contracts = contracts
 
         self._encumbrances = encumbrances

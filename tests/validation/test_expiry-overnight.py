@@ -734,46 +734,37 @@ def test_the_margin_view_never_reports_the_cure_deadline(cure_run):
 # --------------------------------------------------------------------------
 
 def test_the_session_now_asks_which_margin_model_applies_and_counts_the_answer():
-    """A 2026 position is still margined ``IM + VM`` intraday -- and it says so.
+    """A 2026 position is margined on the sourced post-KRX two-layer model.
 
-    **What this used to assert, under the name
-    ``test_the_session_never_asks_which_margin_model_applies``:**
-    ``indeterminate == 0``. ``RuleSet.margin_model()`` raises from the KRX
-    cutover -- the post-KRX mechanism is not sourced in the rulebook -- and
-    the session never called it, so a VN30F2603 long carried through the real
-    2026-03-09 limit-down was margined on the pre-KRX broker shape ten months
-    past the cutover with nothing in any published number saying so.
+    **History.** This test first asserted ``indeterminate == 0`` while the
+    session never asked ``RuleSet.margin_model()``; then, once it asked, that
+    the post-KRX row raised (*"POST-KRX VALUE NOT SOURCED"*) and every mark
+    was counted under ``rule.margin_model.unsourced``. Since 2026-11-25 the
+    row resolves to QD 26's two layers, so the counter does not fire: the
+    intraday mark is the broker layer (``IM`` on VSDC's published 0.17, no VM
+    with no firm named) and the overnight layer is VSDC's post-close ``MR``,
+    which on this source -- futures only, no VN30 index -- is INDETERMINATE
+    naming the underlying's close.
 
-    The session asks now. The intraday mark still runs on ``IM + VM``,
-    because refusing to margin an open position is not a safer answer than
-    margining it on last year's mechanism, and every mark it takes that way
-    is counted under ``rule.margin_model.unsourced``. The **overnight** layer
-    is where the refusal bites: with no firm named there is no
-    ``margin_model_overnight`` to ask, so the end-of-day requirement is
-    INDETERMINATE and moves the scalar.
-
-    The intraday close mark below now reflects W1 daily cash settlement: the
-    day's variation margin is settled to cash at the close and the baseline
-    rolls, so the requirement at the close is ``IM`` alone. The margin-model
-    refusal this test is really about -- the overnight layer going
-    INDETERMINATE -- is orthogonal to that and asserted unchanged.
+    The close mark reflects W1 daily cash settlement: the day's loss is
+    settled to cash at the close, so the requirement there is ``IM`` alone.
     """
     result, strategy, model, raised = S.run_post_krx_margin_model()
 
-    assert model is None
-    assert isinstance(raised, UnresolvedRule)
-    assert 'POST-KRX VALUE NOT SOURCED' in str(raised)
+    assert model == 'krx_two_layer'
+    assert raised is None
 
     assert result.error is None
     assert result.failed_identities == ()
 
     report = result.indeterminate
     silent = getattr(report, 'silent_ignorance', {})
-    assert silent.get('rule.margin_model.unsourced', 0) > 0
+    assert 'rule.margin_model.unsourced' not in silent
     assert report.indeterminate == len(result.overnight) > 0
     assert all(r.amount is None for r in result.overnight)
+    assert all(r.model == 'VSDC_CCP' for r in result.overnight)
     assert {g for r in result.overnight for g in r.gaps} == {
-        'margin_model_overnight.unstated'}
+        'underlying_close:VN30'}
     assert getattr(report, 'is_clean', False) is False
 
     crash = strategy.at(date(2026, 3, 9), 'close')
@@ -799,25 +790,26 @@ def test_the_overnight_layer_names_the_one_input_each_arm_is_missing(
 
     This is the engine the fidelity audit found unreachable:
     ``scenario_margin.py``, 1,069 executable lines, **zero call sites** in
-    ``src/`` or ``validation/``. Every arm here is post-KRX, so the rulebook
-    has stopped answering and the *profile* decides -- which is survey
-    finding F-1 made operational.
+    ``src/`` or ``validation/``. Every arm here is post-KRX, where the
+    rulebook names QD 26's two-layer model and the CCP layer is VSDC's own,
+    so naming a firm no longer changes the answer.
 
     A caller told only "indeterminate" cannot act. Each arm's ``gaps`` names
-    the input, and the remedy is different in each case: name a firm, serve
-    the index, or nothing.
+    the input: serve the index, or nothing.
     """
     no_firm, withheld, served = overnight_layer
 
-    assert no_firm.model == 'UNSTATED'
+    # Post-KRX the CCP layer is VSDC's own and needs no firm: with no index
+    # served, both the firm-less arm and SSI's name the underlying's close.
+    assert no_firm.model == 'VSDC_CCP'
     assert no_firm.overnight is None
-    assert no_firm.gaps == ('margin_model_overnight.unstated',)
+    assert no_firm.gaps == ('underlying_close:VN30',)
 
-    assert withheld.model == 'SCENARIO_GRID'
+    assert withheld.model == 'VSDC_CCP'
     assert withheld.overnight is None
     assert withheld.gaps == ('underlying_close:VN30',)
 
-    assert served.model == 'SCENARIO_GRID'
+    assert served.model == 'VSDC_CCP'
     assert served.overnight is not None
     assert served.gaps == ()
 
@@ -864,7 +856,7 @@ def test_an_uncomputable_overnight_layer_is_counted_not_substituted(
     no_firm, withheld, served = overnight_layer
     assert no_firm.intraday == withheld.intraday == served.intraday
 
-    for arm, key in ((no_firm, 'margin_model_overnight.unstated'),
+    for arm, key in ((no_firm, 'underlying_close'),
                      (withheld, 'underlying_close')):
         report = arm.result.indeterminate
         assert report.indeterminate == len(arm.result.overnight)

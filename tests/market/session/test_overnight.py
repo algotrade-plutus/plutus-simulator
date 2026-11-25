@@ -27,9 +27,9 @@ from plutus.market.session.broker_profile import (
     get_profile,
 )
 from plutus.market.session.overnight import (
-    PRE_KRX_CONTINUOUS, OvernightAssumption, OvernightGap,
-    OvernightRequirement, overnight_requirement, scenario_grid_requirement,
-    underlying_of,
+    PRE_KRX_CONTINUOUS, VSDC_CCP_MODEL, OvernightAssumption, OvernightGap,
+    OvernightRequirement, is_continuous_model, overnight_requirement,
+    scenario_grid_requirement, underlying_of, vsdc_ccp_requirement,
 )
 from plutus.market.session.scenario_margin import ContractLeg, UnderlyingGroup
 
@@ -597,3 +597,102 @@ def test_the_legs_the_grid_saw_survive_onto_the_result():
             legs['VN30F2602'].short_quantity) == (3, 0)
     assert (legs['VN30F2603'].long_quantity,
             legs['VN30F2603'].short_quantity) == (0, 2)
+
+
+# --------------------------------------------------------------------------
+# The post-KRX CCP layer from VSDC's PUBLISHED inputs (owner decision
+# 2026-11-25): rate = VSDC's initial-margin ratio, MF = tick x M / 2 (S-11),
+# S = the underlying's close. SMrate is unpublished, so a calendar spread at
+# the close is UNKNOWN -- never a number.
+# --------------------------------------------------------------------------
+
+RATE = Decimal('0.17')
+S_VN30 = Decimal('1200')
+
+
+def ccp(positions, *, rates=_DEFAULT, closes=_DEFAULT, factors=_DEFAULT,
+        as_of=AS_OF, **kw):
+    return vsdc_ccp_requirement(
+        as_of=as_of, account_id='ACC', positions=positions,
+        initial_margin_rates=({'VN30': RATE} if rates is _DEFAULT else rates),
+        underlying_closes=({'VN30': S_VN30} if closes is _DEFAULT
+                           else closes),
+        minimum_margin_factors=({code: MF for code in positions}
+                                if factors is _DEFAULT else factors),
+        **kw)
+
+
+@pytest.mark.parametrize('net', [3, -3])
+def test_ccp_single_expiry_book_is_net_times_rate_times_close_times_multiplier(
+        net):
+    """Research S-12: for a one-directional single-expiry book the grid's
+    ``Rm`` is ``|net| x rate x S x M`` and ``MR = Max(Rm, P x MF)``. Long and
+    short alike, on the UNDERLYING's close and VSDC's published ratio."""
+    result = ccp({'VN30F2602': Held(net)})
+    assert result.model == VSDC_CCP_MODEL
+    assert result.engine == 'plutus.market.session.scenario_margin'
+    assert result.is_determinate and result.gaps == ()
+    expected = abs(net) * RATE * S_VN30 * Decimal('100000')
+    assert result.amount == expected == Decimal('61200000')
+    group = result.detail.groups[0]
+    assert group.basis_margin == Decimal('0')
+    assert group.minimum_margin == abs(net) * MF
+
+
+def test_ccp_minimum_margin_floor_binds_when_the_risk_charge_is_smaller():
+    """``Pgm = Max(Rm + Sm + Dm, MM)`` with ``MM = P x MF``. At a tiny ratio
+    the 5,000d-per-contract close-out floor is the larger operand."""
+    result = ccp({'VN30F2602': Held(4)}, rates={'VN30': Decimal('0.00001')})
+    # Rm = 4 x 0.00001 x 1200 x 100,000 = 4,800 < MM = 4 x 5,000 = 20,000
+    assert result.detail.groups[0].risk_margin == Decimal('4800')
+    assert result.amount == Decimal('4') * MF == Decimal('20000')
+    assert result.detail.groups[0].minimum_margin_binds is True
+
+
+def test_ccp_same_direction_across_two_expiries_is_not_a_spread():
+    """Two longs in two months: ``min(long, short) = 0`` so ``Sm = 0`` for
+    any SMrate, and the book is determinate on ``(2 + 1) x rate x S x M``."""
+    result = ccp({'VN30F2602': Held(2), 'VN30F2603': Held(1)})
+    assert result.is_determinate
+    assert result.amount == 3 * RATE * S_VN30 * Decimal('100000')
+
+
+def test_ccp_calendar_spread_at_the_close_is_unknown_with_a_named_reason():
+    """``Sm = min(long, short) x S x M x SMrate`` and SMrate is not published
+    (research M-3). Opposite positions in two expiries of one underlying
+    therefore have no computable requirement, and the layer says so."""
+    result = ccp({'VN30F2602': Held(3), 'VN30F2603': Held(-2)})
+    assert result.amount is None
+    assert result.gaps == (f'{OvernightGap.CALENDAR_SPREAD.value}:VN30',)
+    assert result.subjects == (OvernightGap.CALENDAR_SPREAD.value,)
+
+
+def test_ccp_flat_book_owes_a_determinate_zero():
+    result = ccp({'VN30F2602': Held(0)})
+    assert result.flat and result.amount == Decimal('0')
+    assert result.model == VSDC_CCP_MODEL
+
+
+def test_ccp_never_substitutes_the_futures_price_for_the_index_close():
+    result = ccp({'VN30F2602': Held(1)}, closes={})
+    assert result.amount is None
+    assert result.gaps == (f'{OvernightGap.UNDERLYING_CLOSE.value}:VN30',)
+
+
+def test_ccp_without_a_published_rate_or_factor_refuses():
+    no_rate = ccp({'VN30F2602': Held(1)}, rates={})
+    assert no_rate.gaps == (
+        f'{OvernightGap.INITIAL_MARGIN_RATE.value}:VN30',)
+    no_mf = ccp({'VN30F2602': Held(1)}, factors={})
+    assert no_mf.gaps == (
+        f'{OvernightGap.MINIMUM_MARGIN_FACTOR.value}:VN30F2602',)
+
+
+def test_the_dispatcher_routes_the_vsdc_model_to_the_ccp_layer():
+    result = overnight_requirement(
+        as_of=AS_OF, account_id='ACC', positions={'VN30F2602': Held(-1)},
+        model=VSDC_CCP_MODEL, initial_margin_rates={'VN30': RATE},
+        underlying_closes={'VN30': S_VN30},
+        minimum_margin_factors={'VN30F2602': MF})
+    assert result.amount == RATE * S_VN30 * Decimal('100000')
+    assert not is_continuous_model(VSDC_CCP_MODEL)

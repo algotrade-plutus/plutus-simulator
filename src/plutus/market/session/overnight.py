@@ -41,7 +41,11 @@ account would report a number under a regulation that did not exist, which is
 the exact failure the dated rulebook exists to prevent. The caller
 (:class:`plutus.market.session.exchange.ExchangeSession`) selects the regime
 from the rulebook and passes the model in; this module never dates anything
-itself.
+itself. From the cutover the rulebook names QD 26's two-layer model (owner
+decision 2026-11-25) and the session passes :data:`VSDC_CCP_MODEL`:
+:func:`vsdc_ccp_requirement` runs the grid on VSDC's **published** ratio, with
+no firm's parameter mirror, and answers UNKNOWN for a calendar spread because
+``SMrate`` is not published.
 
 **Nothing is guessed.** Every input the grid needs is a VSDC statistic that
 somebody publishes. Where it is not available the answer is
@@ -158,8 +162,8 @@ __all__ = [
     'OvernightGap', 'OvernightAssumption', 'OvernightRequirement',
     'HeldContract', 'UNDERLYING_PREFIXES', 'underlying_of',
     'PRE_KRX_CONTINUOUS', 'SCENARIO_GRID_MODEL', 'UNSTATED_MODEL',
-    'is_continuous_model', 'overnight_requirement',
-    'scenario_grid_requirement',
+    'VSDC_CCP_MODEL', 'is_continuous_model', 'overnight_requirement',
+    'scenario_grid_requirement', 'vsdc_ccp_requirement',
 ]
 
 _ZERO = Decimal('0')
@@ -174,6 +178,20 @@ _ZERO = Decimal('0')
 #: ve ky quy" S II / S IV, confidence HIGH). Adding a member to the firm
 #: vocabulary to hold a regulatory fact is how the two get confused.
 PRE_KRX_CONTINUOUS = 'PRE_KRX_CONTINUOUS'
+
+#: The model name for the post-KRX regime's **CCP layer as VSDC computes it**
+#: from its own published inputs (owner decision 2026-11-25; rulebook
+#: ``RuleName.MARGIN_MODEL`` from 2025-05-05). QD 26 Dieu 5.5 and Phu luc 2:
+#: ``MR = Max(SUM Pgm, 0)``, ``Pgm = Max(Rm + Sm + Dm, MM)``, once after the
+#: close on the **underlying's** close, priced on VSDC's published
+#: initial-margin ratio, with ``MF = tick x M / 2`` (research S-11).
+#:
+#: Deliberately **not** :data:`SCENARIO_GRID_MODEL`. That name is a *firm's*
+#: statement about its overnight layer, served by the firm's own parameter
+#: mirror; this one is the regulation's, served by nothing but what VSDC
+#: publishes. A provenance record that could not tell the two apart could not
+#: say whose numbers margined the account.
+VSDC_CCP_MODEL = 'VSDC_CCP'
 
 #: The two model names the dispatcher special-cases, as names rather than
 #: literals at the call site. A typo in a string comparison is a silent
@@ -190,10 +208,10 @@ def is_continuous_model(model: str) -> bool:
     One reader, so :func:`overnight_requirement` and its caller cannot
     disagree about which arm a run is on. ``True`` for
     :data:`PRE_KRX_CONTINUOUS` and for the ``IM + VM`` family a firm may name
-    for its own overnight layer; ``False`` for the grid and for ``UNSTATED``,
-    which is not a model at all.
+    for its own overnight layer; ``False`` for either grid and for
+    ``UNSTATED``, which is not a model at all.
     """
-    return model not in (SCENARIO_GRID_MODEL, UNSTATED_MODEL)
+    return model not in (SCENARIO_GRID_MODEL, UNSTATED_MODEL, VSDC_CCP_MODEL)
 
 
 #: ``contract-code prefix -> underlying asset``. Longest prefix wins.
@@ -282,6 +300,16 @@ class OvernightGap(str, Enum):
     #: ``scenario_margin`` refused the inputs. Carried through rather than
     #: swallowed, because its refusals are specific and worth reading.
     ENGINE_REFUSED = 'engine.refused'
+    #: The account holds a **calendar spread** at the close: opposite
+    #: positions in two expiries of one underlying. Phu luc 2 section 3's
+    #: ``Sm = min(SMl, SMs)`` is then non-zero and needs ``SMrate``, which
+    #: VSDC does not publish (research M-3: no DSP series by expiry month).
+    #: The CCP requirement is UNKNOWN rather than computed on a guessed rate.
+    CALENDAR_SPREAD = 'basis_margin.calendar_spread'
+    #: No published VSDC initial-margin ratio for an underlying held.
+    INITIAL_MARGIN_RATE = 'initial_margin_rate'
+    #: No ``MF`` for a held contract (its tick or multiplier did not resolve).
+    MINIMUM_MARGIN_FACTOR = 'minimum_margin_factor'
 
 
 class OvernightAssumption(str, Enum):
@@ -596,6 +624,171 @@ def scenario_grid_requirement(
              f'underlying close of {as_of.isoformat()}')
 
 
+def vsdc_ccp_requirement(
+    *,
+    as_of: date,
+    account_id: str,
+    positions: Mapping[str, HeldContract],
+    initial_margin_rates: Mapping[str, Decimal],
+    underlying_closes: Mapping[str, Decimal],
+    minimum_margin_factors: Mapping[str, Decimal],
+    unsettled_variation_margin: Decimal = _ZERO,
+) -> OvernightRequirement:
+    """The post-KRX CCP requirement from what VSDC **publishes**, or why not.
+
+    Owner decision 2026-11-25, layer 2: QD 26 Dieu 5.5 computes ``MR`` once,
+    *"sau khi ket thuc phien giao dich"*, as Phu luc 2's ``MR = Max(SUM Pgm,
+    0)``, ``Pgm = Max(Rm + Sm + Dm, MM)``, on end-of-day positions and the
+    **underlying's** close. Unlike :func:`scenario_grid_requirement` it takes
+    no firm's parameter mirror: every input is one VSDC publishes or one
+    derived from published facts.
+
+    * ``Rm`` -- the 21-scenario grid on VSDC's published initial-margin
+      ratio (``initial_margin_rates``, underlying -> ratio; the dated
+      ``vsd_initial_margin`` series, 0.17 verified in force at 2026-08-21).
+    * ``MM = P x MF`` -- ``minimum_margin_factors`` (contract -> ``MF``),
+      ``tick x M / 2`` per research S-11 (5,000d per VN30F contract,
+      corroborated by TCBS). Recorded as
+      :attr:`OvernightAssumption.MINIMUM_MARGIN_FACTOR_DERIVED`.
+    * ``Sm`` -- ``min(SMl, SMs)``, which is **zero for any SMrate** unless an
+      underlying carries both a long and a short. ``SMrate`` is not published
+      (research M-3), so a calendar spread at the close is
+      :attr:`OvernightGap.CALENDAR_SPREAD` -- UNKNOWN, never a number. On
+      every other book ``Sm`` is exactly zero and no rate is needed; the
+      grid is passed ``basis_margin_rate = 0`` only on those books, where the
+      ``min`` discards it.
+    * ``Dm`` -- government-bond futures stay deferred
+      (:attr:`OvernightGap.GOVERNMENT_BOND_DEFERRED`).
+    * ``OA`` -- no published grouping, so singleton groups (restrictive;
+      :attr:`OvernightAssumption.NO_PUBLISHED_GROUPING` when two or more
+      underlyings are held).
+
+    **The single-expiry fast path, asserted against the full grid** (research
+    S-12). For a one-directional book on one underlying ``Rm`` reduces to
+    ``|SUM net x M| x rate x S``. The grid is still evaluated -- it is the
+    auditable artefact -- and the closed form is checked against it here on
+    every such book, so a regression in either one cannot pass silently.
+    """
+    held = {code: row for code, row in positions.items()
+            if row.net_quantity != 0}
+    if not held:
+        return OvernightRequirement(
+            as_of=as_of, model=VSDC_CCP_MODEL,
+            engine=MarginModel.SCENARIO_GRID.engine,
+            amount=_ZERO, flat=True,
+            note='flat at the close: no open position, so no end-of-day '
+                 'requirement (QD 26 Dieu 5.5)')
+
+    gaps: List[str] = []
+    assumptions: List[str] = []
+    wanted: List[str] = []
+    sides: Dict[str, set] = {}
+    for code in sorted(held):
+        if code.strip().upper().startswith(_GOVERNMENT_BOND_PREFIXES):
+            gaps.append(_qualified(OvernightGap.GOVERNMENT_BOND_DEFERRED, code))
+            continue
+        name = underlying_of(code)
+        if name is None:
+            gaps.append(_qualified(OvernightGap.UNKNOWN_UNDERLYING, code))
+            continue
+        if name not in wanted:
+            wanted.append(name)
+        sides.setdefault(name, set()).add(held[code].net_quantity > 0)
+        last_day = (held[code].expiry is not None
+                    and held[code].expiry <= as_of)
+        if not last_day and minimum_margin_factors.get(code) is None:
+            gaps.append(_qualified(OvernightGap.MINIMUM_MARGIN_FACTOR, code))
+    for name in wanted:
+        if len(sides[name]) == 2:
+            gaps.append(_qualified(OvernightGap.CALENDAR_SPREAD, name))
+        if initial_margin_rates.get(name) is None:
+            gaps.append(_qualified(OvernightGap.INITIAL_MARGIN_RATE, name))
+        if underlying_closes.get(name) is None:
+            gaps.append(_qualified(OvernightGap.UNDERLYING_CLOSE, name))
+
+    if gaps:
+        return OvernightRequirement(
+            as_of=as_of, model=VSDC_CCP_MODEL,
+            engine=MarginModel.SCENARIO_GRID.engine,
+            amount=None, gaps=tuple(sorted(set(gaps))),
+            note='the post-KRX CCP requirement could not be computed from '
+                 'published inputs; the intraday number is NOT a substitute')
+
+    closes = {name: Decimal(underlying_closes[name]) for name in wanted}
+    legs: List[ContractLeg] = []
+    for code in sorted(held):
+        row = held[code]
+        name = underlying_of(code)
+        assert name is not None  # gaps would have been non-empty
+        multiplier = Decimal(row.multiplier)
+        last_day = row.expiry is not None and row.expiry <= as_of
+        rate: Optional[Decimal] = None
+        if not last_day:
+            rate = _implied_minimum_margin_rate(
+                Decimal(minimum_margin_factors[code]), multiplier,
+                closes[name])
+            if (OvernightAssumption.MINIMUM_MARGIN_FACTOR_DERIVED.value
+                    not in assumptions):
+                assumptions.append(
+                    OvernightAssumption.MINIMUM_MARGIN_FACTOR_DERIVED.value)
+        legs.append(ContractLeg(
+            contract_code=code, underlying=name,
+            long_quantity=max(row.net_quantity, 0),
+            short_quantity=max(-row.net_quantity, 0),
+            multiplier=multiplier, minimum_margin_rate=rate,
+            is_last_trading_day=last_day))
+
+    grid_parameters = tuple(
+        UnderlyingParameters(
+            underlying=name, closing_price=closes[name],
+            initial_margin_ratio=Decimal(initial_margin_rates[name]),
+            # Never read into the result: no underlying here carries both a
+            # long and a short (CALENDAR_SPREAD above), so Sm = min(SMl, SMs)
+            # = 0 whatever SMrate is. SMrate itself is unpublished.
+            basis_margin_rate=_ZERO)
+        for name in wanted)
+    if len(wanted) > 1:
+        assumptions.append(OvernightAssumption.NO_PUBLISHED_GROUPING.value)
+    if unsettled_variation_margin != _ZERO:
+        assumptions.append(
+            OvernightAssumption.VARIATION_MARGIN_UNSETTLED.value)
+
+    try:
+        requirement = required_margin(legs, grid_parameters,
+                                      account_id=account_id)
+    except MarginInputError as exc:
+        return OvernightRequirement(
+            as_of=as_of, model=VSDC_CCP_MODEL,
+            engine=MarginModel.SCENARIO_GRID.engine,
+            amount=None, legs=tuple(legs),
+            gaps=(_qualified(OvernightGap.ENGINE_REFUSED, str(exc)),),
+            assumptions=tuple(sorted(set(assumptions))),
+            note='scenario_margin refused these inputs')
+
+    # Research S-12: the single-expiry / one-directional fast path, checked
+    # against the full grid the engine just walked.
+    for group in requirement.groups:
+        for risk in group.risk_margins:
+            mine = [leg for leg in legs if leg.underlying == risk.underlying]
+            exposure = sum((Decimal(leg.net_quantity) * leg.multiplier
+                            for leg in mine), _ZERO)
+            closed_form = (abs(exposure) * risk.initial_margin_ratio
+                           * risk.close_price)
+            assert abs(risk.gross - closed_form) <= Decimal('0.000001'), (
+                f'{risk.underlying}: the grid gives Rm = {risk.gross} and '
+                f'S-12\'s closed form |net x M| x rate x S gives '
+                f'{closed_form}; a one-directional book must agree')
+
+    return OvernightRequirement(
+        as_of=as_of, model=VSDC_CCP_MODEL,
+        engine=MarginModel.SCENARIO_GRID.engine,
+        amount=requirement.amount, detail=requirement, legs=tuple(legs),
+        assumptions=tuple(sorted(set(assumptions))),
+        note=f'QD 26 Dieu 5.5 / Phu luc 2 section 6: MR = Max(SUM Pgm, 0) on '
+             f'VSDC\'s published initial-margin ratio and the underlying '
+             f'close of {as_of.isoformat()}; Sm = 0 (no calendar spread)')
+
+
 def overnight_requirement(
     *,
     as_of: date,
@@ -610,6 +803,8 @@ def overnight_requirement(
     unsettled_variation_margin: Decimal = _ZERO,
     groups: Sequence[UnderlyingGroup] = (),
     average_prices: Optional[Mapping[str, Decimal]] = None,
+    initial_margin_rates: Optional[Mapping[str, Decimal]] = None,
+    minimum_margin_factors: Optional[Mapping[str, Decimal]] = None,
 ) -> OvernightRequirement:
     """Dispatch the overnight layer to the model in force, and never past it.
 
@@ -631,7 +826,17 @@ def overnight_requirement(
       Not the intraday number wearing a different label: the two are computed
       from different price series by different engines, and a firm that
       declines to say which one applies has not said "the intraday one".
+    * :data:`VSDC_CCP_MODEL` -- the post-KRX regime's CCP layer on VSDC's
+      published inputs, :func:`vsdc_ccp_requirement`.
     """
+    if model == VSDC_CCP_MODEL:
+        return vsdc_ccp_requirement(
+            as_of=as_of, account_id=account_id, positions=positions,
+            initial_margin_rates=initial_margin_rates or {},
+            underlying_closes=underlying_closes or {},
+            minimum_margin_factors=minimum_margin_factors or {},
+            unsettled_variation_margin=unsettled_variation_margin)
+
     if model == SCENARIO_GRID_MODEL:
         if minimum_margin_factor is None:
             raise ValueError(

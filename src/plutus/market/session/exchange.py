@@ -110,6 +110,7 @@ from plutus.market.session.calendar import (
 from plutus.market.session.deposit import (
     ContractLedger, DerivativesAccount, MarginMonitor, UnknownContractMultiplier,
     liquidation_sequence, resolve_contract_multiplier,
+    unsettled_variation_loss,
 )
 from plutus.market.session.charges import ChargeContext, assess_at_maturity
 from plutus.market.session.corporate import (
@@ -128,11 +129,17 @@ from plutus.market.session.orders import (
     OrderBookOfRecord, OrderIdFactory, is_legal_transition,
 )
 from plutus.market.session.overnight import (
-    PRE_KRX_CONTINUOUS, UNSTATED_MODEL, OvernightGap, OvernightRequirement,
-    is_continuous_model, overnight_requirement, underlying_of,
+    PRE_KRX_CONTINUOUS, UNSTATED_MODEL, VSDC_CCP_MODEL, OvernightGap,
+    OvernightRequirement, is_continuous_model, overnight_requirement,
+    underlying_of,
 )
 from plutus.market.session.rulebook import (
-    Rulebook, RuleName, RuleSet, SymbolRouter, UnresolvedRule, VenueListing,
+    MARGIN_MODEL_KRX, Rulebook, RuleName, RuleSet, SymbolRouter,
+    UnresolvedRule, VenueListing,
+)
+from plutus.market.session.scenario_margin import (
+    CHECKPOINT_TIME, Checkpoint, MarginEvent, MarginObservation, MarginViolationMonitor,
+    MarginViolationState, minimum_margin_factor_from_tick,
 )
 from plutus.market.session.types import (
     Accepted, AccountRef, AccountsConfig, Amended, BrokerProfile, Cancelled,
@@ -423,7 +430,12 @@ class Blindness(str, Enum):
     #: the order was passed over the rule rather than judged by it.
     ORDER_SIZE_UNSOURCED = 'rule.max_order_size.unsourced'
     #: The rulebook refuses to name the margin mechanism at this date and the
-    #: account was marked on ``IM + VM`` regardless.
+    #: account was marked on ``IM + VM`` regardless. Since 2026-11-25 the
+    #: rulebook names a mechanism on both sides of the KRX cutover (QD 26's
+    #: two layers after it), so this fires only where no row covers the date.
+    #: A calendar spread held at a post-KRX close -- whose CCP requirement
+    #: needs the unpublished SMrate -- is counted by the overnight layer as
+    #: ``margin.overnight.uncomputed.basis_margin.calendar_spread``.
     MARGIN_MODEL_UNSOURCED = 'rule.margin_model.unsourced'
     #: Prefix. The overnight requirement could not be computed and the run
     #: did **not** substitute the intraday number. Composed as
@@ -997,6 +1009,21 @@ class ExchangeSession:
         #: 5.5), and a caller polling the clock four times after the close
         #: must not get four requirements and four evaluations.
         self._overnight_dates: Set[date] = set()
+        #: QD 26 Dieu 13's binary CCP test, as the state machine
+        #: ``scenario_margin`` already ships. Fed only on the post-KRX
+        #: two-layer model: a CLOSE_1630 observation by the overnight layer
+        #: whenever VSDC's requirement is determinate, and the 09h30 / 14h00
+        #: checkpoints on the next trading days. Never fed before the cutover,
+        #: so a pre-KRX run is untouched by it.
+        self._ccp_monitor = MarginViolationMonitor(
+            account_id=derivatives.ref.account_no,
+            next_trading_day=self._next_trading_date)
+        #: The date of the last DETERMINATE CCP determination still in force;
+        #: ``None`` when the latest close could not be computed, so the 09h30
+        #: and 14h00 checkpoints are not run against a stale requirement.
+        self._ccp_required_on: Optional[date] = None
+        #: ``(date, checkpoint)`` pairs already fed, once each.
+        self._ccp_fed: Set[Tuple[date, Checkpoint]] = set()
 
     # -- the honesty instrument's two write paths -----------------------
 
@@ -1189,7 +1216,8 @@ class ExchangeSession:
             ContractLedger(), margin_buffer=profile.margin_buffer,
             multiplier_resolver=resolve_contract_multiplier,
             opened_at=datetime.combine(config.period_start,
-                                       datetime.min.time()))
+                                       datetime.min.time()),
+            post_krx_variation_margin=cls._firm_states_intraday_vm(profile))
 
         # The book needs the session's cursor and the session needs the book,
         # so one of the two references is late-bound. A one-slot cell is the
@@ -1245,6 +1273,27 @@ class ExchangeSession:
         # provenance implies leverage was modelled. If the maintenance pass
         # never runs, that implication is false and must be reported as such.
         self._needs(Component.EQUITY_MARGIN_ADVANCE)
+
+    @staticmethod
+    def _firm_states_intraday_vm(profile: BrokerProfile) -> bool:
+        """Whether the firm's own intraday model names a VM term.
+
+        Research C-2 (does VM belong in the broker's maintenance number after
+        the KRX cutover?) is open, and QD 26 has no VM component at all. The
+        owner's default (2026-11-25): the broker layer carries **no VM**
+        post-KRX unless existing explicit configuration says otherwise. The
+        only such configuration is the margin profile's
+        ``margin_model_intraday``: ``IM_PLUS_VM`` / ``IM_PLUS_VM_PLUS_DM`` are
+        firms (VNDIRECT, MBS, ...) that publish ``MR = IM + VM (+ DM)`` for
+        their client ladder. A session with no margin profile, or a firm that
+        states no formula, gets no VM term after the cutover.
+        """
+        margin_profile = getattr(profile, 'margin_profile', None)
+        if margin_profile is None:
+            return False
+        model = getattr(margin_profile, 'margin_model_intraday', None)
+        return getattr(model, 'name', None) in ('IM_PLUS_VM',
+                                                'IM_PLUS_VM_PLUS_DM')
 
     @staticmethod
     def _check_margin_model(profile: BrokerProfile) -> None:
@@ -1415,8 +1464,11 @@ class ExchangeSession:
         6. ``cash.accrue_interest(now)``
         7. the derivatives mark -> ``MarginWarning`` / ``MarginCall`` /
            ``ForcedLiquidation``; expiries -> ``ExpirySettled``
+        7a. post-KRX only, QD 26 Dieu 13's 09h30 / 14h00 CCP checkpoints
+           against the previous close's requirement -> :meth:`ccp_margin_state`
         7c. at or after the derivatives close, once per day, the **overnight**
-           requirement -> :meth:`overnight_margin`
+           requirement -> :meth:`overnight_margin` (post-KRX also fed to the
+           Dieu 13 monitor as the 16h30 determination)
         8. drain the cursor and return
 
         **Step 7c runs after step 7**, and the order is load-bearing: a
@@ -1464,6 +1516,7 @@ class ExchangeSession:
         self._settle(ts)
         self._securities.cash_ledger.accrue_interest(ts)
         self._mark_derivatives(ts)
+        self._ccp_checkpoints(ts)
         self._overnight_margin(ts)
         self._run_equity_margin(ts)
         return self.poll()
@@ -1851,6 +1904,11 @@ class ExchangeSession:
         maintenance margin ratio at any date in 2020-2026, so there is no
         maintenance fraction of notional to compare against, and the
         thresholds are broker terms rather than market law.
+
+        From the KRX cutover this is the **broker** layer only (``IM`` on
+        VSDC's published ratio, no VM unless the firm names it); VSDC's
+        post-close requirement is :meth:`overnight_margin` and its binary
+        test is :meth:`ccp_margin_state`.
         """
         return self._derivatives.margin(
             self._marks(), self._rulebook.at(self._now),
@@ -3751,20 +3809,16 @@ class ExchangeSession:
         :meth:`indeterminate_report` publishes the blind sessions rather than
         letting them read as quiet ones.
 
-        **The rulebook is now ASKED which margin mechanism the date is
-        under.** ``RuleSet.margin_model`` had no caller anywhere in ``src/``
-        and raises from the KRX cutover, where the post-trade COMS calculation
-        is unsourced -- so a 2026 position was margined ``IM + VM`` on the
-        pre-KRX shape, the run completed, and the ignorance meter read zero.
-        The mark still runs, because refusing to margin an open position is
-        not a safer answer than margining it on last year's mechanism, but the
-        run now records ``Blindness.MARGIN_MODEL_UNSOURCED`` once per mark it
-        took without a sourced mechanism, and ``Component.MARGIN_MODEL``
-        appears in ``exercised`` when the rulebook could answer. That converts
-        a rule with no caller into a rule with a counted one. *What this does
-        not do* is compute the KRX model: no source states it, and the layer
-        that would -- ``scenario_margin`` -- is refused at build rather than
-        silently substituted (see :meth:`_check_margin_model`).
+        **The rulebook is ASKED which margin mechanism the date is under.**
+        ``RuleSet.margin_model`` once had no caller anywhere in ``src/``; it is
+        asked on every mark, ``Component.MARGIN_MODEL`` appears in
+        ``exercised`` when it answers, and ``Blindness.MARGIN_MODEL_UNSOURCED``
+        is counted per mark where it cannot. From the KRX cutover it answers
+        ``'krx_two_layer'`` (owner decision 2026-11-25): this mark is then the
+        **broker** layer -- ``IM`` on VSDC's published ratio plus the broker's
+        buffer, on the futures price, with no VM term unless the firm's own
+        intraday model names one (``deposit.variation_margin_regime_is_krx``)
+        -- and VSDC's post-close requirement is :meth:`_overnight_margin`'s.
         """
         positions = self._derivatives.positions()
         resting = self._live_derivative_orders()
@@ -3933,16 +3987,25 @@ class ExchangeSession:
         the four that publish scenario-grid material label it as the
         end-of-day submission (survey finding F-1).
 
-        A session with no margin profile has no firm to ask, so past the
-        cutover it gets ``UNSTATED`` -- which is INDETERMINATE, not
-        ``IM + VM`` by default.
+        **From the KRX cutover the rulebook answers too** (owner decision
+        2026-11-25): ``MARGIN_MODEL`` resolves to ``'krx_two_layer'``, whose
+        CCP layer is VSDC's own -- QD 26 Phu luc 2 on VSDC's published
+        initial-margin ratio -- so the answer is :data:`VSDC_CCP_MODEL` and no
+        firm is asked. A firm's ``margin_model_overnight`` and parameter
+        mirror are consulted only where the rulebook resolves nothing.
+
+        A session with no margin profile has no firm to ask, so on a date the
+        rulebook cannot answer it gets ``UNSTATED`` -- which is INDETERMINATE,
+        not ``IM + VM`` by default.
         """
         rules = self._rulebook.at(ts)
         try:
-            rules.margin_model()
+            mechanism = rules.margin_model()
         except UnresolvedRule:
             pass
         else:
+            if mechanism == MARGIN_MODEL_KRX:
+                return VSDC_CCP_MODEL
             return PRE_KRX_CONTINUOUS
         margin_profile = getattr(self._config.broker_profile,
                                  'margin_profile', None)
@@ -4049,6 +4112,15 @@ class ExchangeSession:
             resting=self._live_derivative_orders())
         held_only = view.required - view.resting_order_margin
         continuous = is_continuous_model(model)
+        unsettled = view.variation_margin
+        rates: Dict[str, Decimal] = {}
+        factors: Dict[str, Decimal] = {}
+        if model == VSDC_CCP_MODEL:
+            # The broker view carries no VM post-KRX, so the loss a skipped
+            # settlement left behind is read directly.
+            unsettled = unsettled_variation_loss(self._derivatives,
+                                                 self._marks())
+            rates, factors = self._ccp_inputs(positions, ts)
 
         result = overnight_requirement(
             as_of=ts.date(),
@@ -4060,7 +4132,12 @@ class ExchangeSession:
             minimum_margin_factor=factor,
             intraday_amount=held_only if continuous else None,
             intraday_is_determinate=not view.stale_marks,
-            unsettled_variation_margin=view.variation_margin)
+            unsettled_variation_margin=unsettled,
+            initial_margin_rates=rates,
+            minimum_margin_factors=factors)
+
+        if model == VSDC_CCP_MODEL:
+            self._ccp_close_checkpoint(result)
 
         self._overnight.append(result)
         self._exercise(Component.OVERNIGHT_MARGIN)
@@ -4126,6 +4203,113 @@ class ExchangeSession:
     def overnight_margins(self) -> Tuple[OvernightRequirement, ...]:
         """Every end-of-day requirement this run computed, in order."""
         return tuple(self._overnight)
+
+    # -- the post-KRX CCP layer: inputs and Dieu 13's checkpoints --------
+
+    def _ccp_inputs(self, positions: Mapping[str, ContractPosition],
+                    ts: datetime
+                    ) -> Tuple[Dict[str, Decimal], Dict[str, Decimal]]:
+        """VSDC's published ratio per underlying and ``MF`` per contract.
+
+        The ratio is the rulebook's ``INITIAL_MARGIN_RATE`` -- the dated
+        ``vsd_initial_margin`` series, the same one the broker layer reads,
+        **without** the broker's ``margin_buffer``: the CCP charges VSDC's
+        ratio, the uplift is the broker's (research S-17). ``MF`` is
+        ``tick x M / 2`` (research S-11) on the contract's dated tick and
+        multiplier. Anything that does not resolve is simply absent, and the
+        layer names it as a gap rather than defaulting it.
+        """
+        rules = self._rulebook.at(ts)
+        rates: Dict[str, Decimal] = {}
+        factors: Dict[str, Decimal] = {}
+        for code, position in positions.items():
+            if position.net_quantity == 0:
+                continue
+            name = underlying_of(code)
+            if name is not None and name not in rates:
+                try:
+                    rates[name] = rules.initial_margin_rate(code)
+                except UnresolvedRule:
+                    pass
+            try:
+                tick = rules.tick_size(Venue.HNXDS, InstrumentKind.FUTURE,
+                                       position.average_entry, ticker=code)
+                multiplier = self._derivatives.multiplier_for(code, ts)
+            except (UnresolvedRule, UnknownContractMultiplier):
+                continue
+            if tick is not None:
+                factors[code] = minimum_margin_factor_from_tick(tick,
+                                                                multiplier)
+        return rates, factors
+
+    def _next_trading_date(self, day: date) -> Optional[date]:
+        """The 09h30 top-up deadline's date, or ``None`` past coverage."""
+        try:
+            return self._trading.next_trading_day(day)
+        except CalendarError:
+            return None
+
+    def _ccp_close_checkpoint(self, result: OvernightRequirement) -> None:
+        """Dieu 13.1 / 13.2.c: VSDC's post-close determination, fed once.
+
+        Margin assets are the deposit balance -- **cash only**, as everywhere
+        in this simulator (``DerivativesAccount.deposit_balance``): the
+        eligible-collateral list and haircuts QD 26 Dieu 9 requires are not
+        published (research M-4), so securities collateral is not valued. An
+        undetermined requirement is **not** fed: the monitor advances no state
+        on a skipped checkpoint, and the next mornings' checkpoints are not
+        run against a requirement VSDC never determined.
+        """
+        if not result.is_determinate:
+            self._ccp_required_on = None
+            return
+        self._ccp_monitor.observe(MarginObservation(
+            checkpoint=Checkpoint.CLOSE_1630, on=result.as_of,
+            margin_assets=self._derivatives.deposit_balance,
+            required_margin=result.amount))
+        self._ccp_fed.add((result.as_of, Checkpoint.CLOSE_1630))
+        self._ccp_required_on = result.as_of
+
+    def _ccp_checkpoints(self, ts: datetime) -> None:
+        """Dieu 13.2.a/b: the 09h30 and 14h00 checks on later trading days.
+
+        Each is tested against the requirement determined at the previous
+        determinate close, which the monitor carries, and fed once per date.
+        09h30 is where an unpaid shortfall becomes a suspension; 14h00 only
+        restores. Nothing runs before the first determinate close.
+        """
+        on = ts.date()
+        if self._ccp_required_on is None or on <= self._ccp_required_on:
+            return
+        try:
+            if not self._trading.is_trading_day(on):
+                return
+        except CalendarError:
+            return
+        for checkpoint in (Checkpoint.OPEN_0930, Checkpoint.MIDDAY_1400):
+            at = datetime.combine(on, CHECKPOINT_TIME[checkpoint])
+            if ts < at or (on, checkpoint) in self._ccp_fed:
+                continue
+            self._ccp_fed.add((on, checkpoint))
+            self._ccp_monitor.observe(MarginObservation(
+                checkpoint=checkpoint, on=on,
+                margin_assets=self._derivatives.deposit_balance))
+
+    def ccp_margin_state(self) -> MarginViolationState:
+        """Where the account stands under QD 26 Dieu 13's binary CCP test.
+
+        ``COMPLIANT`` until a post-KRX close finds ``assets < MR``; then
+        ``NOTIFIED`` (top-up due before 09h30 the next trading day),
+        ``SUSPENDED`` at an uncured 09h30, back to ``COMPLIANT`` on a cure,
+        ``CLOSED_OUT`` after 03 working days. Reported, not enforced: the
+        session does not block opening orders on a suspension nor execute a
+        substitute member's close-out.
+        """
+        return self._ccp_monitor.state
+
+    def ccp_margin_events(self) -> Tuple[MarginEvent, ...]:
+        """Every Dieu 13 transition, with shortfall and 09h30 cure deadline."""
+        return self._ccp_monitor.events
 
     def _expiry_reached(self, expiry: date, rules: RuleSet,
                         ts: datetime) -> bool:

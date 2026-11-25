@@ -37,7 +37,12 @@ from plutus.market.session.exchange import (
 from plutus.market.session.book_walk import (
     BookWalk, Remainder, SweepStop, SweptFillDecision, Tranche,
 )
-from plutus.market.session.overnight import PRE_KRX_CONTINUOUS, OvernightGap
+from plutus.market.session.overnight import (
+    PRE_KRX_CONTINUOUS, VSDC_CCP_MODEL, OvernightGap,
+)
+from plutus.market.session.scenario_margin import (
+    MarginEventKind, MarginViolationState,
+)
 from plutus.market.session.types import BrokerProfile
 from plutus.market.session.calendar import (
     CalendarError, weekday_settlement_calendar, weekday_trading_calendar,
@@ -3145,19 +3150,14 @@ def test_an_attached_equity_margin_account_is_reported_attached_and_then_run():
     assert advance not in session.indeterminate_report().unexercised
 
 
-def test_the_margin_model_is_asked_and_an_unsourced_answer_is_counted():
+def test_the_margin_model_is_asked_and_resolves_on_both_sides_of_the_cutover():
     """D42: the rulebook's own "which mechanism applies" had no caller at all.
 
-    ``RuleSet.margin_model`` raises from the KRX cutover, where the post-trade
-    COMS calculation is unsourced. Nothing in ``src/`` called it, so a 2026
-    position was margined ``IM + VM`` on the pre-KRX shape, the run completed,
-    and ``indeterminate_report`` counted zero. A run that cannot resolve a
-    *band* answers INDETERMINATE and counts it; a run that cannot resolve the
-    *margin model* answered with last year's.
-
-    The mark still runs -- refusing to margin an open position is not the
-    safer answer -- but the run now records that it took the mark without a
-    sourced mechanism, and records the positive case too.
+    It is now asked on every mark. Until 2026-11-25 it raised from the KRX
+    cutover and each post-KRX mark was counted under
+    ``rule.margin_model.unsourced``; QD 26's two-layer model is now the
+    sourced post-cutover row, so a single-expiry futures book is marked on a
+    sourced mechanism on both sides and the counter does not fire.
     """
     before = build(rows=FUTURES_ROWS)
     before.advance_to(datetime(2024, 6, 3, 9, 30))
@@ -3177,11 +3177,8 @@ def test_the_margin_model_is_asked_and_an_unsourced_answer_is_counted():
     after.advance_to(datetime(2025, 6, 2, 14, 0))
 
     post = after.indeterminate_report()
-    assert Component.MARGIN_MODEL.value not in post.exercised
-    assert post.silent_ignorance[
-        Blindness.MARGIN_MODEL_UNSOURCED.value] == 1
-    assert post.indeterminate == 0          # the old headline, still zero
-    assert not post.is_clean                # the honest one
+    assert post.exercised[Component.MARGIN_MODEL.value] == 1
+    assert Blindness.MARGIN_MODEL_UNSOURCED.value not in post.silent_ignorance
 
 
 def test_provenance_carries_the_wiring_so_a_result_reads_without_re_running():
@@ -3467,45 +3464,27 @@ def test_a_stale_mark_makes_the_overnight_layer_undecided_and_counted():
     assert report.by_field[DataField.SETTLEMENT_PRICE] == 1
 
 
-def test_a_post_krx_close_with_no_firm_named_refuses_rather_than_substituting():
-    """The KRX cutover, and the substitution that must not happen.
-
-    From 2025-05-05 ``RuleSet.margin_model()`` raises -- the mechanism is not
-    sourced in the rulebook -- so the *profile* decides, and a session with no
-    margin profile has no firm to ask. The intraday number is available, sits
-    right there on ``session.margin()``, and is **not** reported as the
-    overnight one: the two are computed by different engines from different
-    price series, and QD 26 Phu luc 2 has no variation-margin term at all.
-    """
-    session = post_krx_session()
-    assert session.margin().required > 0
-
-    row = session.overnight_margin()
-    assert row.amount is None
-    assert row.engine is None
-    assert row.gaps == (OvernightGap.MODEL_UNSTATED.value,)
-
-    report = session.indeterminate_report()
-    assert report.indeterminate == 1
-    assert report.silent_ignorance[
-        'margin.overnight.uncomputed.margin_model_overnight.unstated'] == 1
-    assert report.is_clean is False
-    assert session.provenance().overnight_indeterminate == 1
-
-
-def test_a_post_krx_close_with_a_firm_but_no_index_names_the_missing_close():
+@pytest.mark.parametrize('firm', [None, 'SSI'])
+def test_a_post_krx_close_with_no_index_names_the_missing_close(firm):
     """Phu luc 2 section 1.1's ``S`` is the **underlying's** close.
 
-    SSI publishes the parameter mirror, so the model is known and the only
-    thing missing is the index level -- which the futures price is not. The
-    gap names ``VN30`` so a caller knows which series to serve.
+    From 2025-05-05 the rulebook names QD 26's two-layer model, so the CCP
+    layer is VSDC's and needs no firm: with or without a margin profile the
+    only thing missing is the index level -- which the futures price is not.
+    The intraday number sits right there on ``session.margin()`` and is
+    **not** reported as the overnight one.
     """
-    session = post_krx_session(firm='SSI')
+    session = post_krx_session(firm=firm)
+    assert session.margin().required > 0
     row = session.overnight_margin()
-    assert row.model == 'SCENARIO_GRID'
+    assert row.model == VSDC_CCP_MODEL
     assert row.amount is None
     assert row.gaps == (f'{OvernightGap.UNDERLYING_CLOSE.value}:VN30',)
-    assert session.indeterminate_report().by_field[DataField.CLOSE] == 1
+    report = session.indeterminate_report()
+    assert report.by_field[DataField.CLOSE] == 1
+    assert report.silent_ignorance[
+        'margin.overnight.uncomputed.underlying_close'] == 1
+    assert session.provenance().overnight_indeterminate == 1
 
 
 def test_a_post_krx_close_runs_the_grid_and_settles_the_days_pnl_in_cash():
@@ -3523,10 +3502,13 @@ def test_a_post_krx_close_runs_the_grid_and_settles_the_days_pnl_in_cash():
     """
     session = post_krx_session(firm='SSI', serve_index=True)
     row = session.overnight_margin()
-    assert row.model == 'SCENARIO_GRID'
+    assert row.model == VSDC_CCP_MODEL
     assert row.engine == 'plutus.market.session.scenario_margin'
     assert row.is_determinate
     assert row.gaps == ()
+    # QD 26 Phu luc 2 on VSDC's published 0.17 and the VN30 close of 1833:
+    # 2 x 0.17 x 1833 x 100,000. SSI's own mirror is not consulted.
+    assert row.amount == Decimal('62322000')
 
     view = session.margin()
     # The loss (2-lot long, entry 1900, marked 1833, 100,000d multiplier ->
@@ -3545,6 +3527,184 @@ def test_a_post_krx_close_runs_the_grid_and_settles_the_days_pnl_in_cash():
         not in report.silent_ignorance
     assert 'margin.overnight.assumed.minimum_margin_factor_derived' in \
         report.silent_ignorance
+
+
+# --------------------------------------------------------------------------
+# The post-KRX two-layer model (owner decision 2026-11-25)
+# --------------------------------------------------------------------------
+
+K3 = date(2026, 3, 11)
+
+
+def krx_session(*, index, deposit=80000000, prices=None, firm=None,
+                book=(('VN30F2603', 2),), cash=150000000):
+    """A post-cutover session that opens ``book`` on K1 and stops at 14:00.
+
+    ``prices`` maps day -> futures price for every contract in ``book``;
+    ``index`` maps day -> VN30 close. Flat futures prices by default, so no
+    variation margin muddies the CCP arithmetic.
+    """
+    prices = prices or {K1: Decimal('1900'), K2: Decimal('1900'),
+                        K3: Decimal('1900')}
+    table, kinds = {}, dict(KINDS)
+    for code, _ in book:
+        kinds[code] = ('HNXDS', InstrumentKind.FUTURE)
+        for day, level in prices.items():
+            table[(code, day)] = market(code, day, level)
+    kinds['VN30'] = ('HSX', InstrumentKind.INDEX)
+    for day, level in index.items():
+        table[('VN30', day)] = market('VN30', day, level)
+    profile = ({'name': 'test-retail'} if firm is None
+               else {'firm': firm, 'warn': False})
+    session = ExchangeSession.from_mapping(
+        config(period={'start': K1.isoformat(), 'end': '2026-03-20'},
+               broker_profile=profile,
+               accounts={'securities': {'initial_cash': cash},
+                         'derivatives': {'initial_deposit': deposit}}),
+        source=StubSource(table, kinds))
+    session.advance_to(datetime(2026, 3, 9, 9, 30))
+    for code, quantity in book:
+        side = buy if quantity > 0 else sell
+        assert isinstance(session.submit(side(
+            ticker=code, quantity=abs(quantity),
+            price=str(prices[K1]))), Accepted)
+    session.advance_to(datetime(2026, 3, 9, 14, 0))
+    return session
+
+
+def test_post_krx_intraday_broker_layer_is_im_on_the_published_rate_no_vm():
+    """Layer 1: the clearing member margins on VSDC's published ratio (QD 26
+    Dieu 5.1.1.b) on the futures price. Post-KRX variation margin is a T+1
+    cash settlement, not a margin component, and with no firm stating
+    otherwise the broker layer carries no VM term -- so an intraday loss
+    does not enter ``required``."""
+    session = krx_session(index={K1: Decimal('1900'), K2: Decimal('1833')},
+                          prices={K1: Decimal('1900'), K2: Decimal('1833')})
+    session.advance_to(datetime(2026, 3, 10, 14, 0))    # in-session, in loss
+    view = session.margin()
+    assert view.variation_margin == Decimal('0')
+    assert view.posted_margin == (Decimal('0.17') * 2 * Decimal('1833')
+                                  * Decimal('100000'))
+    assert view.required == view.posted_margin + view.resting_order_margin
+
+
+def test_post_krx_broker_layer_keeps_vm_where_the_firm_states_it():
+    """VNDIRECT publishes ``MR = IM + VM + DM`` for its client ladder
+    (research C-1, VERIFIED). That is explicit configuration, so the broker
+    layer keeps its (loss-only) VM term after the cutover."""
+    session = krx_session(index={K1: Decimal('1900'), K2: Decimal('1833')},
+                          prices={K1: Decimal('1900'), K2: Decimal('1833')},
+                          firm='VNDIRECT', deposit=200000000)
+    session.advance_to(datetime(2026, 3, 10, 14, 0))
+    assert session.margin().variation_margin == Decimal('13400000')
+
+
+def test_post_krx_ccp_shortfall_notifies_and_top_up_is_due_0930_next_day():
+    """Layer 2: VSDC's MR after the close; ``assets < MR`` is the whole test
+    (Dieu 13.1), and the top-up is due before 09h30 the next trading day.
+    Uncured at 09h30 the account is suspended (Dieu 13.2.a)."""
+    # MR = 2 x 0.17 x 2400 x 100,000 = 81,600,000 > the 80m deposit.
+    session = krx_session(index={K1: Decimal('2400'), K2: Decimal('2400'),
+                                 K3: Decimal('2400')})
+    assert session.ccp_margin_state() is MarginViolationState.COMPLIANT
+    session.advance_to(datetime(2026, 3, 9, 14, 45))
+
+    row = session.overnight_margin()
+    assert row.model == VSDC_CCP_MODEL
+    assert row.amount == Decimal('81600000')
+    assets = session.margin().deposit_balance
+    assert assets < row.amount
+    assert session.ccp_margin_state() is MarginViolationState.NOTIFIED
+    notice, = session.ccp_margin_events()
+    assert notice.kind is MarginEventKind.SHORTFALL_NOTIFIED
+    assert notice.on == K1
+    assert notice.required_margin == row.amount
+    assert notice.shortfall == row.amount - assets
+    assert notice.cure_by_date == K2
+    assert notice.cure_by_time.isoformat() == '09:30:00'
+
+    # Not yet 09:30 on K2: nothing has happened.
+    session.advance_to(datetime(2026, 3, 10, 9, 0))
+    assert session.ccp_margin_state() is MarginViolationState.NOTIFIED
+    session.advance_to(datetime(2026, 3, 10, 9, 30))
+    assert session.ccp_margin_state() is MarginViolationState.SUSPENDED
+    assert session.ccp_margin_events()[-1].kind is MarginEventKind.SUSPENDED
+
+
+def test_post_krx_ccp_top_up_before_0930_cures_the_shortfall():
+    session = krx_session(index={K1: Decimal('2400'), K2: Decimal('2400')})
+    session.advance_to(datetime(2026, 3, 9, 14, 45))
+    assert session.ccp_margin_state() is MarginViolationState.NOTIFIED
+    session.advance_to(datetime(2026, 3, 10, 9, 0))
+    session.transfer(Pool.SECURITIES, Pool.DERIVATIVES, Decimal('5000000'))
+    session.advance_to(datetime(2026, 3, 10, 9, 30))
+    assert session.ccp_margin_state() is MarginViolationState.COMPLIANT
+    assert session.ccp_margin_events()[-1].kind is MarginEventKind.CURED
+
+
+def test_post_krx_ccp_compliant_account_raises_nothing():
+    # MR = 2 x 0.17 x 1900 x 100,000 = 64,600,000 < 80m.
+    session = krx_session(index={K1: Decimal('1900')})
+    session.advance_to(datetime(2026, 3, 9, 14, 45))
+    assert session.overnight_margin().amount == Decimal('64600000')
+    assert session.ccp_margin_state() is MarginViolationState.COMPLIANT
+    assert session.ccp_margin_events() == ()
+
+
+def test_post_krx_calendar_spread_at_the_close_is_unknown_and_counted():
+    """SMrate is unpublished (research M-3), so a calendar spread held at the
+    close has no CCP requirement. The layer answers INDETERMINATE under its
+    own counter and the violation monitor is not fed a guessed number."""
+    session = krx_session(index={K1: Decimal('1900')},
+                          book=(('VN30F2603', 1), ('VN30F2604', -1)),
+                          deposit=200000000)
+    session.advance_to(datetime(2026, 3, 9, 14, 45))
+    row = session.overnight_margin()
+    assert row.amount is None
+    assert row.gaps == (f'{OvernightGap.CALENDAR_SPREAD.value}:VN30',)
+    report = session.indeterminate_report()
+    assert report.silent_ignorance[
+        'margin.overnight.uncomputed.basis_margin.calendar_spread'] == 1
+    assert Blindness.MARGIN_MODEL_UNSOURCED.value not in report.silent_ignorance
+    assert session.ccp_margin_events() == ()
+
+
+def test_a_session_spanning_the_cutover_switches_margin_models_at_it():
+    """Friday 2025-05-02 is pre-KRX: one continuous ``IM + VM`` mechanism and
+    no separate end-of-day model. Monday 2025-05-05 is the cutover: the
+    overnight requirement becomes VSDC's scenario grid on the index close,
+    and the broker layer drops VM. One session, one rulebook."""
+    fri, mon = date(2025, 5, 2), date(2025, 5, 5)
+    code = 'VN30F2505'
+    table = {(code, fri): market(code, fri, Decimal('1300')),
+             (code, mon): market(code, mon, Decimal('1250')),
+             ('VN30', fri): market('VN30', fri, Decimal('1310')),
+             ('VN30', mon): market('VN30', mon, Decimal('1260'))}
+    kinds = {**KINDS, code: ('HNXDS', InstrumentKind.FUTURE),
+             'VN30': ('HSX', InstrumentKind.INDEX)}
+    session = ExchangeSession.from_mapping(
+        config(period={'start': fri.isoformat(), 'end': '2025-05-09'},
+               accounts={'securities': {'initial_cash': 150000000},
+                         'derivatives': {'initial_deposit': 100000000}}),
+        source=StubSource(table, kinds))
+    session.advance_to(datetime(2025, 5, 2, 9, 30))
+    assert isinstance(session.submit(buy(ticker=code, quantity=1,
+                                         price='1300')), Accepted)
+    session.advance_to(datetime(2025, 5, 2, 14, 45))
+    friday = session.overnight_margin()
+    assert friday.model == PRE_KRX_CONTINUOUS
+    assert friday.as_of == fri
+
+    session.advance_to(datetime(2025, 5, 5, 14, 0))   # in-session, in loss
+    assert session.margin().variation_margin == Decimal('0')
+    session.advance_to(datetime(2025, 5, 5, 14, 45))
+    monday = session.overnight_margin()
+    assert monday.model == VSDC_CCP_MODEL
+    assert monday.amount == (Decimal('0.17') * Decimal('1260')
+                             * Decimal('100000'))
+    report = session.indeterminate_report()
+    assert report.exercised[Component.MARGIN_MODEL.value] >= 2
+    assert Blindness.MARGIN_MODEL_UNSOURCED.value not in report.silent_ignorance
 
 
 def test_a_profile_facing_the_user_with_the_overnight_layer_is_refused():

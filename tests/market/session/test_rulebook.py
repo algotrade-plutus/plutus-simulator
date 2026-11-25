@@ -24,6 +24,8 @@ from plutus.market.protocol import (BandSource, InstrumentKind, InstrumentSpec,
                                     SessionPhase)
 from plutus.market.verdicts import AdmissionRule, Verdict
 from plutus.market.session.rulebook import (COVERAGE_START, KRX_CUTOVER,
+                                            MARGIN_MODEL_KRX,
+                                            MARGIN_MODEL_PRE_KRX,
                                             RuleName, RuleSet, RuleStatus,
                                             Rulebook, SymbolRouter,
                                             UnresolvedRule, VenueListing)
@@ -74,30 +76,43 @@ def test_one_rulebook_serves_both_sides_of_the_cutover():
     assert at(POST_KRX_TS).edition is RulebookEdition.POST_KRX
 
 
-def test_unsourced_post_krx_value_says_so_rather_than_returning_the_pre_krx_one():
-    """The margin *model* refuses to resolve after the cutover.
+def test_the_post_krx_margin_model_is_the_sourced_two_layer_model():
+    """The margin *model* switches at the cutover to QD 26's two layers.
 
-    Pre-KRX, margin was lodged with VSDC before an order could be placed.
-    Post-KRX it is held at the clearing member and VSDC computes the
-    requirement after the close by the KRX COMS formula -- which could not be
-    obtained, and Pinetree confirms no initial-margin percentage is published
-    post-KRX. So the pre-KRX row deliberately stops at the cutover instead of
-    running on.
+    Pre-KRX, margin was lodged with VSDC before an order could be placed and
+    recomputed in-session (``'pre_margin'``). From 2025-05-05 QD 26/QD-HDTV
+    (signed ``.docx`` read in ``docs/reference/krx-margin-research.md``)
+    gives two layers: the clearing member margins the investor on VSDC's
+    published initial-margin ratio (Dieu 5.1.1.b), and VSDC computes ``MR``
+    once after the close by Phu luc 2's scenario grid (Dieu 5.5), tested
+    binarily (Dieu 13). The old row said "never read; the COMS formula could
+    not be obtained", which the research contradicts.
 
-    This is the design's requirement made testable: where a post-KRX value is
-    not yet sourced, the resolved rule must **say so explicitly**. Returning
-    ``'pre_margin'`` here would be a wrong answer that reported itself as a
-    sourced one.
+    The pre-KRX row still stops at the cutover rather than running on.
     """
-    assert at(PRE_KRX_TS).margin_model() == 'pre_margin'
-
-    with pytest.raises(UnresolvedRule):
-        at(POST_KRX_TS).margin_model()
+    assert at(PRE_KRX_TS).margin_model() == MARGIN_MODEL_PRE_KRX == 'pre_margin'
+    assert at(POST_KRX_TS).margin_model() == MARGIN_MODEL_KRX
 
     resolution = at(POST_KRX_TS).resolve(RuleName.MARGIN_MODEL)
-    assert resolution.status is RuleStatus.UNKNOWN
-    assert resolution.value is None
-    assert 'COMS' in resolution.note
+    assert resolution.status is RuleStatus.KNOWN
+    assert resolution.citation.effective_from == KRX_CUTOVER
+    assert 'QD 26' in resolution.citation.document
+    for article in ('Dieu 5', 'Dieu 8', 'Dieu 13', 'Phu luc 2'):
+        assert article in resolution.citation.document, article
+    assert 'never read' not in resolution.citation.document
+    assert 'COMS formula could not be obtained' not in (resolution.note or '')
+    # Unpublished inputs are named on the row, not guessed.
+    for unpublished in ('SMrate', 'haircut', '`n`'):
+        assert unpublished in resolution.note, unpublished
+
+
+@pytest.mark.parametrize('ts, expected', [
+    (datetime(2025, 5, 4, 23, 59), 'pre_margin'),
+    (datetime(2025, 5, 5, 0, 0), 'krx_two_layer'),
+    (datetime(2026, 8, 21, 10, 0), 'krx_two_layer'),
+])
+def test_the_margin_model_switches_exactly_at_the_cutover(ts, expected):
+    assert at(ts).margin_model() == expected
 
 
 def test_populating_a_post_krx_value_is_data_entry_not_a_code_change():

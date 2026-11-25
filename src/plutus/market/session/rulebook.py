@@ -114,6 +114,7 @@ from plutus.market.session.types import (ChargeBase, ChargeClass, ChargeRule,
 
 __all__ = [
     'KRX_CUTOVER', 'COVERAGE_START', 'COVERAGE_END',
+    'MARGIN_MODEL_PRE_KRX', 'MARGIN_MODEL_KRX',
     'RuleName', 'RuleStatus', 'RuleResolution', 'RuleInterval',
     'SessionSchedule', 'UnresolvedRule', 'RuleSet', 'Rulebook', 'SymbolRouter',
     'TickSizeFunction', 'VenueListing', 'RULEBOOK_IDS',
@@ -134,6 +135,17 @@ __all__ = [
 #: 2025-05-04 and the interval that begins here opens at 2025-05-05, so this
 #: instant belongs to exactly one edition.
 KRX_CUTOVER = date(2025, 5, 5)
+
+#: ``RuleName.MARGIN_MODEL`` values. ``'pre_margin'`` to 2025-05-04: margin
+#: lodged with VSDC before the order, ``MR = IM + VM`` recomputed in-session.
+MARGIN_MODEL_PRE_KRX = 'pre_margin'
+#: From the cutover: QD 26's **two layers** (owner decision 2026-11-25). The
+#: clearing member margins the investor intraday on VSDC's published
+#: initial-margin ratio (Dieu 5.1.1.b; the broker's ladder is broker
+#: configuration), and VSDC computes ``MR = Max(SUM Pgm, 0)`` once after the
+#: close on the underlying's close (Dieu 5.5, Phu luc 2), tested binarily
+#: (Dieu 13) with the top-up due by 09:30 the next business day.
+MARGIN_MODEL_KRX = 'krx_two_layer'
 
 #: The rulebook research covers 2020-01-01 -> 2026-08-25. Resolving inside the
 #: window is a lookup; resolving outside it is an extrapolation, and this
@@ -1391,12 +1403,14 @@ def _margin_table() -> Dict[Tuple[Any, ...], Tuple[RuleInterval, ...]]:
     not the number. Pre-KRX, margin was lodged with VSDC before an order could
     be placed and recomputed against live prices intraday. Post-KRX, margin
     sits at the clearing member and VSDC computes the requirement after the
-    close from end-of-day open positions using the KRX COMS formula. That
-    formula could not be obtained, and Pinetree explicitly confirms no initial
-    margin *percentage* is published post-KRX -- so the post-cutover row is
-    ``UNKNOWN`` rather than an extension of the pre-KRX shape. This is the
-    demonstrator for the design's requirement that an unsourced post-KRX value
-    say so rather than silently returning the pre-KRX one.
+    close from end-of-day open positions. **That formula is sourced**: the
+    signed QD 26/QD-HDTV ``.docx`` package and its Phu luc 2 were read
+    (``docs/reference/krx-margin-research.md`` S-5, S-7, S-8, S-11, S-12), so
+    the post-cutover row names the two-layer model the owner adopted on
+    2026-11-25. An earlier revision kept this row ``UNKNOWN`` on the note
+    "QD 26 -- never read; the COMS formula could not be obtained"; the
+    research contradicts both halves of that note, and the row was corrected.
+    The pre-KRX row still stops at the cutover rather than running on.
     """
     delegate = 'vsd_initial_margin'
     return {
@@ -1427,7 +1441,7 @@ def _margin_table() -> Dict[Tuple[Any, ...], Tuple[RuleInterval, ...]]:
                             'index-future series must not be applied to them.'),
         ),
         (RuleName.MARGIN_MODEL,): (
-            _interval('pre_margin', date(2017, 5, 1), KRX_CUTOVER,
+            _interval(MARGIN_MODEL_PRE_KRX, date(2017, 5, 1), KRX_CUTOVER,
                       document='VSDC "Thong tin ve ky quy" S II, S IV',
                       confidence=Confidence.HIGH,
                       note='Margin lodged with VSDC BEFORE an order could be '
@@ -1437,19 +1451,46 @@ def _margin_table() -> Dict[Tuple[Any, ...], Tuple[RuleInterval, ...]]:
                            'utilisation = MR / valid margin assets against '
                            '0.80 / 0.90 / 1.00. Vietnam publishes NO '
                            'maintenance margin ratio at any date.'),
-            _unsourced(KRX_CUTOVER,
-                       document='VSDC QD 26/QD-HDTV (2025-04-16) -- never read; '
-                                'the COMS formula could not be obtained',
-                       confidence=Confidence.MEDIUM,
-                       note='POST-KRX VALUE NOT SOURCED. The shape changed: '
-                            'margin is held at the clearing member, the '
-                            'investor trades immediately, and VSDC computes '
-                            'the requirement after the close (~17:00) from '
-                            'END-OF-DAY open positions by the KRX COMS '
-                            'formula, topped up by 09:30 the next business '
-                            'day. A flat-fraction model may have no post-KRX '
-                            'counterpart at all, so the pre-KRX row is '
-                            'deliberately not extended across the cutover.'),
+            _interval(MARGIN_MODEL_KRX, KRX_CUTOVER,
+                      document='VSDC QD 26/QD-HDTV (2025-04-16), signed .docx '
+                               'package read: Dieu 5 (5.1.1.b broker IM on '
+                               'the VSDC ratio; 5.5 MR after the close), '
+                               'Dieu 8 (V_KQ), Dieu 13 (binary test, 09h30 / '
+                               '14h00 / 16h30, top-up before 09h30 T+1), '
+                               'Phu luc 2 (MR = Max(SUM Pgm, 0), '
+                               'Pgm = Max(Rm + Sm + Dm, MM)); '
+                               'docs/reference/krx-margin-research.md',
+                      confidence=Confidence.HIGH,
+                      note='TWO LAYERS (owner decision 2026-11-25). (1) '
+                           'Broker, intraday: the clearing member margins '
+                           'the investor on the initial-margin ratio VSDC '
+                           'publishes (Dieu 5.1.1.b, VERIFIED); its ladder '
+                           'and thresholds are broker configuration. (2) '
+                           'CCP, once after the close: VSDC computes MR on '
+                           'end-of-day positions and the UNDERLYING close '
+                           '(Dieu 5.5, Phu luc 2, VERIFIED); the monitoring '
+                           'test is binary, margin assets < MR (Dieu 13, '
+                           'VERIFIED; no ladder, S-7); top-up before 09h30 '
+                           'the next business day (S-8, VERIFIED). Variation '
+                           'margin is NOT a component (0 occurrences of '
+                           '"bien doi" in QD 26 or Phu luc 2, S-5): position '
+                           'P&L settles in cash T+1. Inputs: the dated VSDC '
+                           'initial-margin ratio (0.17, verified in force at '
+                           '2026-08-21); MF = tick x M / 2 = 5,000d per VN30F '
+                           'contract (S-11, OURS algebra corroborated by '
+                           'TCBS); Rm = |net| x rate x S x M for a '
+                           'one-directional single-expiry book (S-12, OURS '
+                           'algebra). NOT PUBLISHED and therefore never '
+                           'guessed: SMrate (basis margin Sm, M-3), so a '
+                           'calendar spread held at the close is UNKNOWN; '
+                           'the liquidation-day count `n` (C-5); the '
+                           'collateral haircut list (M-4), so margin assets '
+                           'are cash only; the VSDC parameter table (M-2). '
+                           'The 21-scenario spacing is a reading of a '
+                           'defective printed formula (D1/I1). The VM-in-'
+                           'broker-maintenance question (C-2) is open: the '
+                           'broker layer carries no VM post-KRX unless the '
+                           "firm's own intraday model names it."),
         ),
     }
 
@@ -2428,11 +2469,12 @@ class RuleSet:
     def margin_model(self) -> str:
         """Which margin MECHANISM is in force -- not which rate.
 
-        ``'pre_margin'`` to 2025-05-04. From the cutover the mechanism is KRX's
-        post-trade COMS calculation, whose formula could not be obtained, so
-        this raises rather than reporting the pre-KRX shape. That refusal is
-        the design's requirement made concrete: an unsourced post-KRX value
-        says so instead of silently returning its predecessor.
+        :data:`MARGIN_MODEL_PRE_KRX` (``'pre_margin'``) to 2025-05-04, and
+        :data:`MARGIN_MODEL_KRX` (``'krx_two_layer'``) from the cutover: QD
+        26's broker layer on VSDC's published ratio intraday plus VSDC's
+        post-close scenario-grid ``MR``, tested binarily. Still raises
+        :class:`UnresolvedRule` before the pre-KRX row's start, where no
+        mechanism is recorded.
         """
         return self.require(RuleName.MARGIN_MODEL)
 
