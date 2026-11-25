@@ -16,7 +16,7 @@
 - **Do not modify** `src/plutus/market/protocol.py` (`MarketState`), `src/plutus/market/adapters/datahub.py`, `src/plutus/market/adapters/tick.py`, or `src/plutus/market/exchanges/derivatives.py`. `locked_side`/`lock_evidence`/`BAR_PROXY` stay; the resolver simply stops depending on them.
 - **Behaviour-preserving for non-band orders.** After every task, `python -m pytest tests/market -q` must be **0 failed** on the real corpus (the Increment-1 invariant was 1532 passed / 0 failed). Fixture-only minimal-corpus suites may differ; the real corpus is the gate.
 - **Decimal everywhere** for prices/bands; `volume` is `Optional[int]`; corpus prices are in thousands of đồng (`PRICE_SCALE = 1000` in the SB runner).
-- **Run tests from the `plutus` repo root**, environment: `source .venv/bin/activate && export PYTHONPATH=src` (or the installed package). Proto tests run from `proto/ProtoSmartBeta` with its own `.venv`.
+- **Run tests from the `plutus` repo root**, environment: `source .venv/bin/activate && export PYTHONPATH=<plutus>/src` (or the installed package). Proto tests run from `proto/ProtoSmartBeta` with its own `.venv`.
 - **Attribution** on every commit:
   ```
   Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
